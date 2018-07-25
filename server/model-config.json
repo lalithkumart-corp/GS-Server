@@ -14,25 +14,25 @@
     ]
   },
   "User": {
-    "dataSource": "db"
+    "dataSource": "developmentdb"
   },
   "AccessToken": {
-    "dataSource": "db",
+    "dataSource": "developmentdb",
     "public": false
   },
   "ACL": {
-    "dataSource": "db",
+    "dataSource": "developmentdb",
     "public": false
   },
   "RoleMapping": {
-    "dataSource": "db",
+    "dataSource": "developmentdb",
     "public": true,
     "options": {
       "strictObjectIDCoercion": true
     }
   },
   "Role": {
-    "dataSource": "db",
+    "dataSource": "developmentdb",
     "public": true
   }
 }
