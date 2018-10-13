@@ -4,7 +4,7 @@
     "connector": "memory"
   },
   "developmentdb": {
-    "database": "development",
+    "database": "gs",
     "username": "root",
     "password": "root",
     "name": "developmentdb",

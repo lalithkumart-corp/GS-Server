@@ -34,5 +34,9 @@
   "Role": {
     "dataSource": "developmentdb",
     "public": true
+  },
+  "Pledgebook": {
+    "dataSource": "developmentdb",
+    "public": true
   }
 }

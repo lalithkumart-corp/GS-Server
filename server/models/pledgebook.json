@@ -1,0 +1,165 @@
+{
+  "name": "Pledgebook",
+  "base": "PersistedModel",
+  "idInjection": true,
+  "options": {
+    "validateUpsert": true
+  },
+  "mysql": {
+    "schema": "developmentdb",
+    "table": "pledgebook"
+  },
+  "properties": {
+    "Id": {
+      "type": "number",
+      "mysql": {
+        "columnName": "Id",
+        "dataType": "int",
+        "dataLength": null,
+        "dataPrecision": 10,
+        "dataScale": 0,
+        "nullable": "Y"
+      }
+    },
+    "BillNo": {
+      "type": "string",
+      "required": true,
+      "mysql": {
+        "columnName": "BillNo",
+        "dataType": "varchar",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "N"
+      }
+    },
+    "Date": {
+      "type": "date",
+      "required": true,
+      "mysql": {
+        "columnName": "Date",
+        "dataType": "datetime",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "N"
+      }
+    },
+    "CustomerName": {
+      "type": "string",
+      "required": true,
+      "mysql": {
+        "columnName": "CustomerName",
+        "dataType": "varchar",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "FGName": {
+      "type": "string",
+      "required": true,
+      "mysql": {
+        "columnName": "FGName",
+        "dataType": "varchar",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "Address": {
+      "type": "string",
+      "mysql": {
+        "columnName": "Address",
+        "dataType": "varchar",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },    
+    "Place": {
+      "type": "string",
+      "mysql": {
+        "columnName": "Place",
+        "dataType": "varchar",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "City": {
+      "type": "string",
+      "mysql": {
+        "columnName": "City",
+        "dataType": "varchar",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "Mobile": {
+      "type": "number",
+      "mysql": {
+        "columnName": "Mobile",
+        "dataType": "varchar",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "Pincode": {
+      "type": "string",
+      "mysql": {
+        "columnName": "Pincode",
+        "dataType": "varchar",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "Orn": {
+      "type": "object",
+      "mysql": {
+        "columnName": "Orn",
+        "dataType": "varchar",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "CreatedDate": {
+      "type": "date",
+      "mysql": {
+        "columnName": "CreatedDate",
+        "dataType": "datetime",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "ModifiedDate": {
+      "type": "date",
+      "mysql": {
+        "columnName": "ModifiedDate",
+        "dataType": "datetime",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    }
+  },
+  "validations": [],
+  "relations": {},
+  "acls": [],
+  "methods": {}
+}
