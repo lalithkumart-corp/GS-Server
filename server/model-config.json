@@ -38,5 +38,17 @@
   "Pledgebook": {
     "dataSource": "developmentdb",
     "public": true
+  },
+  "Image": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "Customer": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "customerMetadataList": {
+    "dataSource": "developmentdb",
+    "public": true
   }
 }

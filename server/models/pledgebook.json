@@ -21,6 +21,18 @@
         "nullable": "Y"
       }
     },
+    "UniqueIdentifier": {
+      "type": "string",
+      "required": true,
+      "mysql": {
+        "columnName": "UniqueIdentifier",
+        "dataType": "varchar",
+        "dataLength": 500,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "N"
+      }
+    },
     "BillNo": {
       "type": "string",
       "required": true,
@@ -45,80 +57,24 @@
         "nullable": "N"
       }
     },
-    "CustomerName": {
-      "type": "string",
+    "CustomerId": {
+      "type": "number",
       "required": true,
       "mysql": {
-        "columnName": "CustomerName",
-        "dataType": "varchar",
-        "dataLength": 255,
+        "columnName": "CustomerId",
+        "dataType": "int",
+        "dataLength": 11,
         "dataPrecision": null,
         "dataScale": null,
         "nullable": "Y"
       }
     },
-    "FGName": {
-      "type": "string",
-      "required": true,
-      "mysql": {
-        "columnName": "FGName",
-        "dataType": "varchar",
-        "dataLength": 255,
-        "dataPrecision": null,
-        "dataScale": null,
-        "nullable": "Y"
-      }
-    },
-    "Address": {
-      "type": "string",
-      "mysql": {
-        "columnName": "Address",
-        "dataType": "varchar",
-        "dataLength": 255,
-        "dataPrecision": null,
-        "dataScale": null,
-        "nullable": "Y"
-      }
-    },    
-    "Place": {
-      "type": "string",
-      "mysql": {
-        "columnName": "Place",
-        "dataType": "varchar",
-        "dataLength": 255,
-        "dataPrecision": null,
-        "dataScale": null,
-        "nullable": "Y"
-      }
-    },
-    "City": {
-      "type": "string",
-      "mysql": {
-        "columnName": "City",
-        "dataType": "varchar",
-        "dataLength": 255,
-        "dataPrecision": null,
-        "dataScale": null,
-        "nullable": "Y"
-      }
-    },
-    "Mobile": {
+    "ImageId": {
       "type": "number",
       "mysql": {
-        "columnName": "Mobile",
-        "dataType": "varchar",
-        "dataLength": 255,
-        "dataPrecision": null,
-        "dataScale": null,
-        "nullable": "Y"
-      }
-    },
-    "Pincode": {
-      "type": "string",
-      "mysql": {
-        "columnName": "Pincode",
-        "dataType": "varchar",
-        "dataLength": 255,
+        "columnName": "ImageId",
+        "dataType": "int",
+        "dataLength": 11,
         "dataPrecision": null,
         "dataScale": null,
         "nullable": "Y"

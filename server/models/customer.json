@@ -1,0 +1,134 @@
+{
+  "name": "Customer",
+  "base": "PersistedModel",
+  "idInjection": true,
+  "options": {
+    "validateUpsert": true    
+  },
+  "properties": {
+    "customerId": {
+      "type": "string",
+      "id": true,
+      "length": 22,
+      "mysql": {
+        "columnName": "CustomerId",
+        "dataType": "int",
+        "dataLength": 22,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "hashKey": {
+      "type": "string",
+      "required": true,
+      "length": 45,
+      "mysql": {
+        "columnName": "HashKey",
+        "dataType": "varchar",
+        "dataLength": 45,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "N"
+      }
+    },
+    "name": {
+      "type": "string",
+      "length": 255,
+      "mysql": {
+        "columnName": "Name",
+        "dataType": "varchar",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "gaurdianName": {
+      "type": "string",
+      "length": 255,
+      "mysql": {
+        "columnName": "GaurdianName",
+        "dataType": "varchar",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "address": {
+      "type": "string",
+      "length": 255,
+      "mysql": {
+        "columnName": "Address",
+        "dataType": "varchar",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "place": {
+      "type": "string",
+      "length": 255,
+      "mysql": {
+        "columnName": "Place",
+        "dataType": "varchar",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "city": {
+      "type": "string",
+      "length": 255,
+      "mysql": {
+        "columnName": "City",
+        "dataType": "varchar",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "mobile": {
+      "type": "string",
+      "length": 11,
+      "mysql": {
+        "columnName": "Mobile",
+        "dataType": "int",
+        "dataLength": 11,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "pincode": {
+      "type": "string",
+      "length": 11,
+      "mysql": {
+        "columnName": "Pincode",
+        "dataType": "int",
+        "dataLength": 11,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "otherRemarks": {
+      "type": "any",
+      "mysql": {
+        "columnName": "OtherRemarks",
+        "dataType": "text",
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    }
+  },
+  "validations": [],
+  "relations": {},
+  "acls": [],
+  "methods": {}
+}

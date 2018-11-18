@@ -1,90 +1,59 @@
 'use strict';
-let _ = require('lodash');
-let app = require('../server');
+
 module.exports = function(Pledgebook) {
 
-    Pledgebook._getMetaDataFromDB = (identifier) => {
-        return new Promise( (resolve, reject) => {
-            let dataSource = Pledgebook.dataSource;
-            dataSource.connector.query(sql[identifier], [], (err, list) => {
-                if (err){                    
-                    reject(err);
-                } else {                    
-                    let bucket = [];
-                    _.each(list, (anItem, index) => {
-                        bucket.push(anItem[identifier]);
-                    });
-                    resolve(bucket);
-                }
-            });
-        });
-    }
-    
-    Pledgebook.getMetaData = async (identifiers, cb) => {
-        let metaData = {};
-        for(let identifier of identifiers) {
-            switch(identifier) {
-                case 'customerNames':
-                    let customerNames = await Pledgebook._getMetaDataFromDB('CustomerName');
-                    metaData.customerNames = customerNames;
-                    break;
-                case 'fgNames':
-                    let fgNames = await Pledgebook._getMetaDataFromDB('FGName');
-                    metaData.fgNames = fgNames;
-                    break;
-                case 'address':
-                    let address = await Pledgebook._getMetaDataFromDB('Address');
-                    metaData.address = address;
-                    break;
-                case 'place':
-                    let place = await Pledgebook._getMetaDataFromDB('Place');
-                    metaData.place = place;
-                    break;
-                case 'city':
-                    let city = await Pledgebook._getMetaDataFromDB('City');
-                    metaData.city = city;
-                    break;
-                case 'mobile':
-                    let mobile = await Pledgebook._getMetaDataFromDB('Mobile');
-                    metaData.mobile = mobile;
-                    break;                
-                case 'pincode':
-                    let pincode = await Pledgebook._getMetaDataFromDB('Pincode');
-                    metaData.pincode = pincode;
-                    break;
-            }
-        }
-        return metaData;
+    Pledgebook.addRecordHandler = async (params, cb) => {
+        try {
+            params.picture.id = await Pledgebook.app.models.Image.handleImage(params.picture); //Save customer picture in Image table
+            params.customerId = await Pledgebook.app.models.Customer.handleCustomerData(params); //Save customer information in Customer Table
+            await Pledgebook.saveBillDetails(params); //Save ImageId, CustomerID, ORNAMENT and other Bill details in Pledgebook
+            return {STATUS: 'success', STATUS_MSG: 'Successfully inserted new bill'};
+        } catch(e) {
+            return {STATUS: 'error', ERROR: e};
+        }        
     }
 
-    Pledgebook.remoteMethod('getMetaData', {
+    Pledgebook.remoteMethod('addRecordHandler', {
         accepts: {
-            arg: 'params', type: 'array', http: (ctx) => {
-                var req = ctx && ctx.req;
-                var identifiers = req && req.query.identifiers;
-                var identifiers = identifiers ? JSON.parse(identifiers) : undefined;
-                return identifiers;
+            arg: 'params',
+            type: 'object',
+            default: {
+                
             },
-            description: 'Arguments goes here',
+            http: {
+                source: 'body',
+            },
         },
         returns: {
             type: 'object',
             root: true,
             http: {
-                source: 'body',
-            },
+                source: 'body'
+            }
         },
-        http: {path: '/metadata', verb: 'get'},
-        description: 'For fetching metadata from Pledgebook.',
-    })
-};
+        http: {path: '/add-new-billrecord', verb: 'post'},
+        description: 'Adding a new record in pledgebook'
+    });
 
-let sql = {
-    CustomerName: `SELECT DISTINCT CustomerName from pledgebook`,
-    FGName: `SELECT DISTINCT FGName FROM pledgebook`,
-    Address: `SELECT DISTINCT Address FROM pledgebook`,
-    Place: `SELECT DISTINCT Place FROM pledgebook`,
-    City: `SELECT DISTINCT City FROM pledgebook`,
-    Mobile: `SELECT DISTINCT Mobile FROM pledgebook`,
-    Pincode: `SELECT DISTINCT Pincode FROM pledgebook`
-}
+    Pledgebook.saveBillDetails = (params) => {
+        return new Promise( (resolve, reject) => {
+            let dbInputValues = {
+                UniqueIdentifier: (+ new Date()),
+                BillNo: params.billNo,
+                Date: params.date,
+                CustomerId: params.customerId,
+                Orn: params.orn,
+                ImageId: params.picture.id,
+                CreatedDate: new Date(),
+                ModifiedDate: new Date()
+            }
+            Pledgebook.create(dbInputValues, (err, result) => {
+                if(err) {
+                    reject ( err );
+                } else {
+                    resolve( result );
+                }
+            });
+        });        
+    }
+};
