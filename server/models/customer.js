@@ -3,101 +3,16 @@ let _ = require('lodash');
 let sh = require('shorthash');
 
 module.exports = function(Customer) {
-    Customer.handleCustomerData = async (params) => {
-        //TODO: Valide the input arguments
-        let hashKey = Customer.generateHashKey(params);
-        let customerData = await Customer.isAlreadyExists(hashKey);
-        if(!customerData) {            
-            params.hashKey = hashKey;
-            customerData = await Customer.saveCustomerData(params);
-        } else {
-            await Customer.checkForCustomerDataUpdate(customerData, params);            
-        }
-        return customerData.customerId;
-    }
 
-    Customer.saveCustomerData = (params) => {
-        return new Promise( (resolve, reject) => {
-            let dbInputValues = {
-                hashKey: params.hashKey,
-                name: params.cname,
-                gaurdianName: params.gaurdianName,
-                address: params.address,
-                place: params.place,
-                city: params.city,
-                pincode: params.pinCode,
-                mobile: params.mobile,
-                other: params.moreDetails,
-                createdAt: new Date(),
-                modifiedAt: new Date()
-            }
-            Customer.create(dbInputValues, (err, result) => {
-                if(err) {
-                    reject(err);
-                } else {
-                    resolve(result);
-                }
-            });
-        });
-    }
-
-    Customer._getMetaDataFromDB = (identifier) => {
-        return new Promise( (resolve, reject) => {
-            // let dataSource = Customer.dataSource;
-            if(identifier == 'otherDetails') {
-                Customer.app.models.customerMetadataList.getList()
-                .then(
-                    (success) => {
-                        let bucket = [];
-                        _.each(success, (anItem, index) => {
-                            bucket.push(anItem);
-                        });
-                        return resolve(bucket);
-                    },
-                    (err) => {
-                        return reject(err);
-                    }
-                )
-            } else {
-                if(Customer.metaData) {
-                    let bucket = [];
-                    _.each(Customer.metaData, (anItem, index) => {
-                        bucket.push(anItem[identifier]);
-                    });
-                    return resolve(bucket);
-                }
-                Customer.find({}, (err, result) => {
-                    if(err) {
-                        return reject(err);
-                    } else {
-                        Customer.metaData = result;
-                        let bucket = [];
-                        _.each(result, (anItem, index) => {
-                            bucket.push(anItem[identifier]);
-                        });
-                        return resolve(bucket);
-                    }
-                });
-                /* dataSource.connector.query(sql[identifier], [], (err, list) => {
-                    if (err){                    
-                        reject(err);
-                    } else {                    
-                        let bucket = [];
-                        _.each(list, (anItem, index) => {
-                            bucket.push(anItem[identifier]);
-                        });
-                        resolve(bucket);
-                    }
-                }); */
-            }
-        });
-    }
-    
     Customer.getMetaData = async (identifiers, cb) => {
         let metaData = {};
         Customer.metaData = null;
         for(let identifier of identifiers) {
             switch(identifier) {
+                case 'all':
+                    let allData = await Customer._getMetaDataFromDB('all');
+                    metaData.row = allData;
+                    break;
                 case 'customerNames':
                     let customerNames = await Customer._getMetaDataFromDB('name');
                     metaData.customerNames = customerNames;
@@ -156,8 +71,111 @@ module.exports = function(Customer) {
         description: 'For fetching metadata from Customer Data.',
     });
 
+    Customer.handleCustomerData = async (params) => {
+        //TODO: Valide the input arguments
+        let hashKey = Customer.generateHashKey(params);
+        let customerData = await Customer.isAlreadyExists(hashKey);
+        if(!customerData) {            
+            params.hashKey = hashKey;
+            customerData = await Customer.saveCustomerData(params);
+        } else {
+            await Customer.checkForCustomerDataUpdate(customerData, params);            
+        }
+        return customerData.customerId;
+    }
+
+    Customer.saveCustomerData = (params) => {
+        return new Promise( (resolve, reject) => {
+            let dbInputValues = {
+                hashKey: params.hashKey,
+                name: params.cname,
+                gaurdianName: params.gaurdianName,
+                address: params.address,
+                place: params.place,
+                city: params.city,
+                pincode: params.pinCode,
+                mobile: params.mobile,
+                otherDetails: params.moreDetails,
+                createdAt: new Date(),
+                modifiedAt: new Date()
+            }
+            Customer.create(dbInputValues, (err, result) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(result);
+                }
+            });
+        });
+    }
+
+    Customer._getMetaDataFromDB = (identifier) => {
+        return new Promise( (resolve, reject) => {
+            // let dataSource = Customer.dataSource;
+            if(identifier == 'otherDetails') {
+                Customer.app.models.customerMetadataList.getList()
+                .then(
+                    (success) => {
+                        let bucket = [];
+                        _.each(success, (anItem, index) => {
+                            bucket.push(anItem);
+                        });
+                        return resolve(bucket);
+                    },
+                    (err) => {
+                        return reject(err);
+                    }
+                )
+            } else {
+                if(Customer.metaData) {
+                    let bucket = [];
+                    _.each(Customer.metaData, (anItem, index) => {
+                        if(identifier == 'all')
+                            bucket.push(anItem);
+                        else
+                            bucket.push(anItem[identifier]);
+                    });
+                    return resolve(bucket);
+                }
+                Customer.find({}, (err, result) => {
+                    if(err) {
+                        return reject(err);
+                    } else {
+                        Customer.metaData = result;
+                        let bucket = [];
+                        _.each(result, (anItem, index) => {
+                            if(identifier == 'all')
+                                bucket.push(anItem);
+                            else
+                                bucket.push(anItem[identifier]);
+                        });
+                        return resolve(bucket);
+                    }
+                });
+                /* dataSource.connector.query(sql[identifier], [], (err, list) => {
+                    if (err){                    
+                        reject(err);
+                    } else {                    
+                        let bucket = [];
+                        _.each(list, (anItem, index) => {
+                            bucket.push(anItem[identifier]);
+                        });
+                        resolve(bucket);
+                    }
+                }); */
+            }
+        });
+    }    
+
     Customer.generateHashKey = (params) => {
-        return sh.unique( params.cname + params.gaurdianName + params.address + params.place + params.city + params.pincode )        
+        let cname = (params.cname)?params.cname.toLowerCase():params.cname;
+        let gaurdianName = (params.gaurdianName)?params.gaurdianName.toLowerCase():params.gaurdianName;
+        let address = (params.address)?params.address.toLowerCase():params.address;
+        let place = (params.place)?params.place.toLowerCase():params.place;
+        let city = (params.city)?params.city.toLowerCase():params.city;
+        let pincode = (params.pincode)?params.pincode.toLowerCase():params.pincode;
+
+        return sh.unique( cname + gaurdianName + address + place + city + pincode )        
     }
 
     Customer.isAlreadyExists = (hashKey) => {
@@ -176,8 +194,37 @@ module.exports = function(Customer) {
         });
     }
 
-    Customer.checkForCustomerDataUpdate = (dbCustomerData, params) => {
-        //TODO: Check for 'other' details value and store in DB
+    Customer.checkForCustomerDataUpdate = async (dbCustomerData, params) => {
+        return new Promise( (resolve, reject) => {
+            let otherDetailsDB = dbCustomerData.otherDetails;
+            let incomingOtherDetails = params.moreDetails;
+            let changes = false;
+            _.each(incomingOtherDetails, (anObj, index) => {
+                let matchFound = false;
+                _.each(otherDetailsDB, (innerObj, key) => {
+                    if(innerObj.key == anObj.key) {
+                        matchFound = true;
+                        changes = true;
+                        innerObj.val = anObj.val;
+                    }
+                });
+                if(!matchFound) {
+                    changes = true;
+                    otherDetailsDB.push(anObj);
+                }
+            });
+            if(changes) {
+                Customer.updateAll({customerId: dbCustomerData.customerId}, {otherDetails: otherDetailsDB}, (err, result) => {
+                    if(err) {
+                        return reject(err);
+                    } else {    
+                        return resolve(err);
+                    }
+                });
+            } else {
+                return resolve();
+            }
+        });
     }
 };
 

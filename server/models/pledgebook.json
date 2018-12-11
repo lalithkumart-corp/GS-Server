@@ -91,6 +91,16 @@
         "nullable": "Y"
       }
     },
+    "remarks": {
+      "type": "any",
+      "mysql": {
+        "columnName": "Remarks",
+        "dataType": "text",
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },    
     "CreatedDate": {
       "type": "date",
       "mysql": {

@@ -44,6 +44,7 @@ module.exports = function(Pledgebook) {
                 CustomerId: params.customerId,
                 Orn: params.orn,
                 ImageId: params.picture.id,
+                remarks: params.billRemarks,
                 CreatedDate: new Date(),
                 ModifiedDate: new Date()
             }
@@ -56,4 +57,31 @@ module.exports = function(Pledgebook) {
             });
         });        
     }
+
+    Pledgebook.getLastBillNumber = (cb) => {
+        let dataSource = Pledgebook.dataSource;
+        dataSource.connector.query(sql.LAST_BILL_NO, (err, result) => {
+            if(err) {
+                cb(err, null);                
+            } else {
+                cb(null, result[0].BillNo);
+            }
+        });
+    };
+
+    Pledgebook.remoteMethod('getLastBillNumber', {
+        returns: {
+            type: 'string',
+            root: true,
+            http: {
+                source: 'body',
+            },
+        },
+        http: {path: '/get-last-bill-number', verb: 'get'},
+        description: 'For fetching metadata from Customer Data.',
+    });
 };
+
+let sql = {
+    LAST_BILL_NO: `SELECT BillNo FROM gs.pledgebook ORDER BY ID DESC LIMIT 1`
+}

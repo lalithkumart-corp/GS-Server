@@ -116,10 +116,10 @@
         "nullable": "Y"
       }
     },
-    "otherRemarks": {
+    "otherDetails": {
       "type": "any",
       "mysql": {
-        "columnName": "OtherRemarks",
+        "columnName": "OtherDetails",
         "dataType": "text",
         "dataPrecision": null,
         "dataScale": null,
