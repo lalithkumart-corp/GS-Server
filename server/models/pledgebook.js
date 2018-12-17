@@ -80,8 +80,50 @@ module.exports = function(Pledgebook) {
         http: {path: '/get-last-bill-number', verb: 'get'},
         description: 'For fetching metadata from Customer Data.',
     });
+
+    Pledgebook.getPendingBills = (args, cb) => {
+        let queryValues = [args.offsetStart, args.offsetEnd];
+        Pledgebook.dataSource.connector.query(sql.GetPendingBills, queryValues, (err, result) => {
+            if(err) {
+                return cb(err, null);
+            } else {
+                return cb(null, result)
+            }
+        });
+    };
+
+    Pledgebook.remoteMethod('getPendingBills', {
+        accepts: {
+            arg: 'params', type: 'object', http: (ctx) => {
+                var req = ctx && ctx.req;
+                var args = req && req.query.args;
+                var args = args ? JSON.parse(args) : {};
+                return args;
+            },
+            description: 'Arguments goes here',
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            },
+        },
+        http: {path: '/get-pending-bills', verb: 'get'},
+        description: 'For fetching pending bills.',
+    })
 };
 
 let sql = {
-    LAST_BILL_NO: `SELECT BillNo FROM gs.pledgebook ORDER BY ID DESC LIMIT 1`
+    LAST_BILL_NO: `SELECT BillNo FROM gs.pledgebook ORDER BY ID DESC LIMIT 1`,
+    GetPendingBills: `SELECT 
+                    *, pledgebook.Id AS PledgeBookID, image.ID AS ImageTableID
+                FROM
+                    pledgebook
+                        LEFT JOIN
+                    customer ON pledgebook.CustomerId = customer.CustomerId
+                        LEFT JOIN
+                    image ON pledgebook.ImageId = image.Id
+                ORDER BY PledgeBookID DESC
+                LIMIT ? , ?`
 }
