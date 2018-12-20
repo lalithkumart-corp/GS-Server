@@ -45,6 +45,17 @@
         "nullable": "N"
       }
     },
+    "Amount": {
+      "type": "number",
+      "mysql": {
+        "columnName": "Amount",
+        "dataType": "int",
+        "dataLength": 11,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
     "Date": {
       "type": "date",
       "required": true,

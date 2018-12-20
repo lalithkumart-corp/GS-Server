@@ -40,6 +40,7 @@ module.exports = function(Pledgebook) {
             let dbInputValues = {
                 UniqueIdentifier: (+ new Date()),
                 BillNo: params.billNo,
+                Amount: params.amount,
                 Date: params.date,
                 CustomerId: params.customerId,
                 Orn: params.orn,
