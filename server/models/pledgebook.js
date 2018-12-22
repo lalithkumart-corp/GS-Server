@@ -7,6 +7,7 @@ module.exports = function(Pledgebook) {
             params.picture.id = await Pledgebook.app.models.Image.handleImage(params.picture); //Save customer picture in Image table
             params.customerId = await Pledgebook.app.models.Customer.handleCustomerData(params); //Save customer information in Customer Table
             await Pledgebook.saveBillDetails(params); //Save ImageId, CustomerID, ORNAMENT and other Bill details in Pledgebook
+            await Pledgebook.app.models.PledgebookSettings.updateLastBillDetail(params);
             return {STATUS: 'success', STATUS_MSG: 'Successfully inserted new bill'};
         } catch(e) {
             return {STATUS: 'error', ERROR: e};
@@ -37,9 +38,12 @@ module.exports = function(Pledgebook) {
 
     Pledgebook.saveBillDetails = (params) => {
         return new Promise( (resolve, reject) => {
+            let billNo = params.billNo;
+            if(params.billSeries !== "")
+                billNo = params.billSeries + "." + billNo;
             let dbInputValues = {
                 UniqueIdentifier: (+ new Date()),
-                BillNo: params.billNo,
+                BillNo: billNo,
                 Amount: params.amount,
                 Date: params.date,
                 CustomerId: params.customerId,
@@ -58,29 +62,6 @@ module.exports = function(Pledgebook) {
             });
         });        
     }
-
-    Pledgebook.getLastBillNumber = (cb) => {
-        let dataSource = Pledgebook.dataSource;
-        dataSource.connector.query(sql.LAST_BILL_NO, (err, result) => {
-            if(err) {
-                cb(err, null);                
-            } else {
-                cb(null, result[0].BillNo);
-            }
-        });
-    };
-
-    Pledgebook.remoteMethod('getLastBillNumber', {
-        returns: {
-            type: 'string',
-            root: true,
-            http: {
-                source: 'body',
-            },
-        },
-        http: {path: '/get-last-bill-number', verb: 'get'},
-        description: 'For fetching metadata from Customer Data.',
-    });
 
     Pledgebook.getPendingBills = (args, cb) => {
         let queryValues = [args.offsetStart, args.offsetEnd];

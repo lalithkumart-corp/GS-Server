@@ -1,0 +1,73 @@
+{
+  "name": "PledgebookSettings",
+  "base": "PersistedModel",
+  "options": {
+    "validateUpsert": true,
+    "mysql": {
+      "schema": "developmentdb",
+      "table": "pledgebook_settings"
+    }
+  },
+  "properties": {
+    "SNo": {
+      "type": "number",
+      "id": true,
+      "mysql": {
+        "columnName": "s_no",
+        "dataType": "int",
+        "dataLength": null,
+        "dataPrecision": null,
+        "dataScale": 0,
+        "nullable": "Y"
+      }
+    },
+    "billSeries": {
+      "type": "string",
+      "mysql": {
+        "columnName": "bill_series",
+        "dataType": "varchar",
+        "dataLength": null,
+        "dataPrecision": null,
+        "dataScale": 0,
+        "nullable": "Y"
+      }
+    },
+    "lastCreatedBillNo": {
+      "type": "number",
+      "mysql": {
+        "columnName": "last_created_bill_no",
+        "dataType": "int",
+        "dataLength": null,
+        "dataPrecision": null,
+        "dataScale": 0,
+        "nullable": "Y"
+      }
+    },
+    "billStart": {
+      "type": "number",
+      "mysql": {
+        "columnName": "bill_start",
+        "dataType": "int",
+        "dataLength": null,
+        "dataPrecision": null,
+        "dataScale": 0,
+        "nullable": "Y"
+      }
+    },
+    "billLimit": {
+      "type": "number",
+      "mysql": {
+        "columnName": "bill_limit",
+        "dataType": "int",
+        "dataLength": null,
+        "dataPrecision": null,
+        "dataScale": 0,
+        "nullable": "Y"
+      }
+    }    
+  },
+  "validations": [],
+  "relations": {},
+  "acls": [],
+  "methods": {}
+}

@@ -50,5 +50,9 @@
   "customerMetadataList": {
     "dataSource": "developmentdb",
     "public": true
+  },
+  "PledgebookSettings": {
+    "dataSource": "developmentdb",
+    "public": true
   }
 }
