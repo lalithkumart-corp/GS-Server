@@ -93,8 +93,8 @@ module.exports = function(Customer) {
                 address: params.address,
                 place: params.place,
                 city: params.city,
-                pincode: params.pinCode,
-                mobile: params.mobile,
+                pincode: params.pinCode || null,
+                mobile: params.mobile || null,
                 otherDetails: params.moreDetails,
                 createdAt: new Date(),
                 modifiedAt: new Date()

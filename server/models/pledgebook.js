@@ -65,7 +65,33 @@ module.exports = function(Pledgebook) {
 
     Pledgebook.getPendingBills = (args, cb) => {
         let queryValues = [args.offsetStart, args.offsetEnd];
-        Pledgebook.dataSource.connector.query(sql.GetPendingBills, queryValues, (err, result) => {
+        let query = `SELECT 
+                *, pledgebook.Id AS PledgeBookID, image.ID AS ImageTableID
+            FROM
+                pledgebook
+                    LEFT JOIN
+                customer ON pledgebook.CustomerId = customer.CustomerId
+                    LEFT JOIN
+                image ON pledgebook.ImageId = image.Id`;
+        let filterQueries = [];
+        if(args.filters.billNo !== "")
+            filterQueries.push(`BillNo like '${args.filters.billNo}%'`);
+        if(args.filters.amount !== "")
+            filterQueries.push(`amount >= ${args.filters.amount}`);
+        if(args.filters.cName !== "")
+            filterQueries.push(`Name like '${args.filters.cName}%'`);
+        if(args.filters.gName !== "")
+            filterQueries.push(`GaurdianName like '${args.filters.gName}%'`);
+        if(args.filters.address !== "")
+            filterQueries.push(`Address like '${args.filters.address}%'`);
+        
+        if(filterQueries.length != 0)
+            query += ' where ' + filterQueries.join(' AND ');
+        
+        query += ` ORDER BY PledgeBookID DESC
+                   LIMIT ? , ?`;
+        
+        Pledgebook.dataSource.connector.query(query, queryValues, (err, result) => {
             if(err) {
                 return cb(err, null);
             } else {
