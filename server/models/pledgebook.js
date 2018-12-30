@@ -65,39 +65,69 @@ module.exports = function(Pledgebook) {
 
     Pledgebook.getPendingBills = (args, cb) => {
         let queryValues = [args.offsetStart, args.offsetEnd];
-        let query = `SELECT 
-                *, pledgebook.Id AS PledgeBookID, image.ID AS ImageTableID
-            FROM
-                pledgebook
-                    LEFT JOIN
-                customer ON pledgebook.CustomerId = customer.CustomerId
-                    LEFT JOIN
-                image ON pledgebook.ImageId = image.Id`;
-        let filterQueries = [];
-        if(args.filters.billNo !== "")
-            filterQueries.push(`BillNo like '${args.filters.billNo}%'`);
-        if(args.filters.amount !== "")
-            filterQueries.push(`amount >= ${args.filters.amount}`);
-        if(args.filters.cName !== "")
-            filterQueries.push(`Name like '${args.filters.cName}%'`);
-        if(args.filters.gName !== "")
-            filterQueries.push(`GaurdianName like '${args.filters.gName}%'`);
-        if(args.filters.address !== "")
-            filterQueries.push(`Address like '${args.filters.address}%'`);
+        let query = `SELECT                         
+                        *,                        
+                        pledgebook.Id AS PledgeBookID,
+                        image.ID AS ImageTableID
+                    FROM
+                        pledgebook
+                            LEFT JOIN
+                        customer ON pledgebook.CustomerId = customer.CustomerId
+                            LEFT JOIN
+                        image ON pledgebook.ImageId = image.Id`;
         
-        if(filterQueries.length != 0)
-            query += ' where ' + filterQueries.join(' AND ');
+        query = Pledgebook.appendFilters(args, query);
         
-        query += ` ORDER BY PledgeBookID DESC
-                   LIMIT ? , ?`;
-        
-        Pledgebook.dataSource.connector.query(query, queryValues, (err, result) => {
-            if(err) {
-                return cb(err, null);
-            } else {
-                return cb(null, result)
-            }
+        query += ` ORDER BY PledgeBookID DESC`;
+        query += ` LIMIT ? , ?`;
+        let promise1 = new Promise((resolve, reject) => {
+            Pledgebook.dataSource.connector.query(query, queryValues, (err, result) => {
+                if(err) {
+                    reject(err);
+                } else {
+                    resolve(result);
+                }
+            });
         });
+
+
+        let countQuery = `SELECT                         
+                            COUNT(*) AS count
+                        FROM
+                            pledgebook
+                                LEFT JOIN
+                            customer ON pledgebook.CustomerId = customer.CustomerId
+                                LEFT JOIN
+                            image ON pledgebook.ImageId = image.Id`;
+        countQuery = Pledgebook.appendFilters(args, countQuery);
+        let promise2 = new Promise((resolve, reject) => {
+            Pledgebook.dataSource.connector.query(countQuery, queryValues, (err, result) => {
+                if(err) {
+                    reject(err);
+                } else {
+                    resolve(result);
+                }
+            });
+        });
+
+        Promise.all([promise1, promise2])
+            .then(
+                (results) => {
+                    let obj = {
+                        results: results[0],
+                        totalCount: results[1][0]['count']
+                    }
+                    return cb(null, obj);
+                },
+                (error) => {
+
+                }
+            )
+            .catch(
+                (exception) => {
+
+                }
+            )
     };
 
     Pledgebook.remoteMethod('getPendingBills', {
@@ -119,7 +149,30 @@ module.exports = function(Pledgebook) {
         },
         http: {path: '/get-pending-bills', verb: 'get'},
         description: 'For fetching pending bills.',
-    })
+    });
+
+    Pledgebook.getQuery = () => {
+
+    }
+
+    Pledgebook.appendFilters = (args, query) => {
+        let filterQueries = [];
+        if(args.filters.billNo !== "")
+            filterQueries.push(`BillNo like '${args.filters.billNo}%'`);
+        if(args.filters.amount !== "")
+            filterQueries.push(`amount >= ${args.filters.amount}`);
+        if(args.filters.cName !== "")
+            filterQueries.push(`Name like '${args.filters.cName}%'`);
+        if(args.filters.gName !== "")
+            filterQueries.push(`GaurdianName like '${args.filters.gName}%'`);
+        if(args.filters.address !== "")
+            filterQueries.push(`Address like '${args.filters.address}%'`);
+        
+        if(filterQueries.length != 0)
+            query += ' where ' + filterQueries.join(' AND ');
+        
+        return query;
+    }
 };
 
 let sql = {
