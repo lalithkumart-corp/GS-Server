@@ -166,7 +166,7 @@ module.exports = function(Pledgebook) {
         if(args.filters.gName !== "")
             filterQueries.push(`GaurdianName like '${args.filters.gName}%'`);
         if(args.filters.address !== "")
-            filterQueries.push(`Address like '${args.filters.address}%'`);
+            filterQueries.push(`Address like '%${args.filters.address}%'`);
         
         if(filterQueries.length != 0)
             query += ' where ' + filterQueries.join(' AND ');
