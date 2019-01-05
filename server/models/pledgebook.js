@@ -156,7 +156,7 @@ module.exports = function(Pledgebook) {
     }
 
     Pledgebook.appendFilters = (args, query) => {
-        let filterQueries = [];
+        let filterQueries = [];        
         if(args.filters.billNo !== "")
             filterQueries.push(`BillNo like '${args.filters.billNo}%'`);
         if(args.filters.amount !== "")
@@ -167,10 +167,10 @@ module.exports = function(Pledgebook) {
             filterQueries.push(`GaurdianName like '${args.filters.gName}%'`);
         if(args.filters.address !== "")
             filterQueries.push(`Address like '%${args.filters.address}%'`);
-        
+        if(args.filters.date)
+            filterQueries.push(`Date between '${args.filters.date.startDate}' and '${args.filters.date.endDate}'`);
         if(filterQueries.length != 0)
             query += ' where ' + filterQueries.join(' AND ');
-        
         return query;
     }
 };
