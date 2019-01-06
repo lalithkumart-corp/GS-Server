@@ -1,9 +1,9 @@
 'use strict';
 
 module.exports = function(CustomerMetaDatalist) {
-    CustomerMetaDatalist.getList = () => {
+    CustomerMetaDatalist.getList = (userId) => {
         return new Promise( (resolve, reject) => {
-            CustomerMetaDatalist.find({}, (err, result) => {
+            CustomerMetaDatalist.find({where: {userId: userId}}, (err, result) => {
                 if(err) {
                     // TODO: Log error
                     return reject(err);

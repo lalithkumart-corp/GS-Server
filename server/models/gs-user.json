@@ -1,0 +1,21 @@
+{
+  "name": "GsUser",
+  "base": "User",
+  "idInjection": true,
+  "mysql": {
+    "schema": "developmentdb",
+    "table": "user"
+  },
+  "options": {
+    "validateUpsert": true
+  },
+  "properties": {
+    "ownerId": {
+      "type": "number"
+    }
+  },
+  "validations": [],
+  "relations": {},
+  "acls": [],
+  "methods": {}
+}

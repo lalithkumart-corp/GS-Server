@@ -11,11 +11,24 @@
   },
   "properties": {
     "customerId": {
-      "type": "string",
+      "type": "number",
       "id": true,
       "length": 22,
       "mysql": {
         "columnName": "CustomerId",
+        "dataType": "int",
+        "dataLength": 22,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "userId": {
+      "type": "number",
+      "id": true,
+      "length": 11,
+      "mysql": {
+        "columnName": "UserId",
         "dataType": "int",
         "dataLength": 22,
         "dataPrecision": null,

@@ -1,9 +1,10 @@
 'use strict';
+let utils = require('../utils/commonUtils');
 
 module.exports = function(Pledgebooksettings) {
-    Pledgebooksettings.updateLastBillDetail = (data) => {
+    Pledgebooksettings.updateLastBillDetail = (data, userId) => {
         return new Promise((resolve, reject) => {
-            Pledgebooksettings.updateAll({SNo: 1}, {billSeries: data.billSeries, lastCreatedBillNo: data.billNo}, (error, result) => {
+            Pledgebooksettings.updateAll({userId: userId}, {billSeries: data.billSeries, lastCreatedBillNo: data.billNo}, (error, result) => {
                 if(error) {
                     reject(error);
                 } else {
@@ -13,33 +14,44 @@ module.exports = function(Pledgebooksettings) {
         });
     }
 
-    Pledgebooksettings.getLastBillSeriesAndNumber = (cb) => {
-        Pledgebooksettings.find({SNo: 1}, (err, result) => {
-            if(err) {
-                cb(err, null);                
-            } else {
-                let data = result[0];
-                let returnVal = {
-                    billSeries: data.billSeries,
-                    billNo: data.lastCreatedBillNo
-                };
-                cb(null, returnVal);
+    Pledgebooksettings.getLastBillSeriesAndNumber =  (accessToken, cb) => {
+        utils.getStoreUserId(accessToken)
+        .then(
+            (userId) => {
+                Pledgebooksettings.findOne({where: {userId: userId}}, (err, result) => {
+                    if(err) {
+                        cb(err, null);
+                    } else {
+                        let data = result;
+                        let returnVal = {
+                            billSeries: data.billSeries,
+                            billNo: data.lastCreatedBillNo
+                        };
+                        cb(null, returnVal);
+                    }
+                });
+            },
+            (error) => {
+                cb(error, null);
             }
-        });
-        // let dataSource = Pledgebooksettings.dataSource;
-        // dataSource.connector.query(sql.LAST_BILL_NO, (err, result) => {
-        //     if(err) {
-        //         cb(err, null);                
-        //     } else {
-        //         let billNo = 0;
-        //         if(result[0] && result[0].BillNo)
-        //             billNo = result[0].BillNo;
-        //         cb(null, billNo);
-        //     }
-        // });
+        )
+        .catch(
+            (exception) => {
+                cb(exception, null);
+            }
+        )
+              
     };
 
     Pledgebooksettings.remoteMethod('getLastBillSeriesAndNumber', {
+        accepts: {
+            arg: 'accessToken', type: 'string', http: (ctx) => {
+                var req = ctx && ctx.req;
+                let access_token = req && req.query.access_token;
+                return access_token;
+            },
+            description: 'Accesstoken passed from client'
+        },
         returns: {
             type: 'string',
             root: true,

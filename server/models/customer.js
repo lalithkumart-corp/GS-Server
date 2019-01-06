@@ -1,48 +1,49 @@
 'use strict';
 let _ = require('lodash');
 let sh = require('shorthash');
-
+let utils = require('../utils/commonUtils');
 module.exports = function(Customer) {
 
-    Customer.getMetaData = async (identifiers, cb) => {
+    Customer.getMetaData = async (accessToken, identifiers, cb) => {
         let metaData = {};
         Customer.metaData = null;
+        let userId = await utils.getStoreUserId(accessToken);
         for(let identifier of identifiers) {
             switch(identifier) {
                 case 'all':
-                    let allData = await Customer._getMetaDataFromDB('all');
+                    let allData = await Customer._getMetaDataFromDB('all', userId);
                     metaData.row = allData;
                     break;
                 case 'customerNames':
-                    let customerNames = await Customer._getMetaDataFromDB('name');
+                    let customerNames = await Customer._getMetaDataFromDB('name', userId);
                     metaData.customerNames = customerNames;
                     break;
                 case 'guardianNames':
-                    let guardianNames = await Customer._getMetaDataFromDB('gaurdianName');
+                    let guardianNames = await Customer._getMetaDataFromDB('gaurdianName', userId);
                     metaData.guardianNames = guardianNames;
                     break;
                 case 'address':
-                    let address = await Customer._getMetaDataFromDB('address');
+                    let address = await Customer._getMetaDataFromDB('address', userId);
                     metaData.address = address;
                     break;
                 case 'place':
-                    let place = await Customer._getMetaDataFromDB('place');
+                    let place = await Customer._getMetaDataFromDB('place', userId);
                     metaData.place = place;
                     break;
                 case 'city':
-                    let city = await Customer._getMetaDataFromDB('city');
+                    let city = await Customer._getMetaDataFromDB('city', userId);
                     metaData.city = city;
                     break;
                 case 'mobile':
-                    let mobile = await Customer._getMetaDataFromDB('mobile');
+                    let mobile = await Customer._getMetaDataFromDB('mobile', userId);
                     metaData.mobile = mobile;
                     break;                
                 case 'pincode':
-                    let pincode = await Customer._getMetaDataFromDB('pincode');
+                    let pincode = await Customer._getMetaDataFromDB('pincode', userId);
                     metaData.pincode = pincode;
                     break;
                 case 'otherDetails':
-                    let otherDetails = await Customer._getMetaDataFromDB('otherDetails');
+                    let otherDetails = await Customer._getMetaDataFromDB('otherDetails', userId);
                     metaData.otherDetails = otherDetails;
                     break;
             }
@@ -51,15 +52,23 @@ module.exports = function(Customer) {
     }
 
     Customer.remoteMethod('getMetaData', {
-        accepts: {
+        accepts: [
+            {
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    var req = ctx && ctx.req;
+                    let access_token = req && req.query.access_token;
+                    return access_token;
+                },
+                description: 'Arguments goes here',
+            },{
             arg: 'params', type: 'array', http: (ctx) => {
                 var req = ctx && ctx.req;
-                var identifiers = req && req.query.identifiers;
-                var identifiers = identifiers ? JSON.parse(identifiers) : undefined;
+                let identifiers = req && req.query.identifiers;
+                identifiers = identifiers ? JSON.parse(identifiers) : undefined;
                 return identifiers;
             },
             description: 'Arguments goes here',
-        },
+        }],
         returns: {
             type: 'object',
             root: true,
@@ -85,8 +94,10 @@ module.exports = function(Customer) {
     }
 
     Customer.saveCustomerData = (params) => {
-        return new Promise( (resolve, reject) => {
+        return new Promise( async (resolve, reject) => {
+            let userId = await utils.getStoreUserId(accessToken);
             let dbInputValues = {
+                userId: userId,
                 hashKey: params.hashKey,
                 name: params.cname,
                 gaurdianName: params.gaurdianName,
@@ -109,11 +120,11 @@ module.exports = function(Customer) {
         });
     }
 
-    Customer._getMetaDataFromDB = (identifier) => {
+    Customer._getMetaDataFromDB = (identifier, userId) => {
         return new Promise( (resolve, reject) => {
             // let dataSource = Customer.dataSource;
             if(identifier == 'otherDetails') {
-                Customer.app.models.customerMetadataList.getList()
+                Customer.app.models.customerMetadataList.getList(userId)
                 .then(
                     (success) => {
                         let bucket = [];
@@ -137,7 +148,7 @@ module.exports = function(Customer) {
                     });
                     return resolve(bucket);
                 }
-                Customer.find({}, (err, result) => {
+                Customer.find({where: {userId: userId}}, (err, result) => {
                     if(err) {
                         return reject(err);
                     } else {

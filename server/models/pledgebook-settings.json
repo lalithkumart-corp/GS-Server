@@ -21,6 +21,17 @@
         "nullable": "Y"
       }
     },
+    "userId": {
+      "type": "number",      
+      "mysql": {
+        "columnName": "user_id",
+        "dataType": "int",
+        "dataLength": null,
+        "dataPrecision": null,
+        "dataScale": 0,
+        "nullable": "Y"
+      }
+    },
     "billSeries": {
       "type": "string",
       "mysql": {
@@ -64,7 +75,7 @@
         "dataScale": 0,
         "nullable": "Y"
       }
-    }    
+    }
   },
   "validations": [],
   "relations": {},
