@@ -5,3 +5,9 @@ CREATE TABLE `gs`.`pledgebook_settings` (
  `bill_start` INT(45) NULL,
  `bill_limit` INT(45) NULL, 
  PRIMARY KEY (`s_no`));
+
+
+ALTER TABLE `gs`.`pledgebook_settings` 
+ADD COLUMN `user_id` INT(11) NOT NULL AFTER `s_no`,
+DROP PRIMARY KEY,
+ADD PRIMARY KEY (`s_no`, `user_id`);
