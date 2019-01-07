@@ -94,8 +94,8 @@ module.exports = function(Customer) {
     }
 
     Customer.saveCustomerData = (params) => {
-        return new Promise( async (resolve, reject) => {
-            let userId = await utils.getStoreUserId(accessToken);
+        return new Promise( (resolve, reject) => {
+            let userId = params._userId;
             let dbInputValues = {
                 userId: userId,
                 hashKey: params.hashKey,

@@ -1,29 +1,37 @@
 'use strict';
 let utils = require('../utils/commonUtils');
+let app = require('../server.js');
 
 module.exports = function(Pledgebook) {
 
-    Pledgebook.addRecordHandler = async (access_token, params, cb) => {
+    Pledgebook.addRecordHandler = async (data, cb) => {
         try {
-            let userId = await utils.getStoreUserId(access_token);
+            let params = data.requestParams;
+            params.accessToken = data.accessToken;
+            if(!params.accessToken)
+                throw 'Access Token is missing';
+            let parsedArg = Pledgebook.parseInputData(params);
+            let userId = await utils.getStoreUserId(params.accessToken);
+            params._userId = userId;
             let pledgebookTableName = await Pledgebook.getPledgebookTableName(userId);
-            params.picture.id = await Pledgebook.app.models.Image.handleImage(params.picture); //Save customer picture in Image table
-            params.customerId = await Pledgebook.app.models.Customer.handleCustomerData(params, userId); //Save customer information in Customer Table
-            await Pledgebook.saveBillDetails(params, pledgebookTableName); //Save ImageId, CustomerID, ORNAMENT and other Bill details in Pledgebook
-            await Pledgebook.app.models.PledgebookSettings.updateLastBillDetail(params, userId);
-            return {STATUS: 'success', STATUS_MSG: 'Successfully inserted new bill'};
+            let validation = await Pledgebook.doValidation(userId, parsedArg, pledgebookTableName);
+            if(validation.status) {                                
+                parsedArg.picture.id = await Pledgebook.app.models.Image.handleImage(parsedArg.picture); //Save customer picture in Image table
+                parsedArg.customerId = await Pledgebook.app.models.Customer.handleCustomerData(parsedArg, userId); //Save customer information in Customer Table
+                await Pledgebook.saveBillDetails(parsedArg, pledgebookTableName); //Save ImageId, CustomerID, ORNAMENT and other Bill details in Pledgebook
+                await Pledgebook.app.models.PledgebookSettings.updateLastBillDetail(parsedArg, userId);
+                return {STATUS: 'success', STATUS_MSG: 'Successfully inserted new bill'};
+            } else {
+                throw validation.errors;
+            }
         } catch(e) {
             return {STATUS: 'error', ERROR: e};
         }        
     }
 
     Pledgebook.remoteMethod('addRecordHandler', {
-        accepts: [
-            {
-                arg: 'access_token',
-                type: 'string'
-            },{
-                arg: 'params',
+        accepts: {
+                arg: 'data',
                 type: 'object',
                 default: {
                     
@@ -31,7 +39,7 @@ module.exports = function(Pledgebook) {
                 http: {
                     source: 'body',
                 },
-            }],
+            },
         returns: {
             type: 'object',
             root: true,
@@ -45,32 +53,17 @@ module.exports = function(Pledgebook) {
 
     Pledgebook.saveBillDetails = (params, pledgebookTableName) => {
         return new Promise( (resolve, reject) => {
-            let billNo = params.billNo;
-            if(params.billSeries !== "")
-                billNo = params.billSeries + "." + billNo;
-            // let dbInputValues = {
-            //     UniqueIdentifier: (+ new Date()),
-            //     BillNo: billNo,
-            //     Amount: params.amount,
-            //     Date: params.date,
-            //     CustomerId: params.customerId,
-            //     Orn: params.orn,
-            //     ImageId: params.picture.id,
-            //     Remarks: params.billRemarks,
-            //     CreatedDate: new Date().toISOString().replace('T', ' ').slice(0,23),
-            //     ModifiedDate: new Date().toISOString().replace('T', ' ').slice(0,23),
-            // };
             let dbInputValues = [
-                (+ new Date()),
-                billNo,
+                params.uniqueIdentifier,
+                params.billNoWithSeries,
                 params.amount,
                 params.date,
-                params.customerId,                
+                params.customerId,
                 params.picture.id,
-                JSON.stringify(params.orn),
+                params.orn,
                 params.billRemarks,
-                new Date().toISOString().replace('T', ' ').slice(0,23),
-                new Date().toISOString().replace('T', ' ').slice(0,23),
+                params.createdDate,
+                params.modifiedDate,
             ];
             let query = Pledgebook.getQuery('insert', dbInputValues, pledgebookTableName);
             Pledgebook.dataSource.connector.query(query, dbInputValues, (err, result) => {
@@ -179,8 +172,8 @@ module.exports = function(Pledgebook) {
         });
     }    
 
-    Pledgebook.getPledgebookTableName = async (userId) => {        
-        let tableName = 'Pledgebook_' + userId;
+    Pledgebook.getPledgebookTableName = async (userId) => {
+        let tableName = app.get('pledgebookTableName')+ '_' + userId;
         return tableName;
     }
 
@@ -230,6 +223,13 @@ module.exports = function(Pledgebook) {
                             image ON ${pledgebookTableName}.ImageId = image.Id`;
                 query = Pledgebook.appendFilters(params, query);
                 break;
+            case 'billAlreadyExist':
+                query = `SELECT 
+                            *
+                        FROM
+                            ${pledgebookTableName}
+                        WHERE
+                            BillNo = ?;`
         }
         return query;
     }
@@ -252,17 +252,60 @@ module.exports = function(Pledgebook) {
             query += ' where ' + filterQueries.join(' AND ');
         return query;
     }
-};
 
-// let sql = {
-//     GetPendingBills: `SELECT 
-//                     *, pledgebook.Id AS PledgeBookID, image.ID AS ImageTableID
-//                 FROM
-//                     pledgebook
-//                         LEFT JOIN
-//                     customer ON pledgebook.CustomerId = customer.CustomerId
-//                         LEFT JOIN
-//                     image ON pledgebook.ImageId = image.Id
-//                 ORDER BY PledgeBookID DESC
-//                 LIMIT ? , ?`
-// }
+    Pledgebook.parseInputData = (params = {}) => {
+        let parsedArg = JSON.parse(JSON.stringify(params));
+        let billNo = params.billNo;
+        if(params.billSeries !== "")
+            billNo = params.billSeries + "." + billNo;
+        parsedArg.accessToken = params.accessToken;
+        parsedArg.billNoWithSeries = billNo;
+        parsedArg.uniqueIdentifier= (+ new Date());
+        parsedArg.orn = JSON.stringify(params.orn);
+        parsedArg.createdDate = new Date().toISOString().replace('T', ' ').slice(0,23);
+        parsedArg.modifiedDate= new Date().toISOString().replace('T', ' ').slice(0,23);
+        return parsedArg;
+    }
+
+    Pledgebook.doValidation = (userId, params, pledgebookTableName) => {
+        return new Promise( async (resolve, reject) => {
+            let returnVal = {
+                status: 1,
+                errors: []
+            }
+            const insertError = (error) => {
+                returnVal.status = 0;
+                returnVal.errors.push(error);
+            }
+            try{
+                if(params.billNo) {
+                    let isAlreadyExist = await Pledgebook.isBillNoAlreadyExist(userId, params.billNoWithSeries, pledgebookTableName);
+                    if(isAlreadyExist)
+                        insertError('Bill Number already Exists');
+                } else {
+                    insertError('Bill Number is missing');
+                }                
+            } catch(e) {
+                insertError(e);
+            } finally {
+                resolve(returnVal);
+            }
+        });        
+    }
+
+    Pledgebook.isBillNoAlreadyExist = (userId, billNoWithSeries, pledgebookTableName) => {
+        return new Promise( (resolve, reject) => {
+            let query = Pledgebook.getQuery('billAlreadyExist', {}, pledgebookTableName);
+            Pledgebook.dataSource.connector.query(query, [billNoWithSeries], (err, result) => {
+                if(err) {
+                    reject(err);
+                } else {
+                    if(result.length > 0)
+                        resolve(true);
+                    else
+                        resolve(false);
+                }
+            });
+        });
+    }
+};
