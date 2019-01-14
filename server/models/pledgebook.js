@@ -10,16 +10,15 @@ module.exports = function(Pledgebook) {
             params.accessToken = data.accessToken;
             if(!params.accessToken)
                 throw 'Access Token is missing';
-            let parsedArg = Pledgebook.parseInputData(params);
-            let userId = await utils.getStoreUserId(params.accessToken);
-            params._userId = userId;
-            let pledgebookTableName = await Pledgebook.getPledgebookTableName(userId);
-            let validation = await Pledgebook.doValidation(userId, parsedArg, pledgebookTableName);
-            if(validation.status) {                                
+            let parsedArg = Pledgebook.parseInputData(params);            
+            params._userId = await utils.getStoreUserId(params.accessToken);
+            let pledgebookTableName = await Pledgebook.getPledgebookTableName(params._userId);
+            let validation = await Pledgebook.doValidation(params._userId, parsedArg, pledgebookTableName);
+            if(validation.status) {
                 parsedArg.picture.id = await Pledgebook.app.models.Image.handleImage(parsedArg.picture); //Save customer picture in Image table
-                parsedArg.customerId = await Pledgebook.app.models.Customer.handleCustomerData(parsedArg, userId); //Save customer information in Customer Table
+                parsedArg.customerId = await Pledgebook.app.models.Customer.handleCustomerData(parsedArg, params._userId); //Save customer information in Customer Table
                 await Pledgebook.saveBillDetails(parsedArg, pledgebookTableName); //Save ImageId, CustomerID, ORNAMENT and other Bill details in Pledgebook
-                await Pledgebook.app.models.PledgebookSettings.updateLastBillDetail(parsedArg, userId);
+                await Pledgebook.app.models.PledgebookSettings.updateLastBillDetail(parsedArg, params._userId);
                 return {STATUS: 'success', STATUS_MSG: 'Successfully inserted new bill'};
             } else {
                 throw validation.errors;
@@ -62,6 +61,8 @@ module.exports = function(Pledgebook) {
                 params.picture.id,
                 params.orn,
                 params.billRemarks,
+                1,
+                {},
                 params.createdDate,
                 params.modifiedDate,
             ];
@@ -121,6 +122,42 @@ module.exports = function(Pledgebook) {
         http: {path: '/get-pending-bills', verb: 'get'},
         description: 'For fetching pending bills.',
     });
+
+    Pledgebook.redeemBill = (data) => {
+        try {
+            let params = data.requestParams;
+            params.accessToken = data.accessToken;
+            if(!params.accessToken)
+                throw 'Access Token is missing';
+            params._userId = await utils.getStoreUserId(params.accessToken);
+            let pledgebookTableName = await Pledgebook.getPledgebookTableName(params._userId);
+            return {STATUS: 'success', RESPONSE: {}, STATUS_MSG: ''};
+        } catch(e) {
+            return {STATUS: 'error', ERROR: e};
+        }
+    }
+
+    Pledgebook.remoteMethod('redeemBill', {
+        accepts: {
+            arg: 'data',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/redeem-pending-bills', verb: 'post'},
+        description: 'Updating bill in pledgebook'
+    })
 
     Pledgebook.getPendingBillsHandler = (accessToken, params) => {
         return new Promise( async (resolve, reject) => {
@@ -187,9 +224,11 @@ module.exports = function(Pledgebook) {
                                 Amount, Date, 
                                 CustomerId, ImageId, 
                                 Orn, Remarks, 
+                                Status, History,
                                 CreatedDate, ModifiedDate) 
                             VALUES
                                 (?, ?,
+                                ?, ?, 
                                 ?, ?, 
                                 ?, ?, 
                                 ?, ?, 
