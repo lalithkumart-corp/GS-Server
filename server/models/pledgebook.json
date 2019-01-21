@@ -111,7 +111,29 @@
         "dataScale": null,
         "nullable": "Y"
       }
-    },    
+    },
+    "status": {
+      "type": "number",
+      "required": true,
+      "mysql": {
+        "columnName": "Status",
+        "dataType": "int",
+        "dataLength": 11,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "history": {
+      "type": "any",
+      "mysql": {
+        "columnName": "History",
+        "dataType": "text",
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
     "CreatedDate": {
       "type": "date",
       "mysql": {
