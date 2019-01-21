@@ -4,31 +4,7 @@ let app = require('../server.js');
 
 module.exports = function(Pledgebook) {
 
-    Pledgebook.addRecordHandler = async (data, cb) => {
-        try {
-            let params = data.requestParams;
-            params.accessToken = data.accessToken;
-            if(!params.accessToken)
-                throw 'Access Token is missing';
-            let parsedArg = Pledgebook.parseInputData(params);            
-            params._userId = await utils.getStoreUserId(params.accessToken);
-            let pledgebookTableName = await Pledgebook.getPledgebookTableName(params._userId);
-            let validation = await Pledgebook.doValidation(params._userId, parsedArg, pledgebookTableName);
-            if(validation.status) {
-                parsedArg.picture.id = await Pledgebook.app.models.Image.handleImage(parsedArg.picture); //Save customer picture in Image table
-                parsedArg.customerId = await Pledgebook.app.models.Customer.handleCustomerData(parsedArg, params._userId); //Save customer information in Customer Table
-                await Pledgebook.saveBillDetails(parsedArg, pledgebookTableName); //Save ImageId, CustomerID, ORNAMENT and other Bill details in Pledgebook
-                await Pledgebook.app.models.PledgebookSettings.updateLastBillDetail(parsedArg, params._userId);
-                return {STATUS: 'success', STATUS_MSG: 'Successfully inserted new bill'};
-            } else {
-                throw validation.errors;
-            }
-        } catch(e) {
-            return {STATUS: 'error', ERROR: e};
-        }        
-    }
-
-    Pledgebook.remoteMethod('addRecordHandler', {
+    Pledgebook.remoteMethod('insertNewBillAPIHandler', {
         accepts: {
                 arg: 'data',
                 type: 'object',
@@ -50,35 +26,8 @@ module.exports = function(Pledgebook) {
         description: 'Adding a new record in pledgebook'
     });
 
-    Pledgebook.saveBillDetails = (params, pledgebookTableName) => {
-        return new Promise( (resolve, reject) => {
-            let dbInputValues = [
-                params.uniqueIdentifier,
-                params.billNoWithSeries,
-                params.amount,
-                params.date,
-                params.customerId,
-                params.picture.id,
-                params.orn,
-                params.billRemarks,
-                1,
-                {},
-                params.createdDate,
-                params.modifiedDate,
-            ];
-            let query = Pledgebook.getQuery('insert', dbInputValues, pledgebookTableName);
-            Pledgebook.dataSource.connector.query(query, dbInputValues, (err, result) => {
-                if(err) {
-                    reject ( err );
-                } else {
-                    resolve( result );
-                }
-            });
-        });        
-    }
-
-    Pledgebook.getPendingBills = (accessToken, params, cb) => {
-        Pledgebook.getPendingBillsHandler(accessToken, params)
+    Pledgebook.getPendingBillsAPIHandler = (accessToken, params, cb) => {
+        Pledgebook.getPendingBills(accessToken, params)
             .then(
                 (success) => {
                     cb(null, success);
@@ -94,7 +43,7 @@ module.exports = function(Pledgebook) {
             )        
     };
 
-    Pledgebook.remoteMethod('getPendingBills', {
+    Pledgebook.remoteMethod('getPendingBillsAPIHandler', {
         accepts: [
             {
                 arg: 'accessToken', type: 'string', http: (ctx) => {
@@ -123,21 +72,7 @@ module.exports = function(Pledgebook) {
         description: 'For fetching pending bills.',
     });
 
-    Pledgebook.redeemBill = (data) => {
-        try {
-            let params = data.requestParams;
-            params.accessToken = data.accessToken;
-            if(!params.accessToken)
-                throw 'Access Token is missing';
-            params._userId = await utils.getStoreUserId(params.accessToken);
-            let pledgebookTableName = await Pledgebook.getPledgebookTableName(params._userId);
-            return {STATUS: 'success', RESPONSE: {}, STATUS_MSG: ''};
-        } catch(e) {
-            return {STATUS: 'error', ERROR: e};
-        }
-    }
-
-    Pledgebook.remoteMethod('redeemBill', {
+    Pledgebook.remoteMethod('redeemPendingBillAPIHandler', {
         accepts: {
             arg: 'data',
             type: 'object',
@@ -157,9 +92,60 @@ module.exports = function(Pledgebook) {
         },
         http: {path: '/redeem-pending-bills', verb: 'post'},
         description: 'Updating bill in pledgebook'
-    })
+    });
 
-    Pledgebook.getPendingBillsHandler = (accessToken, params) => {
+    Pledgebook.insertNewBillAPIHandler = async (data, cb) => {
+        try {
+            let params = data.requestParams;
+            params.accessToken = data.accessToken;
+            if(!params.accessToken)
+                throw 'Access Token is missing';
+            let parsedArg = Pledgebook.parseInputData(params);            
+            params._userId = await utils.getStoreUserId(params.accessToken);
+            let pledgebookTableName = await Pledgebook.getPledgebookTableName(params._userId);
+            let validation = await Pledgebook.doValidation(params._userId, parsedArg, pledgebookTableName);
+            if(validation.status) {
+                parsedArg.picture.id = await Pledgebook.app.models.Image.handleImage(parsedArg.picture); //Save customer picture in Image table
+                parsedArg.customerId = await Pledgebook.app.models.Customer.handleCustomerData(parsedArg, params._userId); //Save customer information in Customer Table
+                await Pledgebook.saveBillDetails(parsedArg, pledgebookTableName); //Save ImageId, CustomerID, ORNAMENT and other Bill details in Pledgebook
+                await Pledgebook.app.models.PledgebookSettings.updateLastBillDetail(parsedArg, params._userId);
+                return {STATUS: 'success', STATUS_MSG: 'Successfully inserted new bill'};
+            } else {
+                throw validation.errors;
+            }
+        } catch(e) {
+            return {STATUS: 'error', ERROR: e};
+        }        
+    }    
+
+    Pledgebook.saveBillDetails = (params, pledgebookTableName) => {
+        return new Promise( (resolve, reject) => {
+            let dbInputValues = [
+                params.uniqueIdentifier,
+                params.billNoWithSeries,
+                params.amount,
+                params.date,
+                params.customerId,
+                params.picture.id,
+                params.orn,
+                params.billRemarks,
+                1,
+                {},
+                params.createdDate,
+                params.modifiedDate,
+            ];
+            let query = Pledgebook.getQuery('insert', dbInputValues, pledgebookTableName);
+            Pledgebook.dataSource.connector.query(query, dbInputValues, (err, result) => {
+                if(err) {
+                    reject ( err );
+                } else {
+                    resolve( result );
+                }
+            });
+        });        
+    }
+
+    Pledgebook.getPendingBills = (accessToken, params) => {
         return new Promise( async (resolve, reject) => {
             let queryValues = [params.offsetStart, params.offsetEnd];
             let userId = await utils.getStoreUserId(accessToken);
@@ -208,6 +194,37 @@ module.exports = function(Pledgebook) {
                 )
         });
     }    
+
+    Pledgebook.redeemPendingBillAPIHandler = async (data) => {
+        try {
+            let params = data.requestParams;
+            params.accessToken = data.accessToken;
+            if(!params.accessToken)
+                throw 'Access Token is missing';
+            params._userId = await utils.getStoreUserId(params.accessToken);
+            params._pledgebookTableName = await Pledgebook.getPledgebookTableName(params._userId);
+            await Pledgebook.redeemUpdateDB(params);
+            return {STATUS: 'success', RESPONSE: {}, STATUS_MSG: ''};
+        } catch(e) {
+            return {STATUS: 'error', ERROR: e};
+        }
+    }    
+
+    Pledgebook.redeemUpdateDB = (params) => {
+        return new Promise( (resolve, reject) => {
+            let query = Pledgebook.getQuery('redeem', params, params._pledgebookTableName);
+            Pledgebook.dataSource.connector.query(query, (err, result) => {
+                if (err) {
+                    reject(err);
+                } else {                    
+                    if(result.affectedRows > 0)
+                        resolve(true);
+                    else
+                        reject({msg: 'Not Updated'});
+                }
+            });
+        });        
+    }
 
     Pledgebook.getPledgebookTableName = async (userId) => {
         let tableName = app.get('pledgebookTableName')+ '_' + userId;
@@ -269,6 +286,25 @@ module.exports = function(Pledgebook) {
                             ${pledgebookTableName}
                         WHERE
                             BillNo = ?;`
+            case 'redeem':
+            /* UPDATE gs.pledgebook_4
+                        SET Status = CASE BillNo 
+                                            WHEN 'K.1' THEN 0 
+                                            WHEN 'K.2' THEN 0 
+                                            ELSE Status
+                                            END
+                        WHERE BillNo IN('K.1', 'K.2'); */
+                if(params.ids.length == 1) { //UPDATE `gs`.`pledgebook_4` SET `Status`='0' WHERE `Id`='8';
+                    query = `UPDATE ${pledgebookTableName} SET Status= 0 WHERE Id = ${params.ids[0]}`; 
+                } else {
+                    query = `UPDATE ${pledgebookTableName} SET STATUS = CASE Id`;
+                    for(let i=0; i<params.ids.length; i++) {
+                        query += ` WHEN '${params.ids[i]}' THEN 0`;
+                    }
+                    query += ` ELSE Status 
+                            END
+                            WHERE Id IN (${params.ids.join(', ')})`;
+                }                                 
         }
         return query;
     }
