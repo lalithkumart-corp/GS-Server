@@ -1,6 +1,7 @@
 'use strict';
 let utils = require('../utils/commonUtils');
 let app = require('../server.js');
+let _ = require('lodash');
 
 module.exports = function(Pledgebook) {
 
@@ -92,6 +93,56 @@ module.exports = function(Pledgebook) {
         },
         http: {path: '/redeem-pending-bills', verb: 'post'},
         description: 'Updating bill in pledgebook'
+    });
+
+    Pledgebook.remoteMethod('getPendingBillNosAPIHandler', {
+        accepts: [
+            {
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let accessToken = req && req.query.access_token;
+                    return accessToken;
+                },
+                description: 'Arguments goes here',
+            }],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            },
+        },
+        http: {path: '/get-pending-bill-nos', verb: 'get'},
+        description: 'For fetching pending bills Numbers.',
+    });
+
+    Pledgebook.remoteMethod('getBillDetailsAPIHandler', {
+        accepts: [
+            {
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let accessToken = req && req.query.access_token;
+                    return accessToken;
+                },
+                description: 'Arguments goes here',
+            },
+            {
+                arg: 'billNoArray', type: 'array', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let billNoArray = req && req.query.bill_nos;
+                    return JSON.parse(billNoArray);
+                },
+                description: 'For fetching the bill data based on bill Number'
+            }],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            },
+        },
+        http: {path: '/get-bill-details', verb: 'get'},
+        description: 'For fetching bill data.',
     });
 
     Pledgebook.insertNewBillAPIHandler = async (data, cb) => {
@@ -286,6 +337,7 @@ module.exports = function(Pledgebook) {
                             ${pledgebookTableName}
                         WHERE
                             BillNo = ?;`
+                break;
             case 'redeem':
             /* UPDATE gs.pledgebook_4
                         SET Status = CASE BillNo 
@@ -304,13 +356,25 @@ module.exports = function(Pledgebook) {
                     query += ` ELSE Status 
                             END
                             WHERE Id IN (${params.ids.join(', ')})`;
-                }                                 
+                }
+                break;
+            case 'pendingBillNumbers':
+                query = `SELECT BillNo from ${pledgebookTableName}`;
+                break;
+            case 'billDetails':
+                query = `SELECT * from ${pledgebookTableName} WHERE `;
+                let filterPart = [];
+                for(let i=0; i<params.length; i++) {
+                    filterPart.push(`BillNo="${params[i]}"`);
+                }
+                query += filterPart.join(' OR ');
+                break;
         }
         return query;
     }
 
     Pledgebook.appendFilters = (params, query) => {
-        let filterQueries = [];        
+        let filterQueries = [];
         if(params.filters.billNo !== "")
             filterQueries.push(`BillNo like '${params.filters.billNo}%'`);
         if(params.filters.amount !== "")
@@ -381,6 +445,62 @@ module.exports = function(Pledgebook) {
                         resolve(false);
                 }
             });
+        });
+    }
+
+    Pledgebook.getPendingBillNosAPIHandler = async (accessToken, cb) => {
+        try {            
+            if(!accessToken)
+                throw 'Access Token is missing';
+            let list = await Pledgebook._getPendingBillNumbers(accessToken);
+            return {STATUS: 'SUCCESS', list};
+        } catch(e) {
+            return { STATUS: 'ERROR', MESSAGE: e}
+        }
+    }
+    Pledgebook._getPendingBillNumbers = (accessToken) => {
+        return new Promise( async (resolve, reject) => {
+            let _userId = await utils.getStoreUserId(accessToken);
+            let pledgebookTableName = await Pledgebook.getPledgebookTableName(_userId);
+            let query = Pledgebook.getQuery('pendingBillNumbers', {}, pledgebookTableName);
+            Pledgebook.dataSource.connector.query(query, (err, result) => {
+                if(err) {
+                    reject(err);
+                } else {
+                    let theBuffer = [];
+                    _.each(result, (anResultItem, index) => {
+                        theBuffer.push(anResultItem.BillNo);
+                    });
+                    resolve(theBuffer);
+                }                    
+            });
+        });
+    }
+
+    Pledgebook.getBillDetailsAPIHandler = async (accessToken, billNoArray, cb) => {
+        try {            
+            if(!accessToken)
+                throw 'Access Token is missing';
+            let billDetails = await Pledgebook._getBillDetails(accessToken, billNoArray);
+            return {STATUS: 'SUCCESS', billDetails};
+        } catch(e) {
+            return { STATUS: 'ERROR', MESSAGE: e}
+        }
+    }
+
+    Pledgebook._getBillDetails = (accessToken, billNoArray) => {
+        return new Promise ( async (resolve, reject) => {
+            let _userId = await utils.getStoreUserId(accessToken);
+            let pledgebookTableName = await Pledgebook.getPledgebookTableName(_userId);
+            let query = Pledgebook.getQuery('billDetails', billNoArray, pledgebookTableName);
+            Pledgebook.dataSource.connector.query(query, (err, result) => {
+                if(err) {
+                    reject(err);
+                } else {
+                    resolve(result);
+                }
+            });
+            // where BillNo='K.2' OR BillNo = 'K.5';
         });
     }
 };
