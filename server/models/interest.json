@@ -1,0 +1,90 @@
+{
+  "name": "Interest",
+  "base": "PersistedModel",
+  "idInjection": true,
+  "options": {
+    "validateUpsert": true    
+  },
+  "mysql": {
+    "schema": "developmentdb",
+    "table": "interest_rates"
+  },
+  "properties": {
+    "Id": {
+      "type": "number",
+      "mysql": {
+        "columnName": "id",
+        "dataType": "int",
+        "dataLength": null,
+        "dataPrecision": 10,
+        "dataScale": 0,
+        "nullable": "Y"
+      }
+    },
+    "userId" : {
+      "type": "number",
+      "required": true,      
+      "mysql": {
+        "columnName": "user_id",
+        "dataType": "int",
+        "dataLength": 11,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "N"
+      }
+    },
+    "type": {
+      "type": "string",
+      "default": "gold",
+      "mysql": {
+        "columnName": "type",
+        "dataType": "varchar",
+        "dataLength": 45,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "rangeFrom": {
+      "type": "number",
+      "required": true,
+      "default": 1,
+      "mysql": {
+        "columnName": "range_from",
+        "dataType": "int",
+        "dataLength": 50,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "N"
+      }
+    },
+    "rangeTo": {
+      "type": "number",
+      "default": 1000000,
+      "mysql": {
+        "columnName": "range_to",
+        "dataType": "int",
+        "dataLength": 50,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "rateOfInterest": {
+      "type": "number",
+      "required": true,
+      "mysql": {
+        "columnName": "rate_of_interest",
+        "dataType": "int",
+        "dataLength": 50,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "N"
+      }
+    }
+  },
+  "validations": [],
+  "relations": {},
+  "acls": [],
+  "methods": {}
+}

@@ -248,37 +248,71 @@ module.exports = function(Pledgebook) {
 
     Pledgebook.redeemPendingBillAPIHandler = async (data) => {
         try {
-            let params = data.requestParams;
+            let params = {
+                data: data.requestParams
+            };
             params.accessToken = data.accessToken;
             if(!params.accessToken)
                 throw 'Access Token is missing';
             params._userId = await utils.getStoreUserId(params.accessToken);
             params._pledgebookTableName = await Pledgebook.getPledgebookTableName(params._userId);
-            await Pledgebook.redeemUpdateDB(params);
+            params._pledgebookClosedBillTableName = await Pledgebook.getPledgebookClosedTableName(params._userId);
+            await Pledgebook.updatePledgebookBillStatus(params);
             return {STATUS: 'success', RESPONSE: {}, STATUS_MSG: ''};
         } catch(e) {
-            return {STATUS: 'error', ERROR: e};
+            return {STATUS: 'error', ERROR: e, MESSAGE: (e?e.message:'')};
         }
     }    
 
-    Pledgebook.redeemUpdateDB = (params) => {
+    Pledgebook.updatePledgebookBillStatus = (params) => {
         return new Promise( (resolve, reject) => {
-            let query = Pledgebook.getQuery('redeem', params, params._pledgebookTableName);
-            Pledgebook.dataSource.connector.query(query, (err, result) => {
+            let query = Pledgebook.getQuery('redeem-status-update', params, params._pledgebookTableName);
+            Pledgebook.dataSource.connector.query(query, async (err, result) => {
                 if (err) {
-                    reject(err);
-                } else {                    
-                    if(result.affectedRows > 0)
-                        resolve(true);
-                    else
-                        reject({msg: 'Not Updated'});
+                    return reject(err);
+                } else {
+                    if(result.affectedRows > 0) {
+                        await Pledgebook._insertRowInClosedBillList(params);
+                        return resolve(true);
+                    } else {
+                        return reject({msg: 'Not Updated'});
+                    }
                 }
             });
         });        
     }
 
+    Pledgebook._insertRowInClosedBillList = (params) => {
+        return new Promise( (resolve, reject) => {
+            /*let dbInputValues = [];
+            for(let i=0; i<params.data.length; i++) {
+                let aRowObj = params.data[i];
+                dbInputValues.push(aRowObj.pledgeBookUID, aRowObj.billNo, aRowObj.pledgedDate, aRowObj.closedDate,
+                    aRowObj.principalAmt, aRowObj.noOfMonth, aRowObj.roi, aRowObj.interestPerMonth,
+                    aRowObj.interestValue, aRowObj.estimatedAmount, aRowObj.discountValue, aRowObj.paidAmount,
+                    aRowObj.handedTo);
+            } */           
+            let query = Pledgebook.getQuery('redeem-insert', params, params._pledgebookClosedBillTableName);            
+            Pledgebook.dataSource.connector.query(query, (err, result) => {
+                if(err) {
+                    return reject(err);                    
+                } else {
+                    if(result.affectedRows > 0)
+                        return resolve(true);
+                    else
+                        return reject({msg: 'Not insertedd record in Bill closed list table'});
+                }
+            });
+        });
+    }
+
     Pledgebook.getPledgebookTableName = async (userId) => {
         let tableName = app.get('pledgebookTableName')+ '_' + userId;
+        return tableName;
+    }
+
+    Pledgebook.getPledgebookClosedTableName = async (userId) => {
+        let tableName = app.get('pledgebookClosedBillListTableName')+ '_' + userId;
         return tableName;
     }
 
@@ -338,7 +372,7 @@ module.exports = function(Pledgebook) {
                         WHERE
                             BillNo = ?;`
                 break;
-            case 'redeem':
+            case 'redeem-status-update':
             /* UPDATE gs.pledgebook_4
                         SET Status = CASE BillNo 
                                             WHEN 'K.1' THEN 0 
@@ -346,9 +380,16 @@ module.exports = function(Pledgebook) {
                                             ELSE Status
                                             END
                         WHERE BillNo IN('K.1', 'K.2'); */
-                if(params.ids.length == 1) { //UPDATE `gs`.`pledgebook_4` SET `Status`='0' WHERE `Id`='8';
-                    query = `UPDATE ${pledgebookTableName} SET Status= 0 WHERE Id = ${params.ids[0]}`; 
+                if(params.data.length == 1) {
+                    query = `UPDATE ${pledgebookTableName} SET Status= 0 WHERE Id = ${params.data[0].pledgeBookID}`; 
                 } else {
+                    query = `SET SQL_SAFE_UPDATES = 0;`;
+                    for(let i=0; i<params.data.length; i++) {
+                        query += `UPDATE ${pledgebookTableName} SET STATUS = 0 WHERE Id = '${params.data[i].pledgeBookID}'`;
+                    }
+                    query += `SET SQL_SAFE_UPDATES = 1;`;
+
+                    /*
                     query = `UPDATE ${pledgebookTableName} SET STATUS = CASE Id`;
                     for(let i=0; i<params.ids.length; i++) {
                         query += ` WHEN '${params.ids[i]}' THEN 0`;
@@ -356,13 +397,44 @@ module.exports = function(Pledgebook) {
                     query += ` ELSE Status 
                             END
                             WHERE Id IN (${params.ids.join(', ')})`;
+                    */
                 }
                 break;
-            case 'pendingBillNumbers':
-                query = `SELECT BillNo from ${pledgebookTableName}`;
+            case 'redeem-insert':
+                query = ''; //`SET SQL_SAFE_UPDATES = 0;`;
+                for(let i=0; i<params.data.length; i++) {
+                    let aRowObj = params.data[i];
+                    query += `INSERT INTO 
+                                ${pledgebookTableName} 
+                                    (pledgebook_uid, bill_no, 
+                                    pledged_date, closed_date, 
+                                    principal_amt, no_of_month, 
+                                    rate_of_interest, int_rupee_per_month, 
+                                    interest_amt, actual_estimated_amt, 
+                                    discount_amt, paid_amt, 
+                                    handed_over_to_person) 
+                                VALUES ('${aRowObj.pledgeBookUID}', '${aRowObj.billNo}', '${aRowObj.pledgedDate}', '${aRowObj.closedDate}',
+                                    '${aRowObj.principalAmt}', '${aRowObj.noOfMonth}', '${aRowObj.roi}', '${aRowObj.interestPerMonth}',
+                                    '${aRowObj.interestValue}', '${aRowObj.estimatedAmount}', '${aRowObj.discountValue}', '${aRowObj.paidAmount}',
+                                    '${aRowObj.handedTo}');`;
+                }
+                //query += `SET SQL_SAFE_UPDATES = 1;`;
                 break;
-            case 'billDetails':
-                query = `SELECT * from ${pledgebookTableName} WHERE `;
+            case 'pendingBillNumbers':
+                query = `SELECT BillNo from ${pledgebookTableName} where Status=1`;
+                break;
+            case 'billDetails':                
+                query = `SELECT                         
+                            *,
+                            ${pledgebookTableName}.Id AS PledgeBookID,
+                            image.ID AS ImageTableID
+                        FROM
+                            ${pledgebookTableName}
+                                LEFT JOIN
+                            customer ON ${pledgebookTableName}.CustomerId = customer.CustomerId
+                                LEFT JOIN
+                            image ON ${pledgebookTableName}.ImageId = image.Id
+                        WHERE `;
                 let filterPart = [];
                 for(let i=0; i<params.length; i++) {
                     filterPart.push(`BillNo="${params[i]}"`);
@@ -418,7 +490,7 @@ module.exports = function(Pledgebook) {
             }
             try{
                 if(params.billNo) {
-                    let isAlreadyExist = await Pledgebook.isBillNoAlreadyExist(userId, params.billNoWithSeries, pledgebookTableName);
+                    let isAlreadyExist = await Pledgebook._isBillNoAlreadyExist(userId, params.billNoWithSeries, pledgebookTableName);
                     if(isAlreadyExist)
                         insertError('Bill Number already Exists');
                 } else {
@@ -432,7 +504,7 @@ module.exports = function(Pledgebook) {
         });        
     }
 
-    Pledgebook.isBillNoAlreadyExist = (userId, billNoWithSeries, pledgebookTableName) => {
+    Pledgebook._isBillNoAlreadyExist = (userId, billNoWithSeries, pledgebookTableName) => {
         return new Promise( (resolve, reject) => {
             let query = Pledgebook.getQuery('billAlreadyExist', {}, pledgebookTableName);
             Pledgebook.dataSource.connector.query(query, [billNoWithSeries], (err, result) => {
@@ -499,8 +571,7 @@ module.exports = function(Pledgebook) {
                 } else {
                     resolve(result);
                 }
-            });
-            // where BillNo='K.2' OR BillNo = 'K.5';
+            });            
         });
-    }
+    }    
 };

@@ -19,5 +19,6 @@
     },
     "cors": false
   },
-  "pledgebookTableName": "pledgebook"
+  "pledgebookTableName": "pledgebook",
+  "pledgebookClosedBillListTableName": "pledgebook_closed_bills"
 }
