@@ -61,6 +61,17 @@
         "nullable": "Y"
       }
     },
+    "imageId": {
+      "type": "number",
+      "mysql": {
+        "columnName": "ImageId",
+        "dataType": "int",
+        "dataLength": 11,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
     "gaurdianName": {
       "type": "string",
       "length": 255,
@@ -145,7 +156,13 @@
     }
   },
   "validations": [],
-  "relations": {},
+  "relations": {
+    "image": {
+      "type": "belongsTo",
+      "model": "Image",
+      "foreignKey": "ImageId"
+    }
+  },  
   "acls": [],
   "methods": {}
 }

@@ -79,18 +79,7 @@
         "dataScale": null,
         "nullable": "Y"
       }
-    },
-    "ImageId": {
-      "type": "number",
-      "mysql": {
-        "columnName": "ImageId",
-        "dataType": "int",
-        "dataLength": 11,
-        "dataPrecision": null,
-        "dataScale": null,
-        "nullable": "Y"
-      }
-    },
+    },    
     "Orn": {
       "type": "object",
       "mysql": {

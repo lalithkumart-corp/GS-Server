@@ -2,8 +2,9 @@
 let utils = require('../utils/commonUtils');
 
 module.exports = function(Pledgebooksettings) {
-    Pledgebooksettings.updateLastBillDetail = (data, userId) => {
+    Pledgebooksettings.updateLastBillDetail = (data) => {
         return new Promise((resolve, reject) => {
+            let userId = data._userId;
             Pledgebooksettings.updateAll({userId: userId}, {billSeries: data.billSeries, lastCreatedBillNo: data.billNo}, (error, result) => {
                 if(error) {
                     reject(error);

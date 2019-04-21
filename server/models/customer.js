@@ -100,6 +100,7 @@ module.exports = function(Customer) {
                 userId: userId,
                 hashKey: params.hashKey,
                 name: params.cname,
+                imageId: params.picture.id,
                 gaurdianName: params.gaurdianName,
                 address: params.address,
                 place: params.place,
@@ -147,8 +148,8 @@ module.exports = function(Customer) {
                             bucket.push(anItem[identifier]);
                     });
                     return resolve(bucket);
-                }
-                Customer.find({where: {userId: userId}}, (err, result) => {
+                }                
+                Customer.find({where: {userId: userId}, include: ['image']}, (err, result) => {
                     if(err) {
                         return reject(err);
                     } else {

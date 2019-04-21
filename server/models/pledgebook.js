@@ -152,14 +152,14 @@ module.exports = function(Pledgebook) {
             if(!params.accessToken)
                 throw 'Access Token is missing';
             let parsedArg = Pledgebook.parseInputData(params);            
-            params._userId = await utils.getStoreUserId(params.accessToken);
-            let pledgebookTableName = await Pledgebook.getPledgebookTableName(params._userId);
-            let validation = await Pledgebook.doValidation(params._userId, parsedArg, pledgebookTableName);
+            parsedArg._userId = await utils.getStoreUserId(params.accessToken);
+            let pledgebookTableName = await Pledgebook.getPledgebookTableName(parsedArg._userId);
+            let validation = await Pledgebook.doValidation(parsedArg, pledgebookTableName);
             if(validation.status) {
                 parsedArg.picture.id = await Pledgebook.app.models.Image.handleImage(parsedArg.picture); //Save customer picture in Image table
-                parsedArg.customerId = await Pledgebook.app.models.Customer.handleCustomerData(parsedArg, params._userId); //Save customer information in Customer Table
+                parsedArg.customerId = await Pledgebook.app.models.Customer.handleCustomerData(parsedArg); //Save customer information in Customer Table
                 await Pledgebook.saveBillDetails(parsedArg, pledgebookTableName); //Save ImageId, CustomerID, ORNAMENT and other Bill details in Pledgebook
-                await Pledgebook.app.models.PledgebookSettings.updateLastBillDetail(parsedArg, params._userId);
+                await Pledgebook.app.models.PledgebookSettings.updateLastBillDetail(parsedArg);
                 return {STATUS: 'success', STATUS_MSG: 'Successfully inserted new bill'};
             } else {
                 throw validation.errors;
@@ -176,12 +176,11 @@ module.exports = function(Pledgebook) {
                 params.billNoWithSeries,
                 params.amount,
                 params.date,
-                params.customerId,
-                params.picture.id,
+                params.customerId,                
                 params.orn,
                 params.billRemarks,
                 1,
-                {},
+                JSON.stringify({}),
                 params.createdDate,
                 params.modifiedDate,
             ];
@@ -324,14 +323,14 @@ module.exports = function(Pledgebook) {
                             ${pledgebookTableName} 
                                 (UniqueIdentifier, BillNo, 
                                 Amount, Date, 
-                                CustomerId, ImageId, 
+                                CustomerId, 
                                 Orn, Remarks, 
                                 Status, History,
                                 CreatedDate, ModifiedDate) 
                             VALUES
                                 (?, ?,
                                 ?, ?, 
-                                ?, ?, 
+                                ?, 
                                 ?, ?, 
                                 ?, ?, 
                                 ?, ?);`
@@ -340,13 +339,13 @@ module.exports = function(Pledgebook) {
                 query = `SELECT                         
                                 *,                        
                                 ${pledgebookTableName}.Id AS PledgeBookID,
-                                image.ID AS ImageTableID
+                                image.Id AS ImageTableID
                             FROM
                                 ${pledgebookTableName}
                                     LEFT JOIN
                                 customer ON ${pledgebookTableName}.CustomerId = customer.CustomerId
                                     LEFT JOIN
-                                image ON ${pledgebookTableName}.ImageId = image.Id`;
+                                image ON customer.ImageId = image.Id`;
                 
                 query = Pledgebook.appendFilters(params, query);
                 
@@ -361,7 +360,7 @@ module.exports = function(Pledgebook) {
                                 LEFT JOIN
                             customer ON ${pledgebookTableName}.CustomerId = customer.CustomerId
                                 LEFT JOIN
-                            image ON ${pledgebookTableName}.ImageId = image.Id`;
+                            image ON customer.ImageId = image.Id`;
                 query = Pledgebook.appendFilters(params, query);
                 break;
             case 'billAlreadyExist':
@@ -427,13 +426,13 @@ module.exports = function(Pledgebook) {
                 query = `SELECT                         
                             *,
                             ${pledgebookTableName}.Id AS PledgeBookID,
-                            image.ID AS ImageTableID
+                            image.Id AS ImageTableID
                         FROM
                             ${pledgebookTableName}
                                 LEFT JOIN
                             customer ON ${pledgebookTableName}.CustomerId = customer.CustomerId
                                 LEFT JOIN
-                            image ON ${pledgebookTableName}.ImageId = image.Id
+                            image ON customer.ImageId = image.Id
                         WHERE `;
                 let filterPart = [];
                 for(let i=0; i<params.length; i++) {
@@ -478,8 +477,9 @@ module.exports = function(Pledgebook) {
         return parsedArg;
     }
 
-    Pledgebook.doValidation = (userId, params, pledgebookTableName) => {
+    Pledgebook.doValidation = (params, pledgebookTableName) => {
         return new Promise( async (resolve, reject) => {
+            let userId = params._userId
             let returnVal = {
                 status: 1,
                 errors: []
