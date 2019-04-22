@@ -155,7 +155,17 @@ module.exports = function(Pledgebook) {
                     return JSON.parse(billNoArray);
                 },
                 description: 'For fetching the bill data based on bill Number'
-            }],
+            },
+        {
+            arg: 'fetchOnlyPending', type: 'string', http: (ctx) => {
+                let req = ctx && ctx.req;
+                let fetchOnlyPending = req && req.query.fetch_only_pending;
+                if(typeof fetchOnlyPending == 'undefined')
+                    fetchOnlyPending = false;
+                return fetchOnlyPending;
+            },
+            description: 'Fetch bill only if its in pending state'
+        }],
         returns: {
             type: 'object',
             root: true,
@@ -496,7 +506,7 @@ module.exports = function(Pledgebook) {
                 for(let i=0; i<params.length; i++) {
                     filterPart.push(`BillNo="${params[i]}"`);
                 }
-                query += filterPart.join(' OR ');
+                query += filterPart.join(' OR ');                
                 break;
         }
         return query;
@@ -607,22 +617,24 @@ module.exports = function(Pledgebook) {
         });
     }
 
-    Pledgebook.getBillDetailsAPIHandler = async (accessToken, billNoArray, cb) => {
+    Pledgebook.getBillDetailsAPIHandler = async (accessToken, billNoArray, fetchOnlyPending, cb) => {
         try {            
             if(!accessToken)
                 throw 'Access Token is missing';
-            let billDetails = await Pledgebook._getBillDetails(accessToken, billNoArray);
+            let billDetails = await Pledgebook._getBillDetails(accessToken, billNoArray, fetchOnlyPending);
             return {STATUS: 'SUCCESS', billDetails};
         } catch(e) {
             return { STATUS: 'ERROR', MESSAGE: e}
         }
     }
 
-    Pledgebook._getBillDetails = (accessToken, billNoArray) => {
+    Pledgebook._getBillDetails = (accessToken, billNoArray, fetchOnlyPending) => {
         return new Promise ( async (resolve, reject) => {
             let _userId = await utils.getStoreUserId(accessToken);
             let pledgebookTableName = await Pledgebook.getPledgebookTableName(_userId);
             let query = Pledgebook.getQuery('billDetails', billNoArray, pledgebookTableName);
+            if(fetchOnlyPending)
+                query +=` AND STATUS=1`;
             Pledgebook.dataSource.connector.query(query, (err, result) => {
                 if(err) {
                     reject(err);
