@@ -95,6 +95,28 @@ module.exports = function(Pledgebook) {
         description: 'Updating bill in pledgebook'
     });
 
+    Pledgebook.remoteMethod('reOpenClosedBillsAPIHandler', {
+        accepts: {
+            arg: 'data',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/re-open-closed-bills', verb: 'post'},
+        description: 'Re-opening a closed bill in pledgebook'
+    });    
+
     Pledgebook.remoteMethod('getPendingBillNosAPIHandler', {
         accepts: [
             {
@@ -256,12 +278,13 @@ module.exports = function(Pledgebook) {
             params._userId = await utils.getStoreUserId(params.accessToken);
             params._pledgebookTableName = await Pledgebook.getPledgebookTableName(params._userId);
             params._pledgebookClosedBillTableName = await Pledgebook.getPledgebookClosedTableName(params._userId);
+            params._status = 0;
             await Pledgebook.updatePledgebookBillStatus(params);
             return {STATUS: 'success', RESPONSE: {}, STATUS_MSG: ''};
         } catch(e) {
             return {STATUS: 'error', ERROR: e, MESSAGE: (e?e.message:'')};
         }
-    }    
+    }
 
     Pledgebook.updatePledgebookBillStatus = (params) => {
         return new Promise( (resolve, reject) => {
@@ -271,7 +294,7 @@ module.exports = function(Pledgebook) {
                     return reject(err);
                 } else {
                     if(result.affectedRows > 0) {
-                        await Pledgebook._insertRowInClosedBillList(params);
+                       await Pledgebook._insertRowInClosedBillList(params);
                         return resolve(true);
                     } else {
                         return reject({msg: 'Not Updated'});
@@ -279,7 +302,7 @@ module.exports = function(Pledgebook) {
                 }
             });
         });        
-    }
+    }    
 
     Pledgebook._insertRowInClosedBillList = (params) => {
         return new Promise( (resolve, reject) => {
@@ -296,10 +319,37 @@ module.exports = function(Pledgebook) {
                 if(err) {
                     return reject(err);                    
                 } else {
-                    if(result.affectedRows > 0)
-                        return resolve(true);
+                    if(result.affectedRows > 0)                        
+                        return resolve(true);                    
                     else
                         return reject({msg: 'Not insertedd record in Bill closed list table'});
+                }
+            });
+        });
+    }
+
+    Pledgebook.reOpenBill = (params) => {
+        return new Promise( (resolve, reject) => {
+            let query = Pledgebook.getQuery('redeem-status-update', params, params._pledgebookTableName);
+            Pledgebook.dataSource.connector.query(query, async (err, result) => {
+                if (err) {
+                    return reject(err);
+                } else {
+                    if(result.affectedRows > 0) {
+                        let query = Pledgebook.getQuery('reopen-bill', params, params._pledgebookClosedBillTableName);
+                        Pledgebook.dataSource.connector.query(query, (err, result) => {
+                            if(err) {
+                                return reject(err);
+                            } else {
+                                if(result.affectedRows > 0)
+                                    return resolve(true);
+                                else
+                                    return reject({msg: 'Not removed the record from Bill closed list table'});
+                            }
+                        });                        
+                    } else {
+                        return reject({msg: 'Not Updated'});
+                    }
                 }
             });
         });
@@ -380,11 +430,11 @@ module.exports = function(Pledgebook) {
                                             END
                         WHERE BillNo IN('K.1', 'K.2'); */
                 if(params.data.length == 1) {
-                    query = `UPDATE ${pledgebookTableName} SET Status= 0 WHERE Id = ${params.data[0].pledgeBookID}`; 
+                    query = `UPDATE ${pledgebookTableName} SET Status= ${params._status} WHERE Id = ${params.data[0].pledgeBookID}`; 
                 } else {
                     query = `SET SQL_SAFE_UPDATES = 0;`;
                     for(let i=0; i<params.data.length; i++) {
-                        query += `UPDATE ${pledgebookTableName} SET STATUS = 0 WHERE Id = '${params.data[i].pledgeBookID}'`;
+                        query += `UPDATE ${pledgebookTableName} SET STATUS = ${params._status} WHERE Id = '${params.data[i].pledgeBookID}'`;
                     }
                     query += `SET SQL_SAFE_UPDATES = 1;`;
 
@@ -416,6 +466,14 @@ module.exports = function(Pledgebook) {
                                     '${aRowObj.principalAmt}', '${aRowObj.noOfMonth}', '${aRowObj.roi}', '${aRowObj.interestPerMonth}',
                                     '${aRowObj.interestValue}', '${aRowObj.estimatedAmount}', '${aRowObj.discountValue}', '${aRowObj.paidAmount}',
                                     '${aRowObj.handedTo}');`;
+                }
+                //query += `SET SQL_SAFE_UPDATES = 1;`;
+                break;
+            case 'reopen-bill':
+                query = ''; //`SET SQL_SAFE_UPDATES = 0;`;
+                for(let i=0; i<params.data.length; i++) {
+                    let aRowObj = params.data[i];
+                    query += `DELETE FROM ${pledgebookTableName} WHERE pledgebook_uid='${aRowObj.pledgeBookUID}';`;
                 }
                 //query += `SET SQL_SAFE_UPDATES = 1;`;
                 break;
@@ -573,5 +631,24 @@ module.exports = function(Pledgebook) {
                 }
             });            
         });
-    }    
+    }
+
+    Pledgebook.reOpenClosedBillsAPIHandler = async (data) => {
+        try {
+            let params = {
+                data: data.requestParams
+            };
+            params.accessToken = data.accessToken;
+            if(!params.accessToken)
+                throw 'Access Token is missing';
+            params._userId = await utils.getStoreUserId(params.accessToken);
+            params._pledgebookTableName = await Pledgebook.getPledgebookTableName(params._userId);
+            params._pledgebookClosedBillTableName = await Pledgebook.getPledgebookClosedTableName(params._userId);
+            params._status = 1;
+            await Pledgebook.reOpenBill(params);
+            return {STATUS: 'success', RESPONSE: {}, STATUS_MSG: ''};
+        } catch(e) {
+            return {STATUS: 'error', ERROR: e, MESSAGE: (e?e.message:'')};
+        }
+    }
 };
