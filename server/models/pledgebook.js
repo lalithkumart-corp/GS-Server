@@ -177,6 +177,35 @@ module.exports = function(Pledgebook) {
         description: 'For fetching bill data.',
     });
 
+    Pledgebook.remoteMethod('fetchUserHistoryAPIHandler', {
+        accepts: [{
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let accessToken = req && req.query.access_token;
+                    return accessToken;
+                },
+                description: 'Accesstoken',
+            },
+            {
+                arg: 'customerId', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let customerId = req && req.query.customer_id;
+                    return customerId;
+                },
+                description: 'customerId',
+            }
+        ],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            }
+        },
+        http: {path: '/fetch-user-history', verb: 'get'},
+        description: 'For fetching users total bill history'
+    })
+
     Pledgebook.insertNewBillAPIHandler = async (data, cb) => {
         try {
             let params = data.requestParams;
@@ -188,7 +217,7 @@ module.exports = function(Pledgebook) {
             let pledgebookTableName = await Pledgebook.getPledgebookTableName(parsedArg._userId);
             let validation = await Pledgebook.doValidation(parsedArg, pledgebookTableName);
             if(validation.status) {
-                parsedArg.picture.id = await Pledgebook.app.models.Image.handleImage(parsedArg.picture); //Save customer picture in Image table
+                parsedArg.picture.id = await Pledgebook.app.models.Image.storeAndGetImageID(parsedArg.picture); //Save customer picture in Image table
                 parsedArg.customerId = await Pledgebook.app.models.Customer.handleCustomerData(parsedArg); //Save customer information in Customer Table
                 await Pledgebook.saveBillDetails(parsedArg, pledgebookTableName); //Save ImageId, CustomerID, ORNAMENT and other Bill details in Pledgebook
                 await Pledgebook.app.models.PledgebookSettings.updateLastBillDetail(parsedArg);
@@ -423,6 +452,22 @@ module.exports = function(Pledgebook) {
                             image ON customer.ImageId = image.Id`;
                 query = Pledgebook.appendFilters(params, query);
                 break;
+            case 'byCustomerId':
+                query = `SELECT                         
+                            *,                        
+                            ${pledgebookTableName}.Id AS PledgeBookID,
+                            image.Id AS ImageTableID
+                        FROM
+                            ${pledgebookTableName}
+                                LEFT JOIN
+                            customer ON ${pledgebookTableName}.CustomerId = customer.CustomerId
+                                LEFT JOIN
+                            image ON customer.ImageId = image.Id
+                        WHERE
+                            ${pledgebookTableName}.CustomerId = ?`;
+
+                query += ` ORDER BY PledgeBookID DESC`;                
+                break;
             case 'billAlreadyExist':
                 query = `SELECT 
                             *
@@ -514,20 +559,22 @@ module.exports = function(Pledgebook) {
 
     Pledgebook.appendFilters = (params, query) => {
         let filterQueries = [];
-        if(params.filters.billNo !== "")
-            filterQueries.push(`BillNo like '${params.filters.billNo}%'`);
-        if(params.filters.amount !== "")
-            filterQueries.push(`amount >= ${params.filters.amount}`);
-        if(params.filters.cName !== "")
-            filterQueries.push(`Name like '${params.filters.cName}%'`);
-        if(params.filters.gName !== "")
-            filterQueries.push(`GaurdianName like '${params.filters.gName}%'`);
-        if(params.filters.address !== "")
-            filterQueries.push(`Address like '%${params.filters.address}%'`);
-        if(params.filters.date)
-            filterQueries.push(`Date between '${params.filters.date.startDate}' and '${params.filters.date.endDate}'`);
-        if(filterQueries.length != 0)
-            query += ' where ' + filterQueries.join(' AND ');
+        if(params.filters) {
+            if(params.filters.billNo !== "")
+                filterQueries.push(`BillNo like '${params.filters.billNo}%'`);
+            if(params.filters.amount !== "")
+                filterQueries.push(`amount >= ${params.filters.amount}`);
+            if(params.filters.cName !== "")
+                filterQueries.push(`Name like '${params.filters.cName}%'`);
+            if(params.filters.gName !== "")
+                filterQueries.push(`GaurdianName like '${params.filters.gName}%'`);
+            if(params.filters.address !== "")
+                filterQueries.push(`Address like '%${params.filters.address}%'`);
+            if(params.filters.date)
+                filterQueries.push(`Date between '${params.filters.date.startDate}' and '${params.filters.date.endDate}'`);
+            if(filterQueries.length != 0)
+                query += ' where ' + filterQueries.join(' AND ');
+        }
         return query;
     }
 
@@ -662,5 +709,29 @@ module.exports = function(Pledgebook) {
         } catch(e) {
             return {STATUS: 'error', ERROR: e, MESSAGE: (e?e.message:'')};
         }
+    }
+
+    Pledgebook.fetchUserHistoryAPIHandler = async (accessToken, customerId, cb) => {
+        try {
+            let billList = await Pledgebook.fetchHistory({accessToken: accessToken, customerId: customerId});
+            return {STATUS: 'success', RESPONSE: billList, STATUS_MSG: ''};
+        } catch(e) {
+            return {STATUS: 'error', ERROR: e, MESSAGE: (e?e.message:'')};
+        }
+    }
+
+    Pledgebook.fetchHistory = (data) => {        
+        return new Promise( async (resolve, reject) => {
+            data._userId = await utils.getStoreUserId(data.accessToken);
+            data._pledgebookTableName = await Pledgebook.getPledgebookTableName(data._userId);
+            let query = Pledgebook.getQuery('byCustomerId', data, data._pledgebookTableName);
+            Pledgebook.dataSource.connector.query(query, [data.customerId], (err, result) => {
+                if(err) {
+                    reject(err);
+                } else {
+                    resolve(result);
+                }
+            });
+        });
     }
 };

@@ -238,6 +238,50 @@ module.exports = function(Customer) {
             }
         });
     }
+
+    Customer.updateCustomerAPIHandler = async (customerDetail) => {
+        try{
+            console.log(customerDetail);
+            customerDetail.picture.id = await Customer.app.models.Image.storeAndGetImageID(customerDetail.picture);
+            await Customer.updateDetails(customerDetail);
+            return {STATUS: 'SUCCESS', MSG: 'Updated the Customer detail successfully'};
+        } catch(e) {
+            return {STATUS: 'ERROR', ERROR: e, MESSAGE: (e?e.message:'')};
+        }
+    }
+
+    Customer.remoteMethod('updateCustomerAPIHandler', {
+        accepts: {
+            arg: 'data',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/update-customer-detail', verb: 'post'},
+        description: 'Updated the customer general information'
+    });  
+
+    Customer.updateDetails = async (params) => {
+        try{
+            //TODO: DELETE the existing image
+            let response = await Customer.updateAll({customerId: params.customerId}, {name: params.cname, imageId: params.picture.id, gaurdianName: params.gaurdianName, address: params.address, place: params.place, city: params.city, mobile: params.mobile, secMobile: params.secMobile, pincode: params.pinCode});
+            return response;
+        } catch(e) {
+            console.log(e);
+            throw e;
+        }
+    }
 };
 
 let sql = {

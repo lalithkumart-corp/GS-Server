@@ -132,6 +132,18 @@
         "nullable": "Y"
       }
     },
+    "secMobile": {
+      "type": "string",
+      "length": 11,
+      "mysql": {
+        "columnName": "SecMobile",
+        "dataType": "int",
+        "dataLength": 11,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
     "pincode": {
       "type": "string",
       "length": 11,
@@ -148,6 +160,16 @@
       "type": "any",
       "mysql": {
         "columnName": "OtherDetails",
+        "dataType": "text",
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "notes": {
+      "type": "any",
+      "mysql": {
+        "columnName": "Notes",
         "dataType": "text",
         "dataPrecision": null,
         "dataScale": null,

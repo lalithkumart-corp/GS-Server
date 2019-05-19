@@ -2,7 +2,7 @@
 let sh = require('shorthash');
 
 module.exports = function(Image) {
-    Image.handleImage = async (picture) => {
+    Image.storeAndGetImageID = async (picture) => {
         try{
             let imageId = null;
             let hashKey = Image.generateHashKey(picture);
