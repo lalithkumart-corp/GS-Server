@@ -5,6 +5,10 @@ module.exports = function(Image) {
     Image.storeAndGetImageID = async (picture) => {
         try{
             let imageId = null;
+            
+            if(picture.imageId)
+                return picture.imageId;
+
             let hashKey = Image.generateHashKey(picture);
             if(hashKey) {
                 let alreadyExists = await Image.checkIfAlreadyExists(hashKey);
