@@ -2,12 +2,12 @@
   "name": "GsUser",
   "base": "User",
   "idInjection": true,
+  "options": {
+    "validateUpsert": true
+  },
   "mysql": {
     "schema": "developmentdb",
     "table": "user"
-  },
-  "options": {
-    "validateUpsert": true
   },
   "properties": {
     "ownerId": {

@@ -79,7 +79,7 @@
         "dataScale": null,
         "nullable": "Y"
       }
-    },    
+    },
     "Orn": {
       "type": "object",
       "mysql": {

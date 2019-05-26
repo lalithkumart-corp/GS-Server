@@ -62,5 +62,9 @@
   "Interest": {
     "dataSource": "developmentdb",
     "public": true
+  },
+  "OrnImages": {
+    "dataSource": "developmentdb",
+    "public": true
   }
 }

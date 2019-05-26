@@ -16,7 +16,7 @@ module.exports = function(Image) {
                     imageId = alreadyExists.id;
                 } else {
                     picture.hashKey = hashKey;
-                    imageId = await Image.saveImage(picture);                
+                    imageId = await Image.saveImage(picture);
                 }
             }
             return imageId;
@@ -47,7 +47,8 @@ module.exports = function(Image) {
             Image.create({hashKey: picture.hashKey, image: picture.value, format: picture.format}, (err, result) => {
                 if(err) {
                     //TODO: log the error
-                    let error = new Error('Image upload Failed');
+                    let error = new Error('Image upload Failed: ');
+                    error += err.message;
                     return reject(error);
                 } else {
                     return resolve(result.id);

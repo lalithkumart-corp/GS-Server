@@ -3,7 +3,7 @@
   "base": "PersistedModel",
   "idInjection": true,
   "options": {
-    "validateUpsert": true    
+    "validateUpsert": true
   },
   "mysql": {
     "schema": "developmentdb",
@@ -21,9 +21,9 @@
         "nullable": "Y"
       }
     },
-    "userId" : {
+    "userId": {
       "type": "number",
-      "required": true,      
+      "required": true,
       "mysql": {
         "columnName": "user_id",
         "dataType": "int",

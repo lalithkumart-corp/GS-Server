@@ -184,7 +184,7 @@
       "model": "Image",
       "foreignKey": "ImageId"
     }
-  },  
+  },
   "acls": [],
   "methods": {}
 }
