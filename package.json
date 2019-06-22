@@ -20,6 +20,7 @@
     "loopback-component-explorer": "^5.0.0",
     "loopback-connector-mysql": "^5.3.0",
     "loopback-context": "^3.4.0",
+    "multer": "^1.4.1",
     "serve-favicon": "^2.0.1",
     "shorthash": "0.0.2",
     "strong-error-handler": "^2.0.0"

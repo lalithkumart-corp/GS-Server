@@ -1,7 +1,177 @@
 'use strict';
 let sh = require('shorthash');
+var multer = require('multer');
+var fs = require('fs');
 
 module.exports = function(Image) {
+
+    Image.saveBase64ImageAPI = async (picData) => {
+        let imageStatus = {STATUS: 'SUCCESS'};
+        try {
+            let picture;
+            if(picData.storeAs == 'FILE') {
+               let uploadedDetail = await Image.writeImgFromBase64(picData);
+                picture = {
+                    storageMode: 'PATH',
+                    path: uploadedDetail.path,
+                    format: uploadedDetail.format,
+                    options: {originalName: uploadedDetail.fileName}
+                }
+            } else {
+                let hashKey = Image.generateHashKey(picData);
+                if(hashKey) {
+                    picture = {
+                        hashKey: hashKey,
+                        value: picData.pic,
+                        format: picData.format,
+                        storageMode: 'BLOB'
+                    };                   
+                }
+            }
+
+            if(picData.imgCategory == 'ORN')
+                imageStatus.ID = await Image.app.models.OrnImage.saveImage(picture);
+            else
+                imageStatus.ID = await Image.saveImage(picture);
+
+        } catch(e) {
+            imageStatus.STATUS = 'ERROR';
+            imageStatus.MSG = e.message;
+        } finally {
+            return imageStatus;
+        }        
+    }
+    
+    Image.remoteMethod('saveBase64ImageAPI', {
+        accepts: {
+            arg: 'picData',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/save-base64-and-get-id', verb: 'post'},
+        description: 'Save Image and Get ID'
+    });
+
+    Image.saveBinaryImageAPI = async (data, req, res) => {
+        let imageStatus = {STATUS: 'SUCCESS'};
+        try {
+            let uploadedDetail = await Image.upload(req, res);
+            let filePathWithName = uploadedDetail.path + uploadedDetail.options.localFile;
+            let base64ImgContent = new Buffer(fs.readFileSync(filePathWithName)).toString("base64");
+            let picture;
+            if(req.body.storeAs == 'BASE64') {
+                let hashKey = Image.generateHashKey({format: uploadedDetail.mimeType, value: base64ImgContent});
+                picture = {
+                    hashKey: hashKey,
+                    storageMode: 'BLOB',
+                    value: base64ImgContent,
+                    format: uploadedDetail.options.mimeType
+                }                
+            } else {
+                picture = {
+                    path: filePathWithName,
+                    storageMode: 'PATH',
+                    format: uploadedDetail.options.mimeType,
+                    options: {originalName: uploadedDetail.options.originalName}
+                };                
+            }
+            if(req.body.imgCategory == 'ORN')
+                imageStatus.ID = await Image.app.models.OrnImage.saveImage(picture);
+            else
+                imageStatus.ID = await Image.saveImage(picture);
+        } catch(e) {            
+            imageStatus.STATUS = 'ERROR';
+            imageStatus.MSG = e.message || e;
+        } finally {
+            return imageStatus;
+        }
+    }
+
+    Image.remoteMethod('saveBinaryImageAPI', {
+        accepts:
+            [{
+                arg: 'data',
+                type: 'object',                
+                http: {
+                    source: 'body',
+                },
+            },{
+                arg: 'req',
+                type: 'object',
+                http: {
+                    source: 'req'
+                }
+            }, {
+                arg: 'res',
+                type: 'object',
+                http: {
+                    source: 'res'
+                }
+            }
+        ],
+        returns: {
+            arg: 'data',
+            type: 'string',
+            root: true
+        },
+        http: {path: '/save-binary-and-get-id', verb: 'post'},
+        description: 'Save Image and Get ID'
+    });
+
+    Image.deleteByIdAPI = async (data) => {
+        let execStatus = {STATUS: 'SUCCESS'};
+        try {
+            let imageRec;
+            if(data.imgCategory == 'ORN'){
+                imageRec = await Image.app.models.OrnImage.getImage(data.imageId);
+                await Image.app.models.OrnImage.delImage(imageRec);
+            } else {
+                imageRec = await Image.getImage(data.imageId);            
+                await Image.delImage(imageRec);
+            }
+            execStatus.MSG = 'Deleted the image successfully!';
+        } catch(e) {
+            execStatus.STATUS = 'ERROR';
+            execStatus.MSG = e.message;
+        } finally {
+            return execStatus;
+        }
+    }
+
+    Image.remoteMethod('deleteByIdAPI', {
+        accepts: {
+            arg: 'data',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/del-by-id', verb: 'delete'},
+        description: 'Delete the saved Image'
+    });      
+
     Image.storeAndGetImageID = async (picture) => {
         try{
             let imageId = null;
@@ -26,6 +196,90 @@ module.exports = function(Image) {
         }
     }
 
+    Image.upload = (req, res) => {
+        return new Promise( (resolve, reject) => {
+            // SOURCE: https://github.com/santhosharuchamy/loopback-file-upload/blob/90a7ac8ece/Loopback%20custom%20fileupload.js
+            let serverFile = { localFile: '', originalName: '', mimeType: '' };
+            let storage = multer.diskStorage({
+                destination: function (req, file, cb) {            
+                    var dirPath = Image.app.get('clientUploadsPath'); // checking and creating uploads folder where files will be uploaded
+                 if (!fs.existsSync(dirPath)) 
+                        fs.mkdirSync(dirPath);
+                    cb(null, dirPath + '/');
+                },
+                filename: function (req, file, cb) {            
+                    var ext = file.originalname.substring(file.originalname.lastIndexOf(".")); // file will be accessible in `file` variable
+                    var fileName = Date.now() + ext;
+                    serverFile.localFile = fileName;
+                    serverFile.originalName = file.originalname;
+                    serverFile.mimeType = file.mimetype;
+                    cb(null, serverFile.localFile);
+                }
+            });
+            let upload = multer({
+                storage: storage
+            }).array('pic', 12);
+            upload(req, res, (err) => {
+                if (err) {
+                    // An error occurred when uploading
+                    reject(err);
+                } else {
+                    let path = Image.app.get('clientUploadsPath');
+                    resolve({path: path, options: serverFile});
+                }
+            });
+        });
+    }
+
+    Image.writeImgFromBase64 = (picData) => {
+        return new Promise( (resolve, reject) => {
+            let fileName = Date.now() + '.png';
+            let dirPath = Image.app.get('clientUploadsPath');
+            let filePathAndName = dirPath + fileName;
+            fs.writeFile(filePathAndName, picData.pic, 'base64', function(err) {
+                if(err)
+                    return reject(err);
+                else
+                    return resolve({fileName: fileName, path: filePathAndName, format: 'image/png'});
+            });
+        });
+    }
+
+    Image.getImage = (imageId) => {
+        return new Promise( (resolve, reject) => {
+            Image.findById(imageId, (err, result) => {
+                if(err)
+                    return reject(err);
+                else
+                    return resolve(result);
+            });
+        });        
+    }
+
+    Image.delImage = (imageRec) => {
+        return new Promise( (resolve, reject) => {
+            if(imageRec.storageMode == 'PATH') {
+                fs.unlink(imageRec.path, (error) => {
+                    if (error) return reject(error);
+                    Image.destroyById(imageRec.id, (err, response) => {
+                        if(err)
+                            return reject(err);
+                        else
+                            return resolve(true);
+                    });
+                });
+            } else {
+                Image.destroyById(imageRec.id, (err, response) => {
+                    if(err)
+                        return reject(err);
+                    else
+                        return resolve(true);
+                });
+            }
+            
+        });
+    }
+
     Image.checkIfAlreadyExists = (hashKey) => {
         return new Promise( (resolve, reject) => {
             Image.findOne({where: {hashKey: hashKey}}, (err, result) => {
@@ -44,7 +298,7 @@ module.exports = function(Image) {
 
     Image.saveImage = (picture) => {
         return new Promise( (resolve, reject) => {
-            Image.create({hashKey: picture.hashKey, image: picture.value, format: picture.format}, (err, result) => {
+            Image.create({hashKey: picture.hashKey, image: picture.value, format: picture.format, path: picture.path, storageMode: picture.storageMode ,options: picture.options}, (err, result) => {
                 if(err) {
                     //TODO: log the error
                     let error = new Error('Image upload Failed: ');

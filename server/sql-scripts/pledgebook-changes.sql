@@ -9,3 +9,6 @@ ADD COLUMN `History` TEXT NULL AFTER `Status`;
 
 ALTER TABLE `gs`.`pledgebook` 
 ADD COLUMN `closedBillReference` VARCHAR(45) NULL DEFAULT NULL AFTER `Status`;
+
+ALTER TABLE `gs`.`pledgebook` 
+ADD COLUMN `OrnPictureId` INT(11) NULL DEFAULT NULL AFTER `Remarks`;

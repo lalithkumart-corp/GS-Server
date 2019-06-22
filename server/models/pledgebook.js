@@ -217,7 +217,8 @@ module.exports = function(Pledgebook) {
             let pledgebookTableName = await Pledgebook.getPledgebookTableName(parsedArg._userId);
             let validation = await Pledgebook.doValidation(parsedArg, pledgebookTableName);
             if(validation.status) {
-                parsedArg.picture.id = await Pledgebook.app.models.Image.storeAndGetImageID(parsedArg.picture); //Save customer picture in Image table
+                parsedArg.userPicture.id = parsedArg.userPicture.imageId;
+                parsedArg.ornPicture.id = parsedArg.ornPicture.imageId;
                 parsedArg.customerId = await Pledgebook.app.models.Customer.handleCustomerData(parsedArg); //Save customer information in Customer Table
                 await Pledgebook.saveBillDetails(parsedArg, pledgebookTableName); //Save ImageId, CustomerID, ORNAMENT and other Bill details in Pledgebook
                 await Pledgebook.app.models.PledgebookSettings.updateLastBillDetail(parsedArg);
@@ -237,11 +238,12 @@ module.exports = function(Pledgebook) {
                 params.billNoWithSeries,
                 params.amount,
                 params.date,
-                params.customerId,                
+                params.customerId,
                 params.orn,
                 params.billRemarks,
+                params.ornPicture.id,
                 1,
-                JSON.stringify({}),
+                JSON.stringify({}),                
                 params.createdDate,
                 params.modifiedDate,
             ];
@@ -414,27 +416,38 @@ module.exports = function(Pledgebook) {
                                 Amount, Date, 
                                 CustomerId, 
                                 Orn, Remarks, 
-                                Status, History,
+                                OrnPictureId,
+                                Status, History,                                
                                 CreatedDate, ModifiedDate) 
                             VALUES
                                 (?, ?,
                                 ?, ?, 
                                 ?, 
                                 ?, ?, 
-                                ?, ?, 
+                                ?,
+                                ?, ?,                                 
                                 ?, ?);`
                 break;
             case 'normal':
                 query = `SELECT                         
                                 *,                        
                                 ${pledgebookTableName}.Id AS PledgeBookID,
-                                image.Id AS ImageTableID
+                                image.Id AS ImageTableID,
+                                image.Image AS UserImageBlob,
+                                orn_images.Id AS OrnImageTableID,
+                                image.Path AS UserImagePath,
+                                image.Format AS UserImageFormat,
+                                orn_images.Image AS OrnImageBlob,
+                                orn_images.Path AS OrnImagePath,
+                                orn_images.Format AS OrnImageFormat
                             FROM
                                 ${pledgebookTableName}
                                     LEFT JOIN
                                 customer ON ${pledgebookTableName}.CustomerId = customer.CustomerId
                                     LEFT JOIN
-                                image ON customer.ImageId = image.Id`;
+                                image ON customer.ImageId = image.Id
+                                    LEFT JOIN
+                                orn_images ON ${pledgebookTableName}.OrnPictureId = orn_images.Id`;
                 
                 query = Pledgebook.appendFilters(params, query);
                 
@@ -456,13 +469,22 @@ module.exports = function(Pledgebook) {
                 query = `SELECT                         
                             *,                        
                             ${pledgebookTableName}.Id AS PledgeBookID,
-                            image.Id AS ImageTableID
+                            image.Id AS ImageTableID,
+                            image.Image AS UserImageBlob,
+                            orn_images.Id AS OrnImageTableID,
+                            image.Path AS UserImagePath,
+                            image.Format AS UserImageFormat,
+                            orn_images.Image AS OrnImageBlob,
+                            orn_images.Path AS OrnImagePath,
+                            orn_images.Format AS OrnImageFormat
                         FROM
                             ${pledgebookTableName}
                                 LEFT JOIN
                             customer ON ${pledgebookTableName}.CustomerId = customer.CustomerId
                                 LEFT JOIN
                             image ON customer.ImageId = image.Id
+                                LEFT JOIN
+                            orn_images ON ${pledgebookTableName}.OrnPictureId = orn_images.Id
                         WHERE
                             ${pledgebookTableName}.CustomerId = ?`;
 
@@ -539,13 +561,23 @@ module.exports = function(Pledgebook) {
                 query = `SELECT                         
                             *,
                             ${pledgebookTableName}.Id AS PledgeBookID,
-                            image.Id AS ImageTableID
+                            image.Id AS ImageTableID,
+                            image.Image AS UserImageBlob,
+                            orn_images.Id AS OrnImageTableID,
+                            image.Path AS UserImagePath,
+                            image.Format AS UserImageFormat,
+                            orn_images.Image AS OrnImageBlob,
+                            orn_images.Path AS OrnImagePath,
+                            orn_images.Format AS OrnImageFormat
+
                         FROM
                             ${pledgebookTableName}
                                 LEFT JOIN
                             customer ON ${pledgebookTableName}.CustomerId = customer.CustomerId
                                 LEFT JOIN
                             image ON customer.ImageId = image.Id
+                                LEFT JOIN
+                            orn_images ON ${pledgebookTableName}.OrnPictureId = orn_images.Id
                         WHERE `;
                 let filterPart = [];
                 for(let i=0; i<params.length; i++) {

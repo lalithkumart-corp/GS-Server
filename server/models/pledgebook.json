@@ -101,6 +101,16 @@
         "nullable": "Y"
       }
     },
+    "ornPictureId": {
+      "type": "number",
+      "mysql": {
+        "columnName": "OrnPictureId",
+        "dataType": "int",
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
     "status": {
       "type": "number",
       "required": true,

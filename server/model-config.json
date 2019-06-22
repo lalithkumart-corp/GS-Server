@@ -63,7 +63,11 @@
     "dataSource": "developmentdb",
     "public": true
   },
-  "OrnImages": {
+  "OrnImage": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "OrnamentList": {
     "dataSource": "developmentdb",
     "public": true
   }

@@ -1,11 +1,97 @@
 {
-  "name": "OrnImages",
+  "name": "OrnImage",
   "base": "PersistedModel",
   "idInjection": true,
   "options": {
-    "validateUpsert": true
+    "validateUpsert": true,
+    "mysql": {
+      "schema": "developmentdb",
+      "table": "orn_images"
+    }
   },
-  "properties": {},
+  "properties": {
+    "id": {
+      "type": "number",
+      "length": 11,
+      "mysql": {
+        "columnName": "Id",
+        "dataType": "int",
+        "dataLength": 11,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "hashKey": {
+      "type": "string",
+      "length": 255,
+      "mysql": {
+        "columnName": "Hashkey",
+        "dataType": "varchar",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "image": {
+      "type": "any",
+      "mysql": {
+        "columnName": "Image",
+        "dataType": "blob",
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "format": {
+      "type": "string",
+      "length": 500,
+      "mysql": {
+        "columnName": "Format",
+        "dataType": "varchar",
+        "dataLength": 500,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "path": {
+      "type": "string",
+      "length": 500,
+      "mysql": {
+        "columnName": "Path",
+        "dataType": "varchar",
+        "dataLength": 500,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "storageMode": {
+      "type": "string",
+      "length": 500,
+      "mysql": {
+        "columnName": "StorageMode",
+        "dataType": "varchar",
+        "dataLength": 100,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "options": {
+      "type": "any",
+      "length": 500,
+      "mysql": {
+        "columnName": "Optional",
+        "dataType": "text",        
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    }
+  },
   "validations": [],
   "relations": {},
   "acls": [],

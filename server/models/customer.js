@@ -100,7 +100,7 @@ module.exports = function(Customer) {
                 userId: userId,
                 hashKey: params.hashKey,
                 name: params.cname,
-                imageId: params.picture.id,
+                imageId: params.userPicture.id,
                 gaurdianName: params.gaurdianName,
                 address: params.address,
                 place: params.place,

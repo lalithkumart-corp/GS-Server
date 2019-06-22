@@ -34,7 +34,7 @@
         "enableHttpContext": true
       }
     }
-  },  
+  },
   "session": {},
   "auth": {},
   "parse": {
@@ -51,8 +51,12 @@
         "${restApiRoot}"
       ]
     }
+  },  
+  "files": {
+    "loopback#static": {
+      "params": "$!../client" 
+    }
   },
-  "files": {},
   "final": {
     "loopback#urlNotFound": {}
   },
