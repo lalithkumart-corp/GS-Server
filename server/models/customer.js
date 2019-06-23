@@ -2,6 +2,8 @@
 let _ = require('lodash');
 let sh = require('shorthash');
 let utils = require('../utils/commonUtils');
+let app = require('../server.js');
+
 module.exports = function(Customer) {
 
     Customer.getMetaData = async (accessToken, identifiers, cb) => {
@@ -88,7 +90,8 @@ module.exports = function(Customer) {
             params.hashKey = hashKey;
             customerData = await Customer.saveCustomerData(params);
         } else {
-            await Customer.checkForCustomerDataUpdate(customerData, params);            
+            // Customer Info should be updated from 'Customer Detail -> General Info" UI page
+           // await Customer.checkForCustomerDataUpdate(customerData, params);            
         }
         return customerData.customerId;
     }
@@ -100,7 +103,7 @@ module.exports = function(Customer) {
                 userId: userId,
                 hashKey: params.hashKey,
                 name: params.cname,
-                imageId: params.userPicture.id,
+                imageId: (params.userPicture)?(params.userPicture.id):null,
                 gaurdianName: params.gaurdianName,
                 address: params.address,
                 place: params.place,
@@ -149,11 +152,12 @@ module.exports = function(Customer) {
                     });
                     return resolve(bucket);
                 }                
-                Customer.find({where: {userId: userId}, include: ['image']}, (err, result) => {
+                //Customer.find({where: {userId: userId}, include: ['image']}, (err, result) => {
+                Customer.dataSource.connector.query(Customer.getQuery('all', {userId: userId}), (err, result) => {                
                     if(err) {
                         return reject(err);
                     } else {
-                        Customer.metaData = result;
+                        Customer.metaData = Customer.parseMetaData(result);
                         let bucket = [];
                         _.each(result, (anItem, index) => {
                             if(identifier == 'all')
@@ -177,7 +181,47 @@ module.exports = function(Customer) {
                 }); */
             }
         });
-    }    
+    }
+
+    Customer.parseMetaData = (rawResult) => {
+        _.each(rawResult, (aRes, index) => {
+            if(aRes.userImagePath)
+                aRes.userImagePath = `http://${app.get('domain')}:${app.get('port')}${aRes.userImagePath.replace('client', '')}`;
+                aRes.mobile = ''+aRes.mobile;
+                aRes.pincode = ''+aRes.pincode;
+        });
+        return rawResult;
+    }
+
+    Customer.getQuery = (identifier, params) => {
+        let sql = '';
+        switch(identifier) {
+            case 'all':
+                sql = `SELECT 
+                            customer.CustomerId AS customerId,
+                            customer.UserId AS userId,
+                            customer.Name AS name,
+                            customer.GaurdianName AS gaurdianName,
+                            customer.Address AS address,
+                            customer.Place AS place,
+                            customer.City AS city,
+                            customer.Pincode AS pincode,
+                            customer.Mobile AS mobile,
+                            customer.HashKey AS hashKey,
+                            image.Id AS imageTableId,
+                            image.Path AS userImagePath,
+                            image.Format AS userImageFormat,
+                            image.Optional AS userImageOptionals,
+                            image.StorageMode AS userImageStorageMode
+                        FROM customer
+                            LEFT JOIN 
+                        image ON customer.ImageId = image.Id
+                            WHERE
+                        customer.UserId=${params.userId}`;
+                break;
+        }
+        return sql;
+    }
 
     Customer.generateHashKey = (params) => {
         let cname = (params.cname)?params.cname.toLowerCase():params.cname;
@@ -185,9 +229,9 @@ module.exports = function(Customer) {
         let address = (params.address)?params.address.toLowerCase():params.address;
         let place = (params.place)?params.place.toLowerCase():params.place;
         let city = (params.city)?params.city.toLowerCase():params.city;
-        let pincode = (params.pincode)?params.pincode.toLowerCase():params.pincode;
+        let pincode = (params.pincode)?params.pincode.toLowerCase():params.pincode;        
 
-        return sh.unique( cname + gaurdianName + address + place + city + pincode )        
+        return sh.unique( cname + gaurdianName + address + place + city + pincode)        
     }
 
     Customer.isAlreadyExists = (hashKey) => {
@@ -207,7 +251,8 @@ module.exports = function(Customer) {
     }
 
     Customer.checkForCustomerDataUpdate = async (dbCustomerData, params) => {
-        return new Promise( (resolve, reject) => {
+        // No Need to update the "Other Details" section. The "Other Details" data shoud be updated only from the "Customer Detail -> Notes" UI page.
+        /*return new Promise( (resolve, reject) => {
             let otherDetailsDB = dbCustomerData.otherDetails;
             let incomingOtherDetails = params.moreDetails;
             let changes = false;
@@ -236,17 +281,16 @@ module.exports = function(Customer) {
             } else {
                 return resolve();
             }
-        });
+        });*/    
     }
 
     Customer.updateCustomerAPIHandler = async (customerDetail) => {
-        try{
-            console.log(customerDetail);
-            customerDetail.picture.id = await Customer.app.models.Image.storeAndGetImageID(customerDetail.picture);
+        try{                        
+            customerDetail.picture.id = customerDetail.picture.imageId || null;
             await Customer.updateDetails(customerDetail);
             return {STATUS: 'SUCCESS', MSG: 'Updated the Customer detail successfully'};
         } catch(e) {
-            return {STATUS: 'ERROR', ERROR: e, MESSAGE: (e?e.message:'')};
+            return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
         }
     }
 

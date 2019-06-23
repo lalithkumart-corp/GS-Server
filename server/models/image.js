@@ -138,7 +138,7 @@ module.exports = function(Image) {
                 imageRec = await Image.app.models.OrnImage.getImage(data.imageId);
                 await Image.app.models.OrnImage.delImage(imageRec);
             } else {
-                imageRec = await Image.getImage(data.imageId);            
+                imageRec = await Image.getImage(data.imageId);
                 await Image.delImage(imageRec);
             }
             execStatus.MSG = 'Deleted the image successfully!';
@@ -172,7 +172,7 @@ module.exports = function(Image) {
         description: 'Delete the saved Image'
     });      
 
-    Image.storeAndGetImageID = async (picture) => {
+    /*Image.storeAndGetImageID = async (picture) => {
         try{
             let imageId = null;
             
@@ -194,7 +194,7 @@ module.exports = function(Image) {
             // TODO: Log error
             throw e;
         }
-    }
+    }*/
 
     Image.upload = (req, res) => {
         return new Promise( (resolve, reject) => {

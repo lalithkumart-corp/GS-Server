@@ -27,10 +27,38 @@ module.exports = function(Pledgebook) {
         description: 'Adding a new record in pledgebook'
     });
 
+    Pledgebook.remoteMethod('updateBillAPIHandler', {
+        accepts: {
+                arg: 'data',
+                type: 'object',
+                default: {
+                    
+                },
+                http: {
+                    source: 'body',
+                },
+            },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/update-billrecord', verb: 'post'},
+        description: 'Updating the existing bill in pledgebook'
+    });
+
     Pledgebook.getPendingBillsAPIHandler = (accessToken, params, cb) => {
         Pledgebook.getPendingBills(accessToken, params)
             .then(
                 (success) => {
+                    _.each(success.results, (aRec, index) => {
+                        if(aRec.OrnImagePath)
+                            aRec.OrnImagePath = `http://${app.get('domain')}:${app.get('port')}${aRec.OrnImagePath.replace('client', '')}`;
+                        if(aRec.UserImagePath)
+                            aRec.UserImagePath = `http://${app.get('domain')}:${app.get('port')}${aRec.UserImagePath.replace('client', '')}`;
+                    });
                     cb(null, success);
                 },
                 (error) => {
@@ -42,7 +70,7 @@ module.exports = function(Pledgebook) {
                     cb(exception, null);
                 }
             )        
-    };
+    };    
 
     Pledgebook.remoteMethod('getPendingBillsAPIHandler', {
         accepts: [
@@ -222,12 +250,12 @@ module.exports = function(Pledgebook) {
                 parsedArg.customerId = await Pledgebook.app.models.Customer.handleCustomerData(parsedArg); //Save customer information in Customer Table
                 await Pledgebook.saveBillDetails(parsedArg, pledgebookTableName); //Save ImageId, CustomerID, ORNAMENT and other Bill details in Pledgebook
                 await Pledgebook.app.models.PledgebookSettings.updateLastBillDetail(parsedArg);
-                return {STATUS: 'success', STATUS_MSG: 'Successfully inserted new bill'};
+                return {STATUS: 'SUCCESS', STATUS_MSG: 'Successfully inserted new bill'};
             } else {
                 throw validation.errors;
             }
         } catch(e) {
-            return {STATUS: 'error', ERROR: e};
+            return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
         }        
     }    
 
@@ -468,23 +496,11 @@ module.exports = function(Pledgebook) {
             case 'byCustomerId':
                 query = `SELECT                         
                             *,                        
-                            ${pledgebookTableName}.Id AS PledgeBookID,
-                            image.Id AS ImageTableID,
-                            image.Image AS UserImageBlob,
-                            orn_images.Id AS OrnImageTableID,
-                            image.Path AS UserImagePath,
-                            image.Format AS UserImageFormat,
-                            orn_images.Image AS OrnImageBlob,
-                            orn_images.Path AS OrnImagePath,
-                            orn_images.Format AS OrnImageFormat
+                            ${pledgebookTableName}.Id AS PledgeBookID                           
                         FROM
                             ${pledgebookTableName}
                                 LEFT JOIN
-                            customer ON ${pledgebookTableName}.CustomerId = customer.CustomerId
-                                LEFT JOIN
-                            image ON customer.ImageId = image.Id
-                                LEFT JOIN
-                            orn_images ON ${pledgebookTableName}.OrnPictureId = orn_images.Id
+                            customer ON ${pledgebookTableName}.CustomerId = customer.CustomerId                              
                         WHERE
                             ${pledgebookTableName}.CustomerId = ?`;
 
@@ -585,6 +601,21 @@ module.exports = function(Pledgebook) {
                 }
                 query += filterPart.join(' OR ');                
                 break;
+            case 'update-bill':
+                query = `UPDATE
+                            ${pledgebookTableName}
+                                SET
+                            BillNo=?,
+                            Amount=?,
+                            Date=?,
+                            CustomerId=?,
+                            Orn=?,
+                            Remarks=?,                            
+                            OrnPictureId=?,
+                            ModifiedDate=?
+                                WHERE
+                            UniqueIdentifier=?`;
+                break;
         }
         return query;
     }
@@ -620,6 +651,18 @@ module.exports = function(Pledgebook) {
         parsedArg.uniqueIdentifier= (+ new Date());
         parsedArg.orn = JSON.stringify(params.orn);
         parsedArg.createdDate = new Date().toISOString().replace('T', ' ').slice(0,23);
+        parsedArg.modifiedDate= new Date().toISOString().replace('T', ' ').slice(0,23);
+        return parsedArg;
+    }
+
+    Pledgebook.parseInputDataForUpdate = (params = {}) => {
+        let parsedArg = JSON.parse(JSON.stringify(params));
+        let billNo = params.billNo;
+        if(params.billSeries !== "")
+            billNo = params.billSeries + "." + billNo;
+        parsedArg.accessToken = params.accessToken;
+        parsedArg.billNoWithSeries = billNo;
+        parsedArg.orn = JSON.stringify(params.orn);
         parsedArg.modifiedDate= new Date().toISOString().replace('T', ' ').slice(0,23);
         return parsedArg;
     }
@@ -760,10 +803,55 @@ module.exports = function(Pledgebook) {
             Pledgebook.dataSource.connector.query(query, [data.customerId], (err, result) => {
                 if(err) {
                     reject(err);
-                } else {
+                } else {                   
                     resolve(result);
                 }
             });
         });
+    }
+
+    Pledgebook.updateBillAPIHandler = async (data) => {
+        try {
+            let params = data.requestParams;
+            params.accessToken = data.accessToken;
+            if(!params.accessToken)
+                throw 'Access Token is missing';
+            let parsedArg = Pledgebook.parseInputDataForUpdate(params);            
+            parsedArg._userId = await utils.getStoreUserId(params.accessToken);
+            let pledgebookTableName = await Pledgebook.getPledgebookTableName(parsedArg._userId);                        
+            parsedArg.ornPicture.id = parsedArg.ornPicture.imageId;
+            parsedArg.customerId = await Pledgebook.app.models.Customer.handleCustomerData(parsedArg); //Save customer information in Customer Table
+            await Pledgebook.updateBillDetails(parsedArg, pledgebookTableName); //Save ImageId, CustomerID, ORNAMENT and other Bill details in Pledgebook                
+            return {STATUS: 'SUCCESS', STATUS_MSG: 'Successfully Updated the bill'};
+        } catch(e) {
+            return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
+        }        
+    }
+
+    Pledgebook.updateBillDetails = (parsedArg, pledgebookTableName) => {
+        return new Promise( (resolve, reject) => {
+            let sql = Pledgebook.getQuery('update-bill', parsedArg, pledgebookTableName);
+            let values = [
+                parsedArg.billNoWithSeries,
+                parsedArg.amount,
+                parsedArg.date,
+                parsedArg.customerId,
+                parsedArg.orn,
+                parsedArg.billRemarks,
+                parsedArg.ornPicture.id,
+                parsedArg.modifiedDate,
+                parsedArg.uniqueIdentifier
+            ]
+            Pledgebook.dataSource.connector.query( sql, values, (err, result) => {
+                if(err) {
+                    reject(err);
+                } else {
+                    if(result.affectedRows > 0)
+                        resolve(true);
+                    else
+                        reject({msg: 'Not Updated'});
+                }
+            });
+        });        
     }
 };
