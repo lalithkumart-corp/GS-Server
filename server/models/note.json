@@ -1,0 +1,54 @@
+{
+  "name": "Note",
+  "base": "PersistedModel",
+  "idInjection": true,
+  "options": {
+    "validateUpsert": true,
+    "mysql": {
+      "schema": "developmentdb",
+      "table": "notes"
+    }
+  },
+  "properties": {
+    "id": {
+      "type": "number",
+      "id": true,
+      "mysql": {
+        "columnName": "Id",
+        "dataType": "int",
+        "dataLength": 22,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "customerId": {
+      "type": "number",
+      "required": true,
+      "mysql": {
+        "columnName": "CustomerId",
+        "dataType": "int",
+        "dataLength": 11,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "N"
+      }
+    },
+    "notes": {
+      "type": "any",
+      "required": true,
+      "mysql": {
+        "columnName": "Notes",
+        "dataType": "text",
+        "dataLength": 22,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    }
+  },
+  "validations": [],
+  "relations": {},
+  "acls": [],
+  "methods": {}
+}

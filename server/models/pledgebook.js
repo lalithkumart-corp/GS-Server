@@ -230,8 +230,8 @@ module.exports = function(Pledgebook) {
                 source: 'body',
             }
         },
-        http: {path: '/fetch-user-history', verb: 'get'},
-        description: 'For fetching users total bill history'
+        http: {path: '/fetch-customer-history', verb: 'get'},
+        description: 'For fetching customer total bill history'
     })
 
     Pledgebook.insertNewBillAPIHandler = async (data, cb) => {

@@ -70,5 +70,9 @@
   "OrnamentList": {
     "dataSource": "developmentdb",
     "public": true
+  },
+  "Note": {
+    "dataSource": "developmentdb",
+    "public": true
   }
 }

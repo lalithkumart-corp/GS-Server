@@ -1,6 +1,6 @@
 {
   "restApiRoot": "/api",
-  "domain": "localhost",  
+  "domain": "localhost",
   "host": "0.0.0.0",
   "port": 3003,
   "remoting": {
@@ -22,5 +22,5 @@
   },
   "pledgebookTableName": "pledgebook",
   "pledgebookClosedBillListTableName": "pledgebook_closed_bills",
-  "clientUploadsPath" : "client/uploads/"
+  "clientUploadsPath": "client/uploads/"
 }
