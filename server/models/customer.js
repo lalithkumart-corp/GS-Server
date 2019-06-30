@@ -208,6 +208,7 @@ module.exports = function(Customer) {
                             customer.Pincode AS pincode,
                             customer.Mobile AS mobile,
                             customer.HashKey AS hashKey,
+                            customer.OtherDetails AS otherDetails,
                             image.Id AS imageTableId,
                             image.Path AS userImagePath,
                             image.Format AS userImageFormat,
@@ -319,7 +320,7 @@ module.exports = function(Customer) {
     Customer.updateDetails = async (params) => {
         try{
             //TODO: DELETE the existing image
-            let response = await Customer.updateAll({customerId: params.customerId}, {name: params.cname, imageId: params.picture.id, gaurdianName: params.gaurdianName, address: params.address, place: params.place, city: params.city, mobile: params.mobile, secMobile: params.secMobile, pincode: params.pinCode});
+            let response = await Customer.updateAll({customerId: params.customerId}, {name: params.cname, imageId: params.picture.id, gaurdianName: params.gaurdianName, address: params.address, place: params.place, city: params.city, mobile: params.mobile, secMobile: params.secMobile, pincode: params.pinCode, otherDetails: params.otherDetails});
             return response;
         } catch(e) {
             console.log(e);
