@@ -633,8 +633,12 @@ module.exports = function(Pledgebook) {
                 filterQueries.push(`GaurdianName like '${params.filters.gName}%'`);
             if(params.filters.address !== "")
                 filterQueries.push(`Address like '%${params.filters.address}%'`);
+            if(params.filters.include == 'pending')
+                filterQueries.push(`Status=1`);
+            else if(params.filters.include == 'closed')
+                filterQueries.push(`Status=0`);
             if(params.filters.date)
-                filterQueries.push(`Date between '${params.filters.date.startDate}' and '${params.filters.date.endDate}'`);
+                filterQueries.push(`Date between '${params.filters.date.startDate}' and '${params.filters.date.endDate}'`);            
             if(filterQueries.length != 0)
                 query += ' where ' + filterQueries.join(' AND ');
         }
