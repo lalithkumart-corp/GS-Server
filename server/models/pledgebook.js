@@ -291,8 +291,9 @@ module.exports = function(Pledgebook) {
             let queryValues = [params.offsetStart, params.offsetEnd];
             let userId = await utils.getStoreUserId(accessToken);
             let pledgebookTableName = await Pledgebook.getPledgebookTableName(userId);
+            let pledgebookClosedBillTableName = await Pledgebook.getPledgebookClosedTableName(userId);
             
-            let query = Pledgebook.getQuery('normal', params, pledgebookTableName);            
+            let query = Pledgebook.getQuery('normal', params, pledgebookTableName, pledgebookClosedBillTableName);            
             let promise1 = new Promise((resolve, reject) => {
                 Pledgebook.dataSource.connector.query(query, queryValues, (err, result) => {
                     if(err) {
@@ -434,7 +435,7 @@ module.exports = function(Pledgebook) {
         return tableName;
     }
 
-    Pledgebook.getQuery = (queryIdentifier, params, pledgebookTableName) => {
+    Pledgebook.getQuery = (queryIdentifier, params, pledgebookTableName, pledgebookClosedBillTableName) => {
         let query = '';
         switch(queryIdentifier) {
             case 'insert':
@@ -475,7 +476,9 @@ module.exports = function(Pledgebook) {
                                     LEFT JOIN
                                 image ON customer.ImageId = image.Id
                                     LEFT JOIN
-                                orn_images ON ${pledgebookTableName}.OrnPictureId = orn_images.Id`;
+                                orn_images ON ${pledgebookTableName}.OrnPictureId = orn_images.Id
+                                    LEFT JOIN
+                                ${pledgebookClosedBillTableName} ON ${pledgebookClosedBillTableName}.pledgebook_uid = ${pledgebookTableName}.UniqueIdentifier`;
                 
                 query = Pledgebook.appendFilters(params, query);
                 
@@ -495,12 +498,17 @@ module.exports = function(Pledgebook) {
                 break;
             case 'byCustomerId':
                 query = `SELECT                         
-                            *,                        
-                            ${pledgebookTableName}.Id AS PledgeBookID                           
+                            *,                                                    
+                            ${pledgebookTableName}.Id AS PledgeBookID,
+                            orn_images.Path AS OrnImagePath
                         FROM
                             ${pledgebookTableName}
                                 LEFT JOIN
-                            customer ON ${pledgebookTableName}.CustomerId = customer.CustomerId                              
+                            customer ON ${pledgebookTableName}.CustomerId = customer.CustomerId      
+                                LEFT JOIN
+                            orn_images ON ${pledgebookTableName}.OrnPictureId = orn_images.Id
+                                LEFT JOIN
+                            ${pledgebookClosedBillTableName} ON ${pledgebookClosedBillTableName}.pledgebook_uid = ${pledgebookTableName}.UniqueIdentifier
                         WHERE
                             ${pledgebookTableName}.CustomerId = ?`;
 
@@ -765,6 +773,10 @@ module.exports = function(Pledgebook) {
                 if(err) {
                     reject(err);
                 } else {
+                    _.each(result, (aRec, index) => {
+                        if(aRec.UserImagePath)
+                            aRec.UserImagePath = `http://${app.get('domain')}:${app.get('port')}${aRec.UserImagePath.replace('client', '')}`;
+                    });                    
                     resolve(result);
                 }
             });            
@@ -803,11 +815,16 @@ module.exports = function(Pledgebook) {
         return new Promise( async (resolve, reject) => {
             data._userId = await utils.getStoreUserId(data.accessToken);
             data._pledgebookTableName = await Pledgebook.getPledgebookTableName(data._userId);
-            let query = Pledgebook.getQuery('byCustomerId', data, data._pledgebookTableName);
+            data._pledgebookClosedBillTableName = await Pledgebook.getPledgebookClosedTableName(data._userId);
+            let query = Pledgebook.getQuery('byCustomerId', data, data._pledgebookTableName, data._pledgebookClosedBillTableName);
             Pledgebook.dataSource.connector.query(query, [data.customerId], (err, result) => {
                 if(err) {
                     reject(err);
-                } else {                   
+                } else {
+                    _.each(result, (aRec, index) => {
+                        if(aRec.OrnImagePath)
+                            aRec.OrnImagePath = `http://${app.get('domain')}:${app.get('port')}${aRec.OrnImagePath.replace('client', '')}`;
+                    })
                     resolve(result);
                 }
             });
