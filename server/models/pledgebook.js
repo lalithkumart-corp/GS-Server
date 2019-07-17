@@ -2,6 +2,8 @@
 let utils = require('../utils/commonUtils');
 let app = require('../server.js');
 let _ = require('lodash');
+const createCsvWriter = require('csv-writer').createObjectCsvWriter;
+const createCsvStringifier = require('csv-writer').createObjectCsvStringifier;
 
 module.exports = function(Pledgebook) {
 
@@ -232,6 +234,36 @@ module.exports = function(Pledgebook) {
         },
         http: {path: '/fetch-customer-history', verb: 'get'},
         description: 'For fetching customer total bill history'
+    })
+
+    Pledgebook.remoteMethod('exportAPIHandler', {
+        accepts: [
+            {
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let accessToken = req && req.query.access_token;
+                    return accessToken;
+                },
+                description: 'Arguments goes here',
+            }, {
+                arg: 'params', type: 'object', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let params = req && req.query.params;
+                    params = params ? JSON.parse(params) : {};
+                    return params;
+                },
+                description: 'Arguments goes here',
+            }, {
+                arg: 'res', type: 'object', 'http': {source: 'res'}
+            }
+        ],
+        isStatic: true,
+        returns: [
+            {arg: 'body', type: 'file', root: true},
+            {arg: 'Content-Type', type: 'string', http: { target: 'header' }}
+          ],
+        http: {path: '/export-pledgebook', verb: 'get'},
+        description: 'For exporting the pledgebook'
     })
 
     Pledgebook.insertNewBillAPIHandler = async (data, cb) => {
@@ -631,19 +663,19 @@ module.exports = function(Pledgebook) {
     Pledgebook.appendFilters = (params, query) => {
         let filterQueries = [];
         if(params.filters) {
-            if(params.filters.billNo !== "")
+            if(params.filters.billNo)
                 filterQueries.push(`BillNo like '${params.filters.billNo}%'`);
-            if(params.filters.amount !== "")
+            if(params.filters.amount && params.filters.amount > 0)
                 filterQueries.push(`amount >= ${params.filters.amount}`);
-            if(params.filters.cName !== "")
+            if(params.filters.cName)
                 filterQueries.push(`Name like '${params.filters.cName}%'`);
-            if(params.filters.gName !== "")
+            if(params.filters.gName)
                 filterQueries.push(`GaurdianName like '${params.filters.gName}%'`);
-            if(params.filters.address !== "")
+            if(params.filters.address)
                 filterQueries.push(`Address like '%${params.filters.address}%'`);
-            if(params.filters.include == 'pending')
+            if(params.filters.include && params.filters.include == 'pending')
                 filterQueries.push(`Status=1`);
-            else if(params.filters.include == 'closed')
+            else if(params.filters.include && params.filters.include == 'closed')
                 filterQueries.push(`Status=0`);
             if(params.filters.date)
                 filterQueries.push(`Date between '${params.filters.date.startDate}' and '${params.filters.date.endDate}'`);            
@@ -874,5 +906,210 @@ module.exports = function(Pledgebook) {
                 }
             });
         });        
+    }
+
+    Pledgebook.exportAPIHandler = async (accessToken, params, res, cb) => {
+        try {            
+            let pledgebook = await Pledgebook.getPledgebookData(accessToken, params);
+            let exportDataJSON = Pledgebook._constructExportDataJSON(pledgebook);
+            let csvStr = Pledgebook._convertToCsvString(exportDataJSON);
+            
+            let status = await Pledgebook._writeCSVfile(exportDataJSON);
+            res.download( 'client/csvfiles/file.csv', 'pledgebook.csv');
+
+            //let updatedResponse = Pledgebook._setResponseHeaders(res);
+            //updatedResponse.download(csvStr);                                        
+
+            // let filePath = path.join('../../client/csvfiles','file.csv');
+            // res.download(filePath, 'downld.csv');
+            
+            // fs.readFile('client/csvfiles/file.csv', (err, stream) => {
+            //     if(err) {
+            //         return cb(err);
+            //     } else {
+            //         cb(null, stream, 'application/octet-stream');
+            //     }
+            // });
+           
+            //return true;
+        } catch(e) {
+            return e;
+        }
+    }
+
+    
+    /*Pledgebook.afterRemote('exportAPIHandler', (ctx, results, next) => {
+        var options = {
+            root: 'client/csvfiles',
+            headers: {
+              'content-type': 'text/comma-separated-values, text/csv, application/csv, application/excel, application/vnd.ms-excel, application/vnd.msexcel, text/anytext',
+              //'content-type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', //'application/vnd.ms-excel', //'text/csv',
+              'x-timestamp': Date.now(),
+              'x-sent': true
+            }
+        };
+        
+        ctx.res.sendFile('file.csv', options, function (err) {
+            if (err) { 
+                console.log(err); 
+                ctx.res.status(err.status).end();
+            } else {
+                ctx.res.end();
+            }
+        });
+    });*/
+    
+
+    Pledgebook.getPledgebookData = (accessToken, params) => {
+        return new Promise( async (resolve, reject) => {
+            let queryValues = [params.offsetStart, params.offsetEnd];
+            let userId = await utils.getStoreUserId(accessToken);
+            let pledgebookTableName = await Pledgebook.getPledgebookTableName(userId);
+            let pledgebookClosedBillTableName = await Pledgebook.getPledgebookClosedTableName(userId);
+            
+            let query = Pledgebook.getQuery('normal', params, pledgebookTableName, pledgebookClosedBillTableName);            
+            Pledgebook.dataSource.connector.query(query, queryValues, (err, result) => {
+                if(err) {
+                    reject(err);
+                } else {
+                    resolve(result);
+                }
+            });
+        });        
+    }
+
+    Pledgebook._constructExportDataJSON = (rawData) => {
+        let mainBucket = [];
+        let pendingBillsBucket = [];
+        let closedBillsBucket = [];
+        _.each(rawData, (aRec, index) => {
+            let anObj = {
+                Date: aRec.Date,
+                BillNo: aRec.BillNo,
+                Amount: aRec.Amount,
+                Name: aRec.Name,
+                GaurdianName: aRec.GaurdianName,
+                Address: aRec.Address,
+                Place: aRec.Place,
+                City: aRec.City,
+                Pincode: aRec.Pincode,
+                Mobile: aRec.Mobile,
+                Orn: Pledgebook._constructOrnString(aRec.Orn)
+            };
+            if(aRec.Status) {
+                let temp = {
+                    ...anObj,
+                }
+                pendingBillsBucket.push(temp);
+            } else {
+                let temp = {
+                    ...anObj,
+                    RedeemedDate: aRec.closed_date,
+                }
+                closedBillsBucket.push(temp);
+            }
+        });
+
+        mainBucket = [...pendingBillsBucket, ...closedBillsBucket];
+        return mainBucket;
+    }
+
+    Pledgebook._constructOrnString = (jsonStr) => {
+        let ornStr = '';
+        if(jsonStr) {
+            let jsonObj;
+            try {
+                jsonObj = JSON.parse(jsonStr);
+            } catch(e) {
+                console.error(e);
+            }
+            if(jsonObj) {
+                let bucket = [];
+                _.each(jsonObj, (anOrnObj, index) => {
+                    bucket.push(`${anOrnObj.ornItem}-${anOrnObj.ornNos}-${anOrnObj.ornNWt}`);
+                });
+                ornStr = bucket.join('||');
+            }
+        }
+        return ornStr;
+    }    
+
+    
+    Pledgebook._writeCSVfile = (jsonData) => {
+        return new Promise( (resolve, reject) => {
+            const csvWriter = createCsvWriter({
+                path: 'client/csvfiles/file.csv',
+                header: [
+                    {id: 'Date', title: 'Date'},
+                    {id: 'BillNo', title: 'BillNo'},
+                    {id: 'Amount', title: 'Amount'},
+                    {id: 'Name', title: 'Name'},
+                    {id: 'GaurdianName', title: 'GaurdianName'},
+                    {id: 'Address', title: 'Address'},
+                    {id: 'Place', title: 'Place'},
+                    {id: 'City', title: 'City'},
+                    {id: 'Pincode', title: 'Pincode'},
+                    {id: 'Mobile', title: 'Mobile'},
+                    {id: 'Orn', title: 'Orn'},
+                ]
+            });
+            csvWriter.writeRecords(jsonData)
+                .then(
+                    () => {
+                        resolve(true);
+                        console.log('...Done');
+                    },
+                    (err) => {
+                        console.error(err);
+                        reject(false);
+                    }
+                )
+                .catch(
+                    (e) => {
+                        console.error(e);
+                        reject(false);
+                    }
+                )
+        });
+    }
+    
+
+    Pledgebook._convertToCsvString = (json) => {
+        const csvStringifier = createCsvStringifier({
+            header: [
+                {id: 'Date', title: 'Date'},
+                {id: 'BillNo', title: 'BillNo'},
+                {id: 'Amount', title: 'Amount'},
+                {id: 'Name', title: 'Name'},
+                {id: 'GaurdianName', title: 'GaurdianName'},
+                {id: 'Address', title: 'Address'},
+                {id: 'Place', title: 'Place'},
+                {id: 'City', title: 'City'},
+                {id: 'Pincode', title: 'Pincode'},
+                {id: 'Mobile', title: 'Mobile'},
+                {id: 'Orn', title: 'Orn'}
+            ]
+        });
+         
+        const records = json;
+
+        let csvStr = csvStringifier.getHeaderString();
+        csvStr += csvStringifier.stringifyRecords(records);
+        return csvStr;
+    }
+
+    Pledgebook._setResponseHeaders = (res) => {
+        var datetime = +new Date();
+        let expiry = datetime + 200000; //extnding the timestamp by around 2minutes
+        let expirtyDateString = new Date(expiry).toGMTString();
+        res.set('Expires', expirtyDateString);
+        res.set('Cache-Control', 'max-age=0, no-cache, must-revalidate, proxy-revalidate');
+        res.set('Last-Modified', datetime +'GMT');
+        res.set('Content-Type','application/force-download');
+        res.set('Content-Type','application/octet-stream');
+        res.set('Content-Type','application/download');
+        res.set('Content-Disposition','attachment;filename=pledgebook.csv');
+        res.set('Content-Transfer-Encoding','binary');
+        return res;
     }
 };
