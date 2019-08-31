@@ -15,6 +15,42 @@ module.exports = function(Pledgebooksettings) {
         });
     }
 
+    Pledgebooksettings.UpdateBillNumberAPIHanlder = async (params, cb) => {
+        let resp = {STATUS: 'SUCCESS'};
+        try {
+            params._userId = await utils.getStoreUserId(params.accessToken);
+            await Pledgebooksettings.updateLastBillDetail(params);       
+            resp.MSG = 'Updated the bill settings successfully!';
+        } catch(e) {
+            resp.STATUS = 'ERROR';
+            resp.ERROR = e.message?e.message:'Unknown Error';
+        } finally {
+            return resp;
+        }
+    }
+
+    Pledgebooksettings.remoteMethod('UpdateBillNumberAPIHanlder', {
+        accepts: {
+                arg: 'params',
+                type: 'object',
+                default: {
+                    
+                },
+                http: {
+                    source: 'body',
+                },
+            },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/update-bill-series-and-number', verb: 'post'},
+        description: 'Update bill series and number'
+    });
+
     Pledgebooksettings.getLastBillSeriesAndNumber =  (accessToken, cb) => {
         utils.getStoreUserId(accessToken)
         .then(
