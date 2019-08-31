@@ -11,7 +11,37 @@
   },
   "properties": {
     "ownerId": {
-      "type": "number"
+      "type": "number",
+      "mysql": {
+        "columnName": "ownerId",
+        "dataType": "int",
+        "dataLength": 11,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "guardianName": {
+      "type": "string",
+      "mysql": {
+        "columnName": "guardianName",
+        "dataType": "varchar",
+        "dataLength": 512,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "phone": {
+      "type": "string",
+      "mysql": {
+        "columnName": "phone",
+        "dataType": "varchar",
+        "dataLength": 45,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
     }
   },
   "validations": [],
