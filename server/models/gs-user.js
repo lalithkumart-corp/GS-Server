@@ -138,6 +138,32 @@ module.exports = function(Gsuser) {
         http: {verb: 'post', path: '/add-customer'}
     });
 
+
+    Gsuser.fetchUserList = (accessToken, cb) => {
+        console.log('12');
+        //TODO:
+    }
+
+    Gsuser.remoteMethod('fetchUserList', {
+        accepts: [
+            {
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let accessToken = req && req.query.access_token;
+                    return accessToken;
+                },
+                description: 'Arguments goes here',
+            }],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            },
+        },
+        http: {verb: 'get', path: '/user-list'}
+    })
+
     Gsuser._insertUser = (custom) => {
         return new Promise( (resolve, reject) => {
             let theParams = {
