@@ -5,13 +5,21 @@ module.exports = function(Pledgebooksettings) {
     Pledgebooksettings.updateLastBillDetail = (data) => {
         return new Promise((resolve, reject) => {
             let userId = data._userId;
-            Pledgebooksettings.updateAll({userId: userId}, {billSeries: data.billSeries, lastCreatedBillNo: data.billNo}, (error, result) => {
-                if(error) {
-                    reject(error);
+
+            Pledgebooksettings.findOrCreate({where: {userId: userId}}, {userId: userId, billStart: 1, billLimit: 10000}, (err, res) => {
+                if(err) {
+                    console.log(err); //TODO: Replace with Logger;
+                    reject(err);
                 } else {
-                    resolve(result);
+                    Pledgebooksettings.updateAll({userId: userId}, {billSeries: data.billSeries, lastCreatedBillNo: data.billNo}, (error, result) => {
+                        if(error) {
+                            reject(error);
+                        } else {
+                            resolve(result);
+                        }
+                    });
                 }
-            });
+            });            
         });
     }
 
@@ -59,7 +67,7 @@ module.exports = function(Pledgebooksettings) {
                     if(err) {
                         cb(err, null);
                     } else {
-                        let data = result;
+                        let data = result || {};
                         let returnVal = {
                             billSeries: data.billSeries,
                             billNo: data.lastCreatedBillNo
