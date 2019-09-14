@@ -319,13 +319,13 @@ module.exports = function(Pledgebook) {
     }
 
     Pledgebook.getPendingBills = (accessToken, params) => {
-        return new Promise( async (resolve, reject) => {
-            let queryValues = [params.offsetStart, params.offsetEnd];
+        return new Promise( async (resolve, reject) => {            
+            let queryValues = [(params.offsetEnd - params.offsetStart), params.offsetStart];
             let userId = await utils.getStoreUserId(accessToken);
             let pledgebookTableName = await Pledgebook.getPledgebookTableName(userId);
             let pledgebookClosedBillTableName = await Pledgebook.getPledgebookClosedTableName(userId);
             
-            let query = Pledgebook.getQuery('normal', params, pledgebookTableName, pledgebookClosedBillTableName);            
+            let query = Pledgebook.getQuery('normal', params, pledgebookTableName, pledgebookClosedBillTableName);             
             let promise1 = new Promise((resolve, reject) => {
                 Pledgebook.dataSource.connector.query(query, queryValues, (err, result) => {
                     if(err) {
@@ -337,7 +337,7 @@ module.exports = function(Pledgebook) {
             });
 
 
-            let countQuery = Pledgebook.getQuery('countQuery', params, pledgebookTableName);
+            let countQuery = Pledgebook.getQuery('countQuery', params, pledgebookTableName);            
             let promise2 = new Promise((resolve, reject) => {
                 Pledgebook.dataSource.connector.query(countQuery, queryValues, (err, result) => {
                     if(err) {
@@ -492,7 +492,7 @@ module.exports = function(Pledgebook) {
             case 'normal':
                 query = `SELECT                         
                                 *,                        
-                                ${pledgebookTableName}.Id AS PledgeBookID,
+                                ${pledgebookTableName}.Date AS PledgedDate,
                                 image.Id AS ImageTableID,
                                 image.Image AS UserImageBlob,
                                 orn_images.Id AS OrnImageTableID,
@@ -514,8 +514,8 @@ module.exports = function(Pledgebook) {
                 
                 query = Pledgebook.appendFilters(params, query);
                 
-                query += ` ORDER BY PledgeBookID DESC`;
-                query += ` LIMIT ? , ?`;
+                query += ` ORDER BY PledgedDate DESC`;
+                query += ` LIMIT ? OFFSET ?`;
                 break;
             case 'countQuery':
                 query = `SELECT                         
@@ -531,7 +531,7 @@ module.exports = function(Pledgebook) {
             case 'byCustomerId':
                 query = `SELECT                         
                             *,                                                    
-                            ${pledgebookTableName}.Id AS PledgeBookID,
+                            ${pledgebookTableName}.Date AS PledgedDate,
                             orn_images.Path AS OrnImagePath
                         FROM
                             ${pledgebookTableName}
@@ -544,7 +544,7 @@ module.exports = function(Pledgebook) {
                         WHERE
                             ${pledgebookTableName}.CustomerId = ?`;
 
-                query += ` ORDER BY PledgeBookID DESC`;                
+                query += ` ORDER BY PledgedDate DESC`;
                 break;
             case 'billAlreadyExist':
                 query = `SELECT 
@@ -563,11 +563,11 @@ module.exports = function(Pledgebook) {
                                             END
                         WHERE BillNo IN('K.1', 'K.2'); */
                 if(params.data.length == 1) {
-                    query = `UPDATE ${pledgebookTableName} SET Status= ${params._status} WHERE Id = ${params.data[0].pledgeBookID}`; 
+                    query = `UPDATE ${pledgebookTableName} SET Status= ${params._status} WHERE UniqueIdentifier = ${params.data[0].pledgeBookUID}`; 
                 } else {
                     query = `SET SQL_SAFE_UPDATES = 0;`;
                     for(let i=0; i<params.data.length; i++) {
-                        query += `UPDATE ${pledgebookTableName} SET STATUS = ${params._status} WHERE Id = '${params.data[i].pledgeBookID}'`;
+                        query += `UPDATE ${pledgebookTableName} SET STATUS = ${params._status} WHERE UniqueIdentifier = '${params.data[i].pledgeBookUID}'`;
                     }
                     query += `SET SQL_SAFE_UPDATES = 1;`;
 
@@ -616,7 +616,6 @@ module.exports = function(Pledgebook) {
             case 'billDetails':                
                 query = `SELECT                         
                             *,
-                            ${pledgebookTableName}.Id AS PledgeBookID,
                             image.Id AS ImageTableID,
                             image.Image AS UserImageBlob,
                             orn_images.Id AS OrnImageTableID,
@@ -692,7 +691,7 @@ module.exports = function(Pledgebook) {
             billNo = params.billSeries + "." + billNo;
         parsedArg.accessToken = params.accessToken;
         parsedArg.billNoWithSeries = billNo;
-        parsedArg.uniqueIdentifier= (+ new Date());
+        parsedArg.uniqueIdentifier= (+ new Date()); //TEMPORARY : for migration:   //params.uniqueIdentifier;
         parsedArg.orn = JSON.stringify(params.orn);
         parsedArg.createdDate = new Date().toISOString().replace('T', ' ').slice(0,23);
         parsedArg.modifiedDate= new Date().toISOString().replace('T', ' ').slice(0,23);
@@ -962,7 +961,7 @@ module.exports = function(Pledgebook) {
 
     Pledgebook.getPledgebookData = (accessToken, params) => {
         return new Promise( async (resolve, reject) => {
-            let queryValues = [params.offsetStart, params.offsetEnd];
+            let queryValues = [(params.offsetEnd - params.offsetStart), params.offsetStart];
             let userId = await utils.getStoreUserId(accessToken);
             let pledgebookTableName = await Pledgebook.getPledgebookTableName(userId);
             let pledgebookClosedBillTableName = await Pledgebook.getPledgebookClosedTableName(userId);

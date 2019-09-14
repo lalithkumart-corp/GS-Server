@@ -223,6 +223,7 @@ module.exports = function(Gsuser) {
         return new Promise ( (resolve, reject) => {
             let sql_closed_bills = pledgebookClosedStructure;
             sql_closed_bills = sql_closed_bills.replace(/TABLENAME/g, 'pledgebook_closed_bills_'+user.id);
+            sql_closed_bills = sql_closed_bills.replace(/PLEDGEBOOKTABLE/g, 'pledgebook_'+user.id);
             Gsuser.dataSource.connector.query(sql_closed_bills, (err, resp) => {
                 if(err) {
                     console.log('Error occured while creating a new pledgebook_closed_bills table for the user: ', user.id);
@@ -238,7 +239,6 @@ module.exports = function(Gsuser) {
 
 
 let pledgebookStructure = `CREATE TABLE TABLENAME (
-                                Id int(11) NOT NULL AUTO_INCREMENT,
                                 UniqueIdentifier varchar(45) DEFAULT NULL,
                                 BillNo varchar(45) DEFAULT NULL,
                                 Amount int(11) DEFAULT NULL,
@@ -252,11 +252,10 @@ let pledgebookStructure = `CREATE TABLE TABLENAME (
                                 History text,
                                 CreatedDate datetime DEFAULT NULL,
                                 ModifiedDate datetime DEFAULT NULL,
-                                PRIMARY KEY (Id)
-                            ) ENGINE=InnoDB AUTO_INCREMENT=45 DEFAULT CHARSET=latin1;`;
+                                PRIMARY KEY (UniqueIdentifier)
+                            ) ENGINE=InnoDB DEFAULT CHARSET=latin1;`;
 
 let pledgebookClosedStructure = `CREATE TABLE TABLENAME (
-                                id int(11) NOT NULL AUTO_INCREMENT,
                                 pledgebook_uid varchar(45) NOT NULL,
                                 bill_no varchar(45) NOT NULL,
                                 pledged_date varchar(45) DEFAULT NULL,
@@ -270,5 +269,7 @@ let pledgebookClosedStructure = `CREATE TABLE TABLENAME (
                                 discount_amt varchar(45) DEFAULT NULL,
                                 paid_amt varchar(45) DEFAULT NULL,
                                 handed_over_to_person varchar(100) DEFAULT NULL,
-                                PRIMARY KEY (id,pledgebook_uid)
-                                ) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=latin1;`;
+                                PRIMARY KEY (pledgebook_uid)
+                                KEY UniqueIdentifier_idx (pledgebook_uid),
+                                CONSTRAINT TABLENAME FOREIGN KEY (pledgebook_uid) REFERENCES PLEDGEBOOKTABLE (UniqueIdentifier)
+                                ) ENGINE=InnoDB DEFAULT CHARSET=latin1;`;

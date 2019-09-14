@@ -1,7 +1,7 @@
 {
   "name": "Pledgebook",
   "base": "PersistedModel",
-  "idInjection": true,
+  "idInjection": false,
   "options": {
     "validateUpsert": true
   },
@@ -10,17 +10,6 @@
     "table": "pledgebook"
   },
   "properties": {
-    "Id": {
-      "type": "number",
-      "mysql": {
-        "columnName": "Id",
-        "dataType": "int",
-        "dataLength": null,
-        "dataPrecision": 10,
-        "dataScale": 0,
-        "nullable": "Y"
-      }
-    },
     "UniqueIdentifier": {
       "type": "string",
       "required": true,
