@@ -2,7 +2,8 @@
 
 var loopback = require('loopback');
 var boot = require('loopback-boot');
-
+//let init = require('./dataMigration').init;
+//let uploadOrnamentData = require('./dataMigration').uploadOrnamentData;
 var app = module.exports = loopback();
 
 app.start = function() {
@@ -15,6 +16,8 @@ app.start = function() {
       var explorerPath = app.get('loopback-component-explorer').mountPath;
       console.log('Browse your REST API at %s%s', baseUrl, explorerPath);
     }
+    //init(app);
+    //uploadOrnamentData(app);
   });
 };
 

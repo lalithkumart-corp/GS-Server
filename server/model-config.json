@@ -67,7 +67,7 @@
     "dataSource": "developmentdb",
     "public": true
   },
-  "OrnamentList": {
+  "Ornament": {
     "dataSource": "developmentdb",
     "public": true
   },
