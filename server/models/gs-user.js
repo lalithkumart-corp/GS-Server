@@ -269,7 +269,7 @@ let pledgebookClosedStructure = `CREATE TABLE TABLENAME (
                                 discount_amt varchar(45) DEFAULT NULL,
                                 paid_amt varchar(45) DEFAULT NULL,
                                 handed_over_to_person varchar(100) DEFAULT NULL,
-                                PRIMARY KEY (pledgebook_uid)
+                                PRIMARY KEY (pledgebook_uid),
                                 KEY UniqueIdentifier_idx (pledgebook_uid),
-                                CONSTRAINT TABLENAME FOREIGN KEY (pledgebook_uid) REFERENCES PLEDGEBOOKTABLE (UniqueIdentifier)
+                                CONSTRAINT TABLENAME_ibfk_1 FOREIGN KEY (pledgebook_uid) REFERENCES PLEDGEBOOKTABLE (UniqueIdentifier)
                                 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;`;
