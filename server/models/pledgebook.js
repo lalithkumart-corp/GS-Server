@@ -223,6 +223,16 @@ module.exports = function(Pledgebook) {
                     return customerId;
                 },
                 description: 'customerId',
+            },
+            {
+                arg: 'include_only', type: 'string', http: (ctx) =>  {
+                    let req = ctx && ctx.req;
+                    let include_only = "all";
+                    if(req && req.query && req.query.include_only)
+                        include_only = req.query.include_only;
+                    return include_only;
+                },
+                description: "Require only pending or closed or all..."
             }
         ],
         returns: {
@@ -279,7 +289,13 @@ module.exports = function(Pledgebook) {
             if(validation.status) {
                 parsedArg.userPicture.id = parsedArg.userPicture.imageId;
                 parsedArg.ornPicture.id = parsedArg.ornPicture.imageId;
-                parsedArg.customerId = await Pledgebook.app.models.Customer.handleCustomerData(parsedArg); //Save customer information in Customer Table
+                let customerObj = await Pledgebook.app.models.Customer.handleCustomerData(parsedArg); //Save customer information in Customer Table
+                parsedArg.customerId = customerObj.customerId;
+
+                //CUSTOM: Mobile number Handling:  ---- > If the given phone number in Bill is different, then save the number given in bill as Comment)
+                if(customerObj.record.mobile !== parsedArg.mobile)
+                    parsedArg.billRemarks += ` Other Mobile: ${parsedArg.mobile}`;
+
                 await Pledgebook.saveBillDetails(parsedArg, pledgebookTableName); //Save ImageId, CustomerID, ORNAMENT and other Bill details in Pledgebook
                 await Pledgebook.app.models.PledgebookSettings.updateLastBillDetail(parsedArg);
                 return {STATUS: 'SUCCESS', STATUS_MSG: 'Successfully inserted new bill'};
@@ -319,53 +335,57 @@ module.exports = function(Pledgebook) {
     }
 
     Pledgebook.getPendingBills = (accessToken, params) => {
-        return new Promise( async (resolve, reject) => {            
-            let queryValues = [(params.offsetEnd - params.offsetStart), params.offsetStart];
-            let userId = await utils.getStoreUserId(accessToken);
-            let pledgebookTableName = await Pledgebook.getPledgebookTableName(userId);
-            let pledgebookClosedBillTableName = await Pledgebook.getPledgebookClosedTableName(userId);
-            
-            let query = Pledgebook.getQuery('normal', params, pledgebookTableName, pledgebookClosedBillTableName);             
-            let promise1 = new Promise((resolve, reject) => {
-                Pledgebook.dataSource.connector.query(query, queryValues, (err, result) => {
-                    if(err) {
-                        reject(err);
-                    } else {
-                        resolve(result);
-                    }
-                });
-            });
-
-
-            let countQuery = Pledgebook.getQuery('countQuery', params, pledgebookTableName);            
-            let promise2 = new Promise((resolve, reject) => {
-                Pledgebook.dataSource.connector.query(countQuery, queryValues, (err, result) => {
-                    if(err) {
-                        reject(err);
-                    } else {
-                        resolve(result);
-                    }
-                });
-            });
-
-            Promise.all([promise1, promise2])
-                .then(
-                    (results) => {
-                        let obj = {
-                            results: results[0],
-                            totalCount: results[1][0]['count']
+        return new Promise( async (resolve, reject) => {
+            try {
+                let queryValues = [(params.offsetEnd - params.offsetStart), params.offsetStart];
+                let userId = await utils.getStoreUserId(accessToken);
+                let pledgebookTableName = await Pledgebook.getPledgebookTableName(userId);
+                let pledgebookClosedBillTableName = await Pledgebook.getPledgebookClosedTableName(userId);
+                
+                let query = Pledgebook.getQuery('normal', params, pledgebookTableName, pledgebookClosedBillTableName);             
+                let promise1 = new Promise((resolve, reject) => {
+                    Pledgebook.dataSource.connector.query(query, queryValues, (err, result) => {
+                        if(err) {
+                            reject(err);
+                        } else {
+                            resolve(result);
                         }
-                        resolve(obj);
-                    },
-                    (error) => {
-                        reject(error);
-                    }
-                )
-                .catch(
-                    (exception) => {
-                        reject(exception);
-                    }
-                )
+                    });
+                });
+
+
+                let countQuery = Pledgebook.getQuery('countQuery', params, pledgebookTableName);            
+                let promise2 = new Promise((resolve, reject) => {
+                    Pledgebook.dataSource.connector.query(countQuery, queryValues, (err, result) => {
+                        if(err) {
+                            reject(err);
+                        } else {
+                            resolve(result);
+                        }
+                    });
+                });
+
+                Promise.all([promise1, promise2])
+                    .then(
+                        (results) => {
+                            let obj = {
+                                results: results[0],
+                                totalCount: results[1][0]['count']
+                            }
+                            resolve(obj);
+                        },
+                        (error) => {
+                            reject(error);
+                        }
+                    )
+                    .catch(
+                        (exception) => {
+                            reject(exception);
+                        }
+                    )
+            } catch(e) {
+                reject(e);
+            }
         });
     }    
 
@@ -384,6 +404,7 @@ module.exports = function(Pledgebook) {
             await Pledgebook.updatePledgebookBillStatus(params);
             return {STATUS: 'success', RESPONSE: {}, STATUS_MSG: ''};
         } catch(e) {
+            console.log(e);
             return {STATUS: 'error', ERROR: e, MESSAGE: (e?e.message:'')};
         }
     }
@@ -393,13 +414,14 @@ module.exports = function(Pledgebook) {
             let query = Pledgebook.getQuery('redeem-status-update', params, params._pledgebookTableName);
             Pledgebook.dataSource.connector.query(query, async (err, result) => {
                 if (err) {
+                    console.log(err);
                     return reject(err);
                 } else {
                     if(result.affectedRows > 0) {
-                       await Pledgebook._insertRowInClosedBillList(params);
+                        await Pledgebook._insertRowInClosedBillList(params);
                         return resolve(true);
                     } else {
-                        return reject({msg: 'Not Updated'});
+                        return reject({msg: 'Not Inserted record in bill closing table'});
                     }
                 }
             });
@@ -416,15 +438,18 @@ module.exports = function(Pledgebook) {
                     aRowObj.interestValue, aRowObj.estimatedAmount, aRowObj.discountValue, aRowObj.paidAmount,
                     aRowObj.handedTo);
             } */           
-            let query = Pledgebook.getQuery('redeem-insert', params, params._pledgebookClosedBillTableName);            
+            let query = Pledgebook.getQuery('redeem-insert', params, params._pledgebookClosedBillTableName); 
             Pledgebook.dataSource.connector.query(query, (err, result) => {
                 if(err) {
+                    console.log('ERROR in inserting rec in closingTableList===');
+                    console.log(err);
                     return reject(err);                    
                 } else {
-                    if(result.affectedRows > 0)                        
-                        return resolve(true);                    
-                    else
+                    if(result.affectedRows > 0) {
+                        return resolve(true);
+                    } else {
                         return reject({msg: 'Not insertedd record in Bill closed list table'});
+                    }
                 }
             });
         });
@@ -514,7 +539,7 @@ module.exports = function(Pledgebook) {
                 
                 query = Pledgebook.appendFilters(params, query);
                 
-                query += ` ORDER BY PledgedDate DESC`;
+                query += ` ORDER BY UniqueIdentifier DESC`;
                 query += ` LIMIT ? OFFSET ?`;
                 break;
             case 'countQuery':
@@ -543,6 +568,11 @@ module.exports = function(Pledgebook) {
                             ${pledgebookClosedBillTableName} ON ${pledgebookClosedBillTableName}.pledgebook_uid = ${pledgebookTableName}.UniqueIdentifier
                         WHERE
                             ${pledgebookTableName}.CustomerId = ?`;
+
+                    if(params.includeOnly == "pending")
+                        query +=  ` AND Status=1`;
+                    else if(params.includeOnly == "closed")
+                        query += ` AND Status=0`;
 
                 query += ` ORDER BY PledgedDate DESC`;
                 break;
@@ -691,7 +721,7 @@ module.exports = function(Pledgebook) {
             billNo = params.billSeries + "." + billNo;
         parsedArg.accessToken = params.accessToken;
         parsedArg.billNoWithSeries = billNo;
-        parsedArg.uniqueIdentifier= (+ new Date()); //TEMPORARY : for migration:   //params.uniqueIdentifier;
+        parsedArg.uniqueIdentifier=  (+ new Date()); //TEMPORARY: for migration:  params.uniqueIdentifier;
         parsedArg.orn = JSON.stringify(params.orn);
         parsedArg.createdDate = new Date().toISOString().replace('T', ' ').slice(0,23);
         parsedArg.modifiedDate= new Date().toISOString().replace('T', ' ').slice(0,23);
@@ -833,9 +863,9 @@ module.exports = function(Pledgebook) {
         }
     }
 
-    Pledgebook.fetchUserHistoryAPIHandler = async (accessToken, customerId, cb) => {
+    Pledgebook.fetchUserHistoryAPIHandler = async (accessToken, customerId, include_only, cb) => {
         try {
-            let billList = await Pledgebook.fetchHistory({accessToken: accessToken, customerId: customerId});
+            let billList = await Pledgebook.fetchHistory({accessToken: accessToken, customerId: customerId, includeOnly: include_only});
             return {STATUS: 'success', RESPONSE: billList, STATUS_MSG: ''};
         } catch(e) {
             return {STATUS: 'error', ERROR: e, MESSAGE: (e?e.message:'')};
@@ -872,7 +902,15 @@ module.exports = function(Pledgebook) {
             parsedArg._userId = await utils.getStoreUserId(params.accessToken);
             let pledgebookTableName = await Pledgebook.getPledgebookTableName(parsedArg._userId);                        
             parsedArg.ornPicture.id = parsedArg.ornPicture.imageId;
-            parsedArg.customerId = await Pledgebook.app.models.Customer.handleCustomerData(parsedArg); //Save customer information in Customer Table
+            let customerObj = await Pledgebook.app.models.Customer.handleCustomerData(parsedArg); //Save customer information in Customer Table
+            parsedArg.customerId = customerObj.customerId;
+
+            //CUSTOM: Mobile number Handling:  ---- > If the given phone number in Bill is different, then save the number given in bill as Comment)
+            if(customerObj.record.mobile !== parsedArg.mobile){
+                if(parsedArg.billRemarks.indexOf(parsedArg.mobile) == -1)
+                    parsedArg.billRemarks += ` Other Mobile: ${parsedArg.mobile}`;
+            };
+
             await Pledgebook.updateBillDetails(parsedArg, pledgebookTableName); //Save ImageId, CustomerID, ORNAMENT and other Bill details in Pledgebook                
             return {STATUS: 'SUCCESS', STATUS_MSG: 'Successfully Updated the bill'};
         } catch(e) {

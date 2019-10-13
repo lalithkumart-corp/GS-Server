@@ -20,7 +20,7 @@ const getStoreUserId = (accessToken) => {
                         }
                     });
                 } else {
-                    reject(new Error('No Response from DB...'));
+                    reject(new Error('Authorization Error'));
                 }
             }
         });

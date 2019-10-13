@@ -91,9 +91,12 @@ module.exports = function(Customer) {
             customerData = await Customer.saveCustomerData(params);
         } else {
             // Customer Info should be updated from 'Customer Detail -> General Info" UI page
-           // await Customer.checkForCustomerDataUpdate(customerData, params);            
+           // await Customer.checkForCustomerDataUpdate(customerData, params);  
         }
-        return customerData.customerId;
+        return {
+            customerId: customerData.customerId,
+            record: customerData
+        }
     }
 
     Customer.saveCustomerData = (params) => {
