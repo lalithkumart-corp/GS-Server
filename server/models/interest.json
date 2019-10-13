@@ -1,7 +1,7 @@
 {
   "name": "Interest",
   "base": "PersistedModel",
-  "idInjection": true,
+  "idInjection": false,
   "options": {
     "validateUpsert": true
   },
