@@ -539,7 +539,10 @@ module.exports = function(Pledgebook) {
                 
                 query = Pledgebook.appendFilters(params, query);
                 
-                query += ` ORDER BY UniqueIdentifier DESC`;
+                if(params.filters.include && params.filters.include == 'closed')
+                    query += ` ORDER BY uid DESC`;
+                else
+                    query += ` ORDER BY UniqueIdentifier DESC`;
                 query += ` LIMIT ? OFFSET ?`;
                 break;
             case 'countQuery':
@@ -618,14 +621,15 @@ module.exports = function(Pledgebook) {
                     let aRowObj = params.data[i];
                     query += `INSERT INTO 
                                 ${pledgebookTableName} 
-                                    (pledgebook_uid, bill_no, 
+                                    (uid,
+                                    pledgebook_uid, bill_no, 
                                     pledged_date, closed_date, 
                                     principal_amt, no_of_month, 
                                     rate_of_interest, int_rupee_per_month, 
                                     interest_amt, actual_estimated_amt, 
                                     discount_amt, paid_amt, 
                                     handed_over_to_person) 
-                                VALUES ('${aRowObj.pledgeBookUID}', '${aRowObj.billNo}', '${aRowObj.pledgedDate}', '${aRowObj.closedDate}',
+                                VALUES (${(+new Date())}, '${aRowObj.pledgeBookUID}', '${aRowObj.billNo}', '${aRowObj.pledgedDate}', '${aRowObj.closedDate}',
                                     '${aRowObj.principalAmt}', '${aRowObj.noOfMonth}', '${aRowObj.roi}', '${aRowObj.interestPerMonth}',
                                     '${aRowObj.interestValue}', '${aRowObj.estimatedAmount}', '${aRowObj.discountValue}', '${aRowObj.paidAmount}',
                                     '${aRowObj.handedTo}');`;

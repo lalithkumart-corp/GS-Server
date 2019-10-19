@@ -256,6 +256,7 @@ let pledgebookStructure = `CREATE TABLE TABLENAME (
                             ) ENGINE=InnoDB DEFAULT CHARSET=latin1;`;
 
 let pledgebookClosedStructure = `CREATE TABLE TABLENAME (
+                                uid BIGINT(20) NOT NULL,
                                 pledgebook_uid varchar(45) NOT NULL,
                                 bill_no varchar(45) NOT NULL,
                                 pledged_date varchar(45) DEFAULT NULL,
