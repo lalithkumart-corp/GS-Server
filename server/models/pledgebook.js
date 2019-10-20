@@ -1101,12 +1101,14 @@ module.exports = function(Pledgebook) {
                         console.log('...Done');
                     },
                     (err) => {
+                        console.log('ERROR occured.....');
                         console.error(err);
                         reject(false);
                     }
                 )
                 .catch(
                     (e) => {
+                        console.log('Exception occured.....');
                         console.error(e);
                         reject(false);
                     }
