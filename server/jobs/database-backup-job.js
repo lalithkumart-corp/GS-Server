@@ -1,7 +1,7 @@
 var fs = require('fs');
 var spawn = require('child_process').spawn;
 const cron = require("node-cron");
-
+let appRootPath = require('app-root-path');
 
 /**
  
@@ -18,7 +18,7 @@ const cron = require("node-cron");
 const task = () => {
     console.log('MYSQL DB backup');
     let fileName = +new Date();
-    var wstream = fs.createWriteStream(`backups/mysql/${fileName}.sql`);
+    var wstream = fs.createWriteStream(appRootPath+`/backups/mysql/${fileName}.sql`);
     var mysqldump = spawn('mysqldump', [
         '-u',
         'root',
