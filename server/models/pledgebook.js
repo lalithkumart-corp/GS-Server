@@ -1030,12 +1030,14 @@ module.exports = function(Pledgebook) {
                 Amount: aRec.Amount,
                 Name: aRec.Name,
                 GaurdianName: aRec.GaurdianName,
+                Orn: Pledgebook._constructOrnString(aRec.Orn),
+                Status: (aRec.Status)?'PENDING':'CLOSED',
                 Address: aRec.Address,
                 Place: aRec.Place,
                 City: aRec.City,
                 Pincode: aRec.Pincode,
                 Mobile: aRec.Mobile,
-                Orn: Pledgebook._constructOrnString(aRec.Orn)
+                ClosedDate: aRec.closed_date
             };
             if(aRec.Status) {
                 let temp = {
@@ -1086,12 +1088,14 @@ module.exports = function(Pledgebook) {
                     {id: 'Amount', title: 'Amount'},
                     {id: 'Name', title: 'Name'},
                     {id: 'GaurdianName', title: 'GaurdianName'},
+                    {id: 'Orn', title: 'Orn'},
+                    {id: 'Status', title: 'Status'},
                     {id: 'Address', title: 'Address'},
                     {id: 'Place', title: 'Place'},
                     {id: 'City', title: 'City'},
                     {id: 'Pincode', title: 'Pincode'},
                     {id: 'Mobile', title: 'Mobile'},
-                    {id: 'Orn', title: 'Orn'},
+                    {id: 'ClosedDate', title: 'Closed Date'}
                 ]
             });
             csvWriter.writeRecords(jsonData)
