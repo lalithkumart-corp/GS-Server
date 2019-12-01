@@ -974,7 +974,7 @@ module.exports = function(Pledgebook) {
            
             //return true;
         } catch(e) {
-            return e;
+            res.send({STATUS: 'error', ERROR: e});
         }
     }
 
@@ -1107,14 +1107,14 @@ module.exports = function(Pledgebook) {
                     (err) => {
                         console.log('ERROR occured.....');
                         console.error(err);
-                        reject(false);
+                        reject(err);
                     }
                 )
                 .catch(
                     (e) => {
                         console.log('Exception occured.....');
                         console.error(e);
-                        reject(false);
+                        reject(e);
                     }
                 )
         });

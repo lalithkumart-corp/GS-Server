@@ -74,5 +74,9 @@
   "Note": {
     "dataSource": "developmentdb",
     "public": true
+  },
+  "Common": {
+    "dataSource": "developmentdb",
+    "public": true
   }
 }
