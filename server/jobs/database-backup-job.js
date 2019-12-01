@@ -59,7 +59,11 @@ class DbBackup {
                 let filePath = `${appRootPath}/backups/mysql/`;
                 let fullFilePath = filePath+fileName;
                 var wstream = fs.createWriteStream(fullFilePath);
-                var mysqldump = spawn('mysqldump', [
+                // mysqldump is a command, and it will be set in ENV variables alone with 'mysql'
+                // If mysqldump command not found, then set the path of mysql in ENV path, or mention the path of the mysqldump exe file. 
+                // In Mac OS, i have not set 'mysql' in Env path, and so the 'mysqldump' also will throw as command not found. Do, mention the path as below 
+                // Ex: /usr/local/mysql/bin/mysqldump
+                var mysqldump = spawn('mysqldump', [ // /usr/local/mysql/bin/mysqldump
                     '-u',
                     `${dataSource.developmentdb.username}`,
                     `-p${dataSource.developmentdb.password}`,
