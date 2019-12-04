@@ -81,17 +81,20 @@ module.exports = function(Customer) {
                     let filters = req.query.filters || null;
                     let cname = null;
                     let fgname = null;
+                    let hashKey = null;
                     if(filters) {
                         filters = JSON.parse(filters);
                         cname = filters.cname || null;
                         fgname = filters.fgname || null;
+                        hashKey = filters.hashKey || null;
                     }
                     
                     return {
                         start: offsetStart,
                         limit: limit,
                         cname: cname,
-                        fgname: fgname
+                        fgname: fgname,
+                        hashKey: hashKey
                     }
                 }
             }, {
@@ -312,6 +315,8 @@ module.exports = function(Customer) {
             filters.push(`customer.Name LIKE '${params.cname}%'`);
         if(params.fgname)
             filters.push(`customer.GaurdianName LIKE '${params.fgname}%'`);
+        if(params.hashKey)
+            filters.push(`customer.HashKey = '${params.hashKey}'`);
         if(filters.length)
             whereCondition = ` WHERE ${filters.join(' AND ')}`;
         return whereCondition;
