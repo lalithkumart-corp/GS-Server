@@ -49,7 +49,7 @@ class DbBackup {
         }
     }
 
-    start = () => {
+    start() {
         return new Promise( (resolve, reject) => {
             try {
                 console.log('MYSQL DB backup: In progress....');
