@@ -82,11 +82,13 @@ module.exports = function(Customer) {
                     let cname = null;
                     let fgname = null;
                     let hashKey = null;
+                    let onlyIsActive = false;
                     if(filters) {
                         filters = JSON.parse(filters);
                         cname = filters.cname || null;
                         fgname = filters.fgname || null;
                         hashKey = filters.hashKey || null;
+                        onlyIsActive = filters.onlyIsActive;
                     }
                     
                     return {
@@ -94,7 +96,8 @@ module.exports = function(Customer) {
                         limit: limit,
                         cname: cname,
                         fgname: fgname,
-                        hashKey: hashKey
+                        hashKey: hashKey,
+                        onlyIsActive: onlyIsActive
                     }
                 }
             }, {
@@ -302,6 +305,12 @@ module.exports = function(Customer) {
                         image ON customer.ImageId = image.Id
                             ${whereCondition}`;
                 break;
+            case 'replace-customer-hashkey-map':
+                sql = `UPDATE ${params.pledgebookTableName} SET CustomerId = '${params._customerIdForMergeInto}' where CustomerId = '${params._customerIdForMerge}'`;
+                break;
+            case 'disable-customer':
+                sql = `UPDATE customer SET CustStatus = 0 WHERE CustomerId = '${params._customerIdForMerge}'`;
+                break;
         }
         return sql;
     }
@@ -317,6 +326,8 @@ module.exports = function(Customer) {
             filters.push(`customer.GaurdianName LIKE '${params.fgname}%'`);
         if(params.hashKey)
             filters.push(`customer.HashKey = '${params.hashKey}'`);
+        if(params.onlyIsActive)
+            filters.push(`customer.CustStatus = 1`);
         if(filters.length)
             whereCondition = ` WHERE ${filters.join(' AND ')}`;
         return whereCondition;
@@ -424,6 +435,81 @@ module.exports = function(Customer) {
             console.log(e);
             throw e;
         }
+    }
+
+    Customer.updateByMergingIntoOther = async (params) => {
+        try {
+            let _userId = await utils.getStoreUserId(params.accessToken);
+            params.pledgebookTableName = await app.models.Pledgebook.getPledgebookTableName(_userId);
+            params._customerIdForMerge = await Customer.getIdByHashKey(params.custHashkeyForMerge);
+            params._customerIdForMergeInto = await Customer.getIdByHashKey(params.custHashkeyForMergeInto);
+            if(!params._customerIdForMerge || !params._customerIdForMergeInto)
+                throw new Error('Customer not found, Please enter valid Hashkey');
+            await Customer._updateByMergingIntoOther(params);
+            return {STATUS: 'success', message: 'Successfully merged'};
+        } catch(e) {
+            return {STATUS: 'error', ERROR: e, message: 'Error while updating the customer by merging into other customer'};
+        }
+    }
+
+    Customer.remoteMethod('updateByMergingIntoOther', {
+        accepts: {
+            arg: 'data',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/update-by-merging', verb: 'post'},
+        description: 'Updating the customer by merging the one into other customer'
+    });
+
+    Customer._updateByMergingIntoOther = (params) => {
+        return new Promise( (resolve, reject) => {
+            let sql = Customer.getQuery('replace-customer-hashkey-map', params);
+            Customer.dataSource.connector.query(sql, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    Customer.dataSource.connector.query(Customer.getQuery('disable-customer', params), (err1, res1) => {
+                        if(err1) {
+                            return reject(err1);
+                        } else {
+                            return resolve(true);
+                        }
+                    });
+                }
+            });
+        }); 
+    }
+
+    Customer.getIdByHashKey = (hashKey) => {
+        return new Promise( (resolve, reject ) => {
+            try {
+                Customer.dataSource.connector.query(`SELECT * FROM Customer WHERE HashKey='${hashKey}'`, (err, res) => {
+                    if(err) {
+                        return reject(err);
+                    } else {
+                        if(res && res.length > 0)
+                            return resolve(res[0].CustomerId);
+                        else
+                            return resolve(null);
+                    }
+                });
+            } catch(e) {
+                return reject(e);
+            }            
+        });
     }
 };
 
