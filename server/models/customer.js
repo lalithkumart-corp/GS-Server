@@ -429,12 +429,25 @@ module.exports = function(Customer) {
     Customer.updateDetails = async (params) => {
         try{
             //TODO: DELETE the existing image
+            let verification = Customer.checkInputDetails(params);
+            if(!verification.STATUS)
+                throw new Error(verification.message || 'Verification of customer detail failed.');
+            params = verification.params;
             let response = await Customer.updateAll({customerId: params.customerId}, {name: params.cname, imageId: params.picture.id, gaurdianName: params.gaurdianName, address: params.address, place: params.place, city: params.city, mobile: params.mobile, secMobile: params.secMobile, pincode: params.pinCode, otherDetails: params.otherDetails});
             return response;
         } catch(e) {
             console.log(e);
             throw e;
         }
+    }
+
+    Customer.checkInputDetails = (params) => {
+        if(params.mobile && params.mobile == 'null')
+            params.mobile = null;
+        return {
+            STATUS: true,
+            params: params
+        };
     }
 
     Customer.updateByMergingIntoOther = async (params) => {

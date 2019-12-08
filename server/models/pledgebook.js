@@ -293,7 +293,7 @@ module.exports = function(Pledgebook) {
                 parsedArg.customerId = customerObj.customerId;
 
                 //CUSTOM: Mobile number Handling:  ---- > If the given phone number in Bill is different, then save the number given in bill as Comment)
-                if(customerObj.record.mobile !== parsedArg.mobile)
+                if(parsedArg.mobile && customerObj.record.mobile !== parsedArg.mobile)
                     parsedArg.billRemarks += ` Other Mobile: ${parsedArg.mobile}`;
 
                 await Pledgebook.saveBillDetails(parsedArg, pledgebookTableName); //Save ImageId, CustomerID, ORNAMENT and other Bill details in Pledgebook
@@ -910,7 +910,7 @@ module.exports = function(Pledgebook) {
             parsedArg.customerId = customerObj.customerId;
 
             //CUSTOM: Mobile number Handling:  ---- > If the given phone number in Bill is different, then save the number given in bill as Comment)
-            if(customerObj.record.mobile !== parsedArg.mobile){
+            if(parsedArg.mobile && customerObj.record.mobile !== parsedArg.mobile){
                 if(parsedArg.billRemarks.indexOf(parsedArg.mobile) == -1)
                     parsedArg.billRemarks += ` Other Mobile: ${parsedArg.mobile}`;
             };
