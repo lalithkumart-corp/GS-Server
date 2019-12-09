@@ -334,6 +334,7 @@ module.exports = function(Customer) {
     }
 
     Customer.generateHashKey = (params) => {
+        params.pincode = params.pinCode || params.pincode;
         let cname = (params.cname)?params.cname.toLowerCase():params.cname;
         let gaurdianName = (params.gaurdianName)?params.gaurdianName.toLowerCase():params.gaurdianName;
         let address = (params.address)?params.address.toLowerCase():params.address;
@@ -344,9 +345,12 @@ module.exports = function(Customer) {
         return sh.unique( cname + gaurdianName + address + place + city + pincode)        
     }
 
-    Customer.isAlreadyExists = (hashKey) => {
+    Customer.isAlreadyExists = (hashKey, optional) => {
         return new Promise( (resolve, reject) => {
-            Customer.findOne({where: {hashKey: hashKey}}, (err, result) => {
+            let whereCondition = {hashKey: hashKey}
+            if(optional && optional.ignoreCustId)
+                whereCondition = {hashKey: hashKey, customerId: {neq: optional.ignoreCustId}, status: {neq: 0}};
+            Customer.findOne({where: whereCondition}, (err, result) => {
                 if(err) {
                     //TODO: Log the error
                     reject(err);
@@ -429,11 +433,15 @@ module.exports = function(Customer) {
     Customer.updateDetails = async (params) => {
         try{
             //TODO: DELETE the existing image
-            let verification = Customer.checkInputDetails(params);
-            if(!verification.STATUS)
-                throw new Error(verification.message || 'Verification of customer detail failed.');
+            let verification = await Customer.checkInputDetails(params);
+            if(!verification.STATUS) {
+                let msg = 'Verification of customer detail failed.';
+                if(verification.CODE == 'SIMILAR_ALREADY_EXISTS')
+                    msg = `Customer with same details already exists. CustId = "${verification.params._existingCustHashkey}"`;
+                throw new Error(msg);
+            }
             params = verification.params;
-            let response = await Customer.updateAll({customerId: params.customerId}, {name: params.cname, imageId: params.picture.id, gaurdianName: params.gaurdianName, address: params.address, place: params.place, city: params.city, mobile: params.mobile, secMobile: params.secMobile, pincode: params.pinCode, otherDetails: params.otherDetails});
+            let response = await Customer.updateAll({customerId: params.customerId}, {name: params.cname, imageId: params.picture.id, gaurdianName: params.gaurdianName, address: params.address, place: params.place, city: params.city, mobile: params.mobile, secMobile: params.secMobile, pincode: params.pinCode, otherDetails: params.otherDetails, hashKey: params._hashKey});
             return response;
         } catch(e) {
             console.log(e);
@@ -441,13 +449,25 @@ module.exports = function(Customer) {
         }
     }
 
-    Customer.checkInputDetails = (params) => {
+    Customer.checkInputDetails = async (params) => {
         if(params.mobile && params.mobile == 'null')
             params.mobile = null;
-        return {
-            STATUS: true,
-            params: params
-        };
+        let hashKey = Customer.generateHashKey(params);
+        params._hashKey = hashKey;
+        let customerData = await Customer.isAlreadyExists(hashKey, {ignoreCustId: params.customerId});
+        if(customerData) {
+            params._existingCustHashkey = customerData.hashKey;
+            return {
+                STATUS: false,
+                CODE: 'SIMILAR_ALREADY_EXISTS',
+                params: params
+            }
+        } else {
+            return {
+                STATUS: true,
+                params: params
+            }
+        }
     }
 
     Customer.updateByMergingIntoOther = async (params) => {

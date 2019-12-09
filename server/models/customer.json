@@ -175,6 +175,16 @@
         "dataScale": null,
         "nullable": "Y"
       }
+    },
+    "status": {
+      "type": "number",
+      "mysql": {
+        "columnName": "CustStatus",
+        "dataType": "int",
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
     }
   },
   "validations": [],
