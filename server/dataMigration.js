@@ -1,29 +1,33 @@
 let fs = require('fs');
 const _ = require('lodash');
-let json = require('../pledgebook.json');
+let json = require('../pledgebook2.json');
 let ornJSON = require('../orn.json');
 let moment = require('moment');
 //let app = require('./server');
-
+let logger = [];
 const init = async (app) => {
     console.log(1);
     //_.each(json, async (aRec, index) => {
     let startTime = +new Date();
-    for(let i=10000; i< 13586; i++) {
+    for(let i=13000; i< 13947; i++) { // 13586 total
         //if(index < 100) {
             console.log('---------START', i);
             let newBillParam = consructNewBillData(json[i]);
-            let response = await app.models.Pledgebook.insertNewBillAPIHandler({accessToken: '1bDYys8sDwSqj6TKnICdMEEJkcXlX2NZm4LhzzW59yKxP0StiE23uzQcytkUwFtP', requestParams: newBillParam});
+            let response = await app.models.Pledgebook.insertNewBillAPIHandler({accessToken: 'vrdeBCdS8So2SlXasdaDapEKwvh6iePEfgZfALzCATchc8bcfwZYoPLwadsqMCVS', requestParams: newBillParam});
             //console.log(response);
             if(!newBillParam.status) {
                 let closedBillParam = constructClosedBillData(newBillParam, json[i]);
-                let resp = await app.models.Pledgebook.redeemPendingBillAPIHandler({accessToken: '1bDYys8sDwSqj6TKnICdMEEJkcXlX2NZm4LhzzW59yKxP0StiE23uzQcytkUwFtP', requestParams: [closedBillParam]});
+                let resp = await app.models.Pledgebook.redeemPendingBillAPIHandler({accessToken: 'vrdeBCdS8So2SlXasdaDapEKwvh6iePEfgZfALzCATchc8bcfwZYoPLwadsqMCVS', requestParams: [closedBillParam]});
                 //console.log(resp);  
             }
         //}
     }
     let endTime = +new Date();
     console.log(`Time Took = ${endTime-startTime}`);
+    let theStr = logger.join(',\n');
+    fs.writeFile('dataMigration.log', theStr, 'utf8', (err) => {
+        console.log(err);
+    });
     //});    
 }
 
@@ -38,10 +42,10 @@ const consructNewBillData = (aRawObj) => {
         cname: parsedObj._cname,
         gaurdianName: parsedObj._gaurdianName,
         address: parsedObj._address,
-        place: parsedObj._place,
-        city: parsedObj._city,
-        pinCode: parsedObj._pinCode,
-        mobile: parsedObj._mobile,
+        place: parsedObj._place || "kATTUPPAKKAM",
+        city: parsedObj._city || "CHENNAI",
+        pinCode: parsedObj._pinCode || 600056,
+        mobile: parsedObj._mobile || 0,
         orn: parsedObj._orn,
         billRemarks: parsedObj._billRemarks,
         moreDetails: parsedObj._moreDetails,
@@ -54,36 +58,41 @@ const consructNewBillData = (aRawObj) => {
 
 const constructClosedBillData = (newBillData, aRawObj) => {
     let param = {};
+    try {
+        param.pledgeBookUID = newBillData.uniqueIdentifier;
 
-    param.pledgeBookUID = newBillData.uniqueIdentifier;
+        let billNo = newBillData.billNo;
+        if(newBillData.billSeries !== "")
+            billNo = newBillData.billSeries + "." + billNo;
+        param.billNo = billNo;
 
-    let billNo = newBillData.billNo;
-    if(newBillData.billSeries !== "")
-        billNo = newBillData.billSeries + "." + billNo;
-    param.billNo = billNo;
+        param.pledgedDate = newBillData.date;
 
-    param.pledgedDate = newBillData.date;
-
-    let tt = moment(aRawObj.billClosedDate, 'DD/MM/YYYY').toDate(); //.format('YYYY-MM-DD HH:M:SS');        
-    param.closedDate = moment(tt).format('YYYY-MM-DD HH:M:SS');
-    
-    param.principalAmt = newBillData.amount;
-    param.noOfMonth = 0;
-    param.roi = 0;
-    param.interestPerMonth = 0;
-    param.interestValue = 0;
-    param.estimatedAmount = 0;
-    param.discountValue = 0;
-    param.paidAmount = 0;
-    param.handedTo = '';
-
-    return param;
+        let tt = moment(aRawObj.billClosedDate, 'DD/MM/YYYY').toDate(); //.format('YYYY-MM-DD HH:M:SS');        
+        param.closedDate = moment(tt).format('YYYY-MM-DD HH:M:SS');
+        
+        param.principalAmt = newBillData.amount;
+        param.noOfMonth = 0;
+        param.roi = 0;
+        param.interestPerMonth = 0;
+        param.interestValue = 0;
+        param.estimatedAmount = 0;
+        param.discountValue = 0;
+        param.paidAmount = 0;
+        param.handedTo = '';
+        logger.push(`>> ${aRawObj.billNo}=success`);
+    } catch(e) {
+        console.log(e);
+        logger.push(`>> ${aRawObj.billNo}=error`);
+    } finally {
+        return param;
+    }
 }
 
 const parseRawObj = (aRawObj) => {
     let cleaned = {...aRawObj};
     try{
-        
+        cleaned._status = (aRawObj.status == 'open')?1:0;
         let tt = moment(aRawObj.dates, 'DD/MM/YYYY').toDate(); //.format('YYYY-MM-DD HH:M:SS');        
         cleaned._date = moment(tt).format('YYYY-MM-DD HH:M:SS');
         
@@ -132,11 +141,11 @@ const parseRawObj = (aRawObj) => {
         cleaned._moreDetails = [];
         cleaned._userPicture = {imageId: null};
         cleaned._ornPicture = {imageId: null};
-
-        cleaned._status = (aRawObj.status == 'open')?1:0;
+        logger.push(`= ${aRawObj.billNo}=success`);
     } catch(e) {
         console.log(e);
         console.log(aRawObj);
+        logger.push(`= ${aRawObj.billNo}=error`);
     } finally {
         return cleaned;
     }
@@ -151,10 +160,65 @@ const uploadOrnamentData = async (app) => {
     }
 }
 
+const updateClosingBillTable = async (app) => {
+    let dataSource = app.models.Pledgebook.dataSource;
+    let allClosedBills = await getAllClosedBills(dataSource);
+    let i = 0;
+    let limit = allClosedBills.length;
+    let tt = (aBill) => {
+        console.log( +new Date());
+        let status = updateInDB(aBill, dataSource);
+    }
+    setInterval(
+        () => {
+            if(i<limit) {
+                tt(allClosedBills[i]);
+                i++;
+            }
+        }, 
+        5
+    );
+
+    // _.each(allClosedBills, async (aBill, index) => {
+    //     let status = await updateInDB(aBill, dataSource);
+    // })
+}
+
+const updateInDB = (aBill, dataSource) => {
+    return new Promise( (resolve, reject) => {
+        let sql = `UPDATE pledgebook_closed_bills_1 SET uid=${+new Date()} WHERE pledgebook_uid='${aBill.pledgebook_uid}'`;
+        dataSource.connector.query(sql, (err, res) => {
+            if(err) {
+                console.log('-----------------------------ERR');
+                console.log(err);
+                resolve(false);
+            } else {
+                resolve(true);
+            }
+        });
+    });
+}
+
+const getAllClosedBills = (dataSource) => {
+    return new Promise( (resolve, reject) => {
+        let sql = `SELECT * FROM pledgebook_closed_bills_1`;
+        dataSource.connector.query(sql, (err, res) => {
+            if(err) {
+                console.log('--------------FETCH---------------ERR');
+                console.log(err);
+                resolve(false);
+            } else {
+                resolve(res);
+            }
+        });
+    });
+}
+
 //init();
 module.exports = {
     init: init,
-    uploadOrnamentData: uploadOrnamentData
+    uploadOrnamentData: uploadOrnamentData,
+    updateClosingBillTable: updateClosingBillTable
 }
 
 
