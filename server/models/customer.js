@@ -280,6 +280,7 @@ module.exports = function(Customer) {
                             customer.Pincode AS pincode,
                             customer.Mobile AS mobile,
                             customer.HashKey AS hashKey,
+                            customer.SecMobile AS secMobile,
                             customer.OtherDetails AS otherDetails,
                             image.Id AS imageTableId,
                             image.Path AS userImagePath,
