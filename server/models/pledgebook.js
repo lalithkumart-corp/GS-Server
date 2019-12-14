@@ -741,6 +741,8 @@ module.exports = function(Pledgebook) {
         parsedArg.billNoWithSeries = billNo;
         parsedArg.orn = JSON.stringify(params.orn);
         parsedArg.modifiedDate= new Date().toISOString().replace('T', ' ').slice(0,23);
+        if(parsedArg.mobile && parsedArg.mobile == 'null')
+            parsedArg.mobile = null;
         return parsedArg;
     }
 
