@@ -293,8 +293,14 @@ module.exports = function(Pledgebook) {
                 parsedArg.customerId = customerObj.customerId;
 
                 //CUSTOM: Mobile number Handling:  ---- > If the given phone number in Bill is different, then save the number given in bill as Comment)
-                if(parsedArg.mobile && customerObj.record.mobile !== parsedArg.mobile)
-                    parsedArg.billRemarks += ` Other Mobile: ${parsedArg.mobile}`;
+                if(parsedArg.mobile && customerObj.record.mobile !== parsedArg.mobile) {
+                    if(!customerObj.record.secMobile)
+                        await app.models.Customer._updateSecMobile(parsedArg.mobile, parsedArg.customerId);
+                    else if(customerObj.record.secMobile == parsedArg.mobile)
+                        console.log('Sec mobile is already filled, so do nothing now');
+                    else
+                        parsedArg.billRemarks += ` Other Mobile: ${parsedArg.mobile}`;
+                }
 
                 await Pledgebook.saveBillDetails(parsedArg, pledgebookTableName); //Save ImageId, CustomerID, ORNAMENT and other Bill details in Pledgebook
                 await Pledgebook.app.models.PledgebookSettings.updateLastBillDetail(parsedArg);
@@ -732,6 +738,8 @@ module.exports = function(Pledgebook) {
         parsedArg.orn = JSON.stringify(params.orn);
         parsedArg.createdDate = new Date().toISOString().replace('T', ' ').slice(0,23);
         parsedArg.modifiedDate= new Date().toISOString().replace('T', ' ').slice(0,23);
+        if(parsedArg.mobile && parsedArg.mobile == 'null')
+            parsedArg.mobile = null;
         return parsedArg;
     }
 
@@ -915,8 +923,12 @@ module.exports = function(Pledgebook) {
             parsedArg.customerId = customerObj.customerId;
 
             //CUSTOM: Mobile number Handling:  ---- > If the given phone number in Bill is different, then save the number given in bill as Comment)
-            if(parsedArg.mobile && customerObj.record.mobile !== parsedArg.mobile){
-                if(parsedArg.billRemarks.indexOf(parsedArg.mobile) == -1)
+            if(parsedArg.mobile && customerObj.record.mobile !== parsedArg.mobile) {
+                if(!customerObj.record.secMobile)
+                    await app.models.Customer._updateSecMobile(parsedArg.mobile, parsedArg.customerId);
+                else if(customerObj.record.secMobile == parsedArg.mobile)
+                    console.log('Sec mobile is already filled, so do nothing now');
+                else if(parsedArg.billRemarks.indexOf(parsedArg.mobile) == -1)
                     parsedArg.billRemarks += ` Other Mobile: ${parsedArg.mobile}`;
             };
 

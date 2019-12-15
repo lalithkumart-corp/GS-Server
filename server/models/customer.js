@@ -118,7 +118,7 @@ module.exports = function(Customer) {
     Customer.handleCustomerData = async (params) => {
         //TODO: Valide the input arguments
         let hashKey = Customer.generateHashKey(params);
-        let customerData = await Customer.isAlreadyExists(hashKey);
+        let customerData = await Customer.isAlreadyExists(hashKey, {onlyActive: true});
         if(!customerData) {            
             params.hashKey = hashKey;
             customerData = await Customer.saveCustomerData(params);
@@ -313,6 +313,9 @@ module.exports = function(Customer) {
             case 'disable-customer':
                 sql = `UPDATE customer SET CustStatus = ${params.status} WHERE CustomerId = '${params.custId}' AND UserId=${params.userId}`;
                 break;
+            case 'update-sec-mobile':
+                sql = `UPDATE customer SET SecMobile=? WHERE CustomerId=?`;
+                break;
         }
         return sql;
     }
@@ -350,8 +353,17 @@ module.exports = function(Customer) {
     Customer.isAlreadyExists = (hashKey, optional) => {
         return new Promise( (resolve, reject) => {
             let whereCondition = {hashKey: hashKey}
-            if(optional && optional.ignoreCustId)
-                whereCondition = {hashKey: hashKey, customerId: {neq: optional.ignoreCustId}, status: {neq: 0}};
+
+            if(optional) {
+                if(optional.ignoreCustId)
+                    whereCondition.customerId = {neq: optional.ignoreCustId};
+                if(optional.onlyActive)
+                    whereCondition.status = {neq: 0};
+            }
+
+            // if(optional && optional.ignoreCustId)
+            //     whereCondition = {hashKey: hashKey, customerId: {neq: optional.ignoreCustId}};
+            
             Customer.findOne({where: whereCondition}, (err, result) => {
                 if(err) {
                     //TODO: Log the error
@@ -456,7 +468,7 @@ module.exports = function(Customer) {
             params.mobile = null;
         let hashKey = Customer.generateHashKey(params);
         params._hashKey = hashKey;
-        let customerData = await Customer.isAlreadyExists(hashKey, {ignoreCustId: params.customerId});
+        let customerData = await Customer.isAlreadyExists(hashKey, {ignoreCustId: params.customerId, onlyActive: true});
         if(customerData) {
             params._existingCustHashkey = customerData.hashKey;
             return {
@@ -553,6 +565,22 @@ module.exports = function(Customer) {
         });        
     }
 
+    Customer._getById = (custId) => {
+        return new Promise( (resolve, reject) => {
+            try {
+                Customer.findOne({where: {customerId: custId} }, (err, res) => {
+                    if(err)
+                        reject(err);
+                    else {
+                        resolve(res);
+                    }
+                });
+            } catch(e) {
+                reject(e);
+            }
+        });
+    }
+
     Customer.getIdByHashKey = (hashKey) => {
         return new Promise( (resolve, reject ) => {
             try {
@@ -580,6 +608,11 @@ module.exports = function(Customer) {
                 let pendingBills = await app.models.Pledgebook._getPendingBillsList(data.custId, _userId);
                 if(pendingBills.length > 0)
                     throw new Error('This Customer has Pending Bills. Redeem those bills to disable this customer...');
+            } else { //To enable, there should not be any already existing hashkey
+                let custRecord = await Customer._getById(data.custId);
+                let custRecords = await Customer.isAlreadyExists(custRecord.hashKey, {onlyActive: true, ignoreCustId: data.custId});
+                if(custRecords)
+                    throw new Error(`Could not Enable! Snce there is another customer with Same key = ${custRecord.hashKey}`);
             }
             await Customer._changeCustStatus(data.custId, _userId, data.status);
             return {
@@ -617,6 +650,19 @@ module.exports = function(Customer) {
         http: {path: '/update-status', verb: 'post'},
         description: 'Updating the customer Status'
     });
+
+    Customer._updateSecMobile = (mobNumber, custId) => {
+        return new Promise( (resolve, reject) => {
+            let sql = Customer.getQuery('update-sec-mobile');
+            Customer.dataSource.connector.query(sql, [mobNumber, custId], (err, res) => {
+                if(err) {
+                    reject(err);
+                } else {
+                    resolve(res);
+                }
+            });
+        });
+    };
 
 };
 
