@@ -214,11 +214,131 @@ const getAllClosedBills = (dataSource) => {
     });
 }
 
+const validateHashkeys = async (app) => {
+    let dataSource = app.models.Customer.dataSource;
+    let hashKeysCateg = await checkDuplicateHashKeys(dataSource, app);
+    if(hashKeysCateg.duplicates.length > 0) {
+        await resolveDuplicates(hashKeysCateg.duplicates, app);
+    }
+    //await updateDuplicateHashkeys(dataSource, app);
+}
+
+const checkDuplicateHashKeys = (dataSource, app) => {
+    return new Promise( (resolve, reject) => {
+        let uniques = [];
+        let duplicates = [];
+        let uniquesHashKey = [];
+        let duplicatesHashKey = [];
+        dataSource.connector.query(`SELECT * FROM customer`, (err, res) => {
+            if(err) {
+                console.log(err);
+                reject(err);
+            } else {
+                _.each(res, async (aCustRec, index) => {
+                    if(uniquesHashKey.indexOf(aCustRec.HashKey) == -1){
+                        uniquesHashKey.push(aCustRec.HashKey);
+                        uniques.push(aCustRec);
+                    }else{
+                        duplicatesHashKey.push(aCustRec.HashKey);
+                        duplicates.push(aCustRec);
+                    }
+                });
+                console.log(uniques);
+                console.log(duplicates);
+                resolve({
+                    uniques: uniques,
+                    duplicates: duplicates
+                });
+            }
+        });
+    });
+}
+
+const updateDuplicateHashkeys = async (dataSource, app) => {
+    return new Promise( async (resolve, reject) => {
+        let errors = [];
+        let success = [];
+        let changed = [];
+        let notchanged = [];
+        dataSource.connector.query(`SELECT * FROM customer`, async (err, res) => {
+            if(err) {
+                console.log(err);
+            } else {
+                _.each(res, async (aCustRec, index) => {
+
+                    let hashKey = app.models.Customer.generateHashKey({cname: aCustRec.Name, gaurdianName: aCustRec.GaurdianName, address: aCustRec.Address, place: aCustRec.Place, city: aCustRec.City, pincode: aCustRec.Pincode});
+                    if(hashKey !== aCustRec.HashKey) {
+                        errors.push(hashKey);
+                        try {
+                            console.log('Will change');
+                            await updateHashKeyInCustomerTable(aCustRec, hashKey, app);
+                            changed.push(`${aCustRec.HashKey}-${hashKey}`);
+                        } catch(e) {
+                            console.log(e);
+                            notchanged.push(`${aCustRec.HashKey}-${hashKey}`);
+                        }                        
+                    } else {
+                        success.push(`${hashKey}-${aCustRec.Name}-${aCustRec.GaurdianName}`);
+                    }
+                });
+                console.log(errors);
+                console.log(success);
+                console.log(changed);
+                console.log(notchanged);
+            }
+        });
+    });
+}
+
+const updateHashKeyInCustomerTable = async (aCustRec, hashKey, app) => {
+    return new Promise((resolve, reject) => {
+        //UPDATE `gsprod`.`customer` SET `HashKey`='Z1N1lTrd' WHERE `CustomerId`='2353';
+
+        app.models.Customer.dataSource.connector.query(`UPDATE gsprod.customer SET HashKey='${hashKey}' WHERE CustomerId=${aCustRec.CustomerId}`, (err, success) => {
+            if(err){
+                reject(err);
+            } else {
+                console.log('CHanged');
+                resolve(true);
+            }
+        });
+    });
+}
+
+const resolveDuplicates = (duplicates, app) => {
+    return new Promise( (resolve, reject) => {
+        let tt = [];
+        _.each(duplicates, (aDuplicate, index) => {
+            app.models.Customer.dataSource.connector.query(`SELECT * FROM gsprod.customer where HashKey='${aDuplicate.HashKey}'`, (err, res) => {
+                if(err) {
+                    console.log(err);
+                } else {
+                    console.log(res.length);
+                    _.each(res, (aRes, key) => {
+                        app.models.Customer.dataSource.connector.query(`SELECT * FROM gsprod.pledgebook_1 where CustomerId=${aRes.CustomerId}`, (err2, res2) => {
+                            if(err2)
+                                console.log(err2);
+                            else {
+                                let yy = `STATUS: ${aRes.CustStatus} HashKey: ${aDuplicate.HashKey} CustId: ${aRes.CustomerId} Pending Bills: ${res2.length}`;
+                                console.log(yy);
+                                tt.push(yy);
+                                console.log(JSON.stringify(tt));
+                            }
+                        });
+                    });
+                    
+                }
+            });
+        });
+    });
+}
+
 //init();
 module.exports = {
     init: init,
     uploadOrnamentData: uploadOrnamentData,
-    updateClosingBillTable: updateClosingBillTable
+    updateClosingBillTable: updateClosingBillTable,
+    validateHashkeys: validateHashkeys
 }
 
 
