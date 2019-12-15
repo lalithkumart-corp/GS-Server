@@ -689,6 +689,9 @@ module.exports = function(Pledgebook) {
                                 WHERE
                             UniqueIdentifier=?`;
                 break;
+            case 'pending-bill-list':
+                query = `SELECT * FROM ${pledgebookTableName} WHERE CustomerId=${params.custId} AND Status=1`;
+                break;
         }
         return query;
     }
@@ -1160,5 +1163,20 @@ module.exports = function(Pledgebook) {
         res.set('Content-Disposition','attachment;filename=pledgebook.csv');
         res.set('Content-Transfer-Encoding','binary');
         return res;
+    }
+
+    Pledgebook._getPendingBillsList = (custId, userId) => {
+        return new Promise( async (resolve, reject) => {
+            let pledgebookTableName = await Pledgebook.getPledgebookTableName(userId);
+            Pledgebook.dataSource.connector.query(Pledgebook.getQuery('pending-bill-list', {custId: custId}, pledgebookTableName), (err, res) => {
+                if(err) {
+                    reject(err);
+                } else {
+                    resolve(res);
+                }
+
+            });
+        });
+        
     }
 };

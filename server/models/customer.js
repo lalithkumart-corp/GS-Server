@@ -282,6 +282,7 @@ module.exports = function(Customer) {
                             customer.HashKey AS hashKey,
                             customer.SecMobile AS secMobile,
                             customer.OtherDetails AS otherDetails,
+                            customer.CustStatus AS custStatus,
                             image.Id AS imageTableId,
                             image.Path AS userImagePath,
                             image.Format AS userImageFormat,
@@ -310,7 +311,7 @@ module.exports = function(Customer) {
                 sql = `UPDATE ${params.pledgebookTableName} SET CustomerId = '${params._customerIdForMergeInto}' where CustomerId = '${params._customerIdForMerge}'`;
                 break;
             case 'disable-customer':
-                sql = `UPDATE customer SET CustStatus = 0 WHERE CustomerId = '${params._customerIdForMerge}'`;
+                sql = `UPDATE customer SET CustStatus = ${params.status} WHERE CustomerId = '${params.custId}' AND UserId=${params.userId}`;
                 break;
         }
         return sql;
@@ -327,21 +328,21 @@ module.exports = function(Customer) {
             filters.push(`customer.GaurdianName LIKE '${params.fgname}%'`);
         if(params.hashKey)
             filters.push(`customer.HashKey = '${params.hashKey}'`);
-        if(params.onlyIsActive)
-            filters.push(`customer.CustStatus = 1`);
+        // if(params.onlyIsActive)
+        //     filters.push(`customer.CustStatus = 1`);
         if(filters.length)
             whereCondition = ` WHERE ${filters.join(' AND ')}`;
         return whereCondition;
     }
 
     Customer.generateHashKey = (params) => {
-        params.pincode = params.pinCode || params.pincode;
+        params.pincode = params.pinCode || params.pincode || '';
         let cname = (params.cname)?params.cname.toLowerCase():params.cname;
         let gaurdianName = (params.gaurdianName)?params.gaurdianName.toLowerCase():params.gaurdianName;
         let address = (params.address)?params.address.toLowerCase():params.address;
         let place = (params.place)?params.place.toLowerCase():params.place;
         let city = (params.city)?params.city.toLowerCase():params.city;
-        let pincode = (params.pincode)?params.pincode.toLowerCase():params.pincode;        
+        let pincode = (params.pincode)?params.pincode.toString().toLowerCase():params.pincode;        
 
         return sh.unique( cname + gaurdianName + address + place + city + pincode)        
     }
@@ -474,6 +475,7 @@ module.exports = function(Customer) {
     Customer.updateByMergingIntoOther = async (params) => {
         try {
             let _userId = await utils.getStoreUserId(params.accessToken);
+            params._userId = _userId;
             params.pledgebookTableName = await app.models.Pledgebook.getPledgebookTableName(_userId);
             params._customerIdForMerge = await Customer.getIdByHashKey(params.custHashkeyForMerge);
             params._customerIdForMergeInto = await Customer.getIdByHashKey(params.custHashkeyForMergeInto);
@@ -510,21 +512,45 @@ module.exports = function(Customer) {
 
     Customer._updateByMergingIntoOther = (params) => {
         return new Promise( (resolve, reject) => {
-            let sql = Customer.getQuery('replace-customer-hashkey-map', params);
-            Customer.dataSource.connector.query(sql, (err, res) => {
-                if(err) {
-                    return reject(err);
-                } else {
-                    Customer.dataSource.connector.query(Customer.getQuery('disable-customer', params), (err1, res1) => {
-                        if(err1) {
-                            return reject(err1);
-                        } else {
-                            return resolve(true);
+            try {
+                let sql = Customer.getQuery('replace-customer-hashkey-map', params);
+                Customer.dataSource.connector.query(sql, async (err, res) => {
+                    if(err) {
+                        return reject(err);
+                    } else {
+                        let ags = {
+                            custId : params._customerIdForMerge,
+                            userId: params._userId
                         }
-                    });
+                        try {
+                            await Customer._changeCustStatus(params._customerIdForMerge, params._userId, 0);
+                            return resolve(true);
+                        } catch(e) {
+                            return reject(e);
+                        }
+                    }
+                });
+            } catch(e) {
+                return reject(e);
+            }
+        }); 
+    }
+
+    Customer._changeCustStatus = async (custId, userId, status) => {
+        return new Promise( (resolve, reject) => {
+            let params = {
+                custId: custId,
+                userId: userId,
+                status: status
+            }
+            Customer.dataSource.connector.query(Customer.getQuery('disable-customer', params), (err1, res1) => {
+                if(err1) {
+                    reject(err1);
+                } else {
+                    resolve(true);
                 }
             });
-        }); 
+        });        
     }
 
     Customer.getIdByHashKey = (hashKey) => {
@@ -545,6 +571,53 @@ module.exports = function(Customer) {
             }            
         });
     }
+
+    Customer.updateStatusAPI = async (data) => {
+        try {
+            let _userId = await utils.getStoreUserId(data.accessToken);
+            let action = data.status?'Enabled':'Disabled';
+            if(!data.status) { //ToDisable, then the customer should not have any pending bills
+                let pendingBills = await app.models.Pledgebook._getPendingBillsList(data.custId, _userId);
+                if(pendingBills.length > 0)
+                    throw new Error('This Customer has Pending Bills. Redeem those bills to disable this customer...');
+            }
+            await Customer._changeCustStatus(data.custId, _userId, data.status);
+            return {
+                STATUS: 'success',
+                MSG: `${action} the customer successfully`
+            }
+        } catch(e) {
+            console.log(e);
+            return {
+                STATUS: 'error',
+                MSG: e.message || 'Error while updating the customer status',
+                ERROR: e
+            }
+        }
+    }
+    
+    Customer.remoteMethod('updateStatusAPI', {
+        accepts: {
+            arg: 'data',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/update-status', verb: 'post'},
+        description: 'Updating the customer Status'
+    });
+
 };
 
 let sql = {
