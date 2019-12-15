@@ -328,8 +328,8 @@ module.exports = function(Customer) {
             filters.push(`customer.GaurdianName LIKE '${params.fgname}%'`);
         if(params.hashKey)
             filters.push(`customer.HashKey = '${params.hashKey}'`);
-        // if(params.onlyIsActive)
-        //     filters.push(`customer.CustStatus = 1`);
+        if(params.onlyIsActive)
+            filters.push(`customer.CustStatus = 1`);
         if(filters.length)
             whereCondition = ` WHERE ${filters.join(' AND ')}`;
         return whereCondition;
