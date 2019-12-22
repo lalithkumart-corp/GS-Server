@@ -209,6 +209,7 @@ module.exports = function(Gsuser) {
             sql = sql.replace(/TABLENAME/g, 'pledgebook_'+user.id);
             Gsuser.dataSource.connector.query(sql, (err, resp) => {
                 if(err) {
+                    console.log(err);
                     console.log('Error occured while creating a new pledgebbok table for the user: ', user.id);
                     return reject(err);
                 } else {
@@ -226,6 +227,7 @@ module.exports = function(Gsuser) {
             sql_closed_bills = sql_closed_bills.replace(/PLEDGEBOOKTABLE/g, 'pledgebook_'+user.id);
             Gsuser.dataSource.connector.query(sql_closed_bills, (err, resp) => {
                 if(err) {
+                    console.log(err);
                     console.log('Error occured while creating a new pledgebook_closed_bills table for the user: ', user.id);
                     return reject(err);
                 } else {
@@ -239,7 +241,7 @@ module.exports = function(Gsuser) {
 
 
 let pledgebookStructure = `CREATE TABLE TABLENAME (
-                                UniqueIdentifier varchar(45) DEFAULT NULL,
+                                UniqueIdentifier varchar(45),
                                 BillNo varchar(45) DEFAULT NULL,
                                 Amount int(11) DEFAULT NULL,
                                 Date varchar(45) DEFAULT NULL,
