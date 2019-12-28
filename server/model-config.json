@@ -78,5 +78,9 @@
   "Common": {
     "dataSource": "developmentdb",
     "public": true
+  },
+  "GsRole": {
+    "dataSource": "developmentdb",
+    "public": true
   }
 }
