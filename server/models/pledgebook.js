@@ -294,7 +294,9 @@ module.exports = function(Pledgebook) {
 
                 //CUSTOM: Mobile number Handling:  ---- > If the given phone number in Bill is different, then save the number given in bill as Comment)
                 if(parsedArg.mobile && customerObj.record.mobile !== parsedArg.mobile) {
-                    if(!customerObj.record.secMobile)
+                    if(!customerObj.record.mobile || customerObj.record.mobile == 'null')
+                        await app.models.Customer._updatePrimaryMobile(parsedArg.mobile, parsedArg.customerId);
+                    else if(!customerObj.record.secMobile)
                         await app.models.Customer._updateSecMobile(parsedArg.mobile, parsedArg.customerId);
                     else if(customerObj.record.secMobile == parsedArg.mobile)
                         console.log('Sec mobile is already filled, so do nothing now');
@@ -924,7 +926,9 @@ module.exports = function(Pledgebook) {
 
             //CUSTOM: Mobile number Handling:  ---- > If the given phone number in Bill is different, then save the number given in bill as Comment)
             if(parsedArg.mobile && customerObj.record.mobile !== parsedArg.mobile) {
-                if(!customerObj.record.secMobile)
+                if(!customerObj.record.mobile || customerObj.record.mobile == 'null')
+                    await app.models.Customer._updatePrimaryMobile(parsedArg.mobile, parsedArg.customerId);
+                else if(!customerObj.record.secMobile)
                     await app.models.Customer._updateSecMobile(parsedArg.mobile, parsedArg.customerId);
                 else if(customerObj.record.secMobile == parsedArg.mobile)
                     console.log('Sec mobile is already filled, so do nothing now');

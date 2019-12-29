@@ -316,6 +316,9 @@ module.exports = function(Customer) {
             case 'update-sec-mobile':
                 sql = `UPDATE customer SET SecMobile=? WHERE CustomerId=?`;
                 break;
+            case 'update-primary-mobile':
+                sql = `UPDATE customer SET Mobile=? WHERE CustomerId=?`;
+                break;
         }
         return sql;
     }
@@ -650,6 +653,19 @@ module.exports = function(Customer) {
         http: {path: '/update-status', verb: 'post'},
         description: 'Updating the customer Status'
     });
+
+    Customer._updatePrimaryMobile = (mobNumber, custId) => {
+        return new Promise( (resolve, reject) => {
+            let sql = Customer.getQuery('update-primary-mobile');
+            Customer.dataSource.connector.query(sql, [mobNumber, custId], (err, res) => {
+                if(err) {
+                    reject(err);
+                } else {
+                    resolve(res);
+                }
+            });
+        });
+    };
 
     Customer._updateSecMobile = (mobNumber, custId) => {
         return new Promise( (resolve, reject) => {
