@@ -123,14 +123,19 @@ module.exports = function(app) {
                     }
                 }
             }*/
-            if(typeof context.remotingContext.args.auth_user_id !== 'undefined')
-                tokenVal = context.remotingContext.args.auth_user_id;
-            else if(typeof context.remotingContext.req.query.accesstoken !== 'undefined')
-                tokenVal = context.remotingContext.req.query.accesstoken;
-            else if(typeof context.remotingContext.req.query.access_token !== 'undefined')
-                tokenVal = context.remotingContext.req.query.access_token;
-            else if(typeof context.remotingContext.args.custom.auth_user_id !== 'undefined')
-                tokenVal = context.remotingContext.args.custom.auth_user_id;
+            // if(typeof context.remotingContext.args.auth_user_id !== 'undefined')
+            //     tokenVal = context.remotingContext.args.auth_user_id;
+            // else if(typeof context.remotingContext.req.query.accesstoken !== 'undefined')
+            //     tokenVal = context.remotingContext.req.query.accesstoken;
+            // else if(typeof context.remotingContext.req.query.access_token !== 'undefined')
+            //     tokenVal = context.remotingContext.req.query.access_token;
+            // else if(typeof context.remotingContext.args.custom.auth_user_id !== 'undefined')
+            //     tokenVal = context.remotingContext.args.custom.auth_user_id;
+
+            if(typeof context.remotingContext.args.apiParams.accessToken !== 'undefined')
+                tokenVal = context.remotingContext.args.apiParams.accessToken;
+            else if(typeof context.remotingContext.args.apiParams.access_token !== 'undefined')
+                tokenVal = context.remotingContext.args.apiParams.access_token;
             return tokenVal;
         } catch(e){
             console.log('Exception catched in Role Resolver: Getting Token value... ');
