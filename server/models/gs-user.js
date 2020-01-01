@@ -1,4 +1,6 @@
 'use strict';
+let addUserParamValidation = require('../utils/validateUtil').addUserParamValidation;
+let utils = require('../utils/commonUtils');
 
 module.exports = function(Gsuser) {
     Gsuser.loginUser = (custom, cb) => {
@@ -46,7 +48,7 @@ module.exports = function(Gsuser) {
         }
     );
 
-    Gsuser.addCustomer = async (custom, cb) => {     
+    Gsuser.signupNewCustomer = async (custom, cb) => {     
 
         try{
             let user = await Gsuser._insertUser(custom);
@@ -114,7 +116,7 @@ module.exports = function(Gsuser) {
         */
     }
 
-    Gsuser.remoteMethod('addCustomer', {
+    Gsuser.remoteMethod('signupNewCustomer', {
         description: 'Registering a new customer',
         accepts: {
             arg: 'custom',
@@ -138,10 +140,81 @@ module.exports = function(Gsuser) {
         http: {verb: 'post', path: '/add-customer'}
     });
 
+    Gsuser.addUser = async (apiParams, cb) => {
+        let errors = [];
+        try {
+            let validationRes = addUserParamValidation(apiParams.formData);
+            if(validationRes.STATUS) {
+                console.log('ADD user');
+                let ownerUserId = await utils.getStoreOwnerUserId(apiParams.accessToken);
+                if(!ownerUserId) {
+                    throw 'Owner User Id not found';
+                } else {
+                    let newUser = await Gsuser._insertUser({...apiParams.formData, ownerId: ownerUserId});
+                    console.log(newUser);
+                }
+            } else {
+                errors.push(...validationRes.ERRORS);
+                throw 'validation Errors';
+            }
 
-    Gsuser.fetchUserList = (accessToken, cb) => {
-        console.log('12');
-        //TODO:
+            return {
+                STATUS: 'SUCCESS',
+                MSG: "Successfully added the user"
+            } 
+        } catch(e) {
+            if(typeof e == 'string')
+                errors.push(e);
+            else
+                errors.push(e.message || e.msg || 'Exception occured');
+            return {
+                STATUS: 'ERROR',
+                ERRORS: errors
+            }
+        }
+        
+    }
+
+    Gsuser.remoteMethod('addUser', {
+        description: 'Adding new User under an existing customer',
+        accepts: {
+            arg: 'apiParams',
+            type: 'object',
+            default: {
+                "email": "gs@gs.com",
+                "password": "admin123",
+                "confirmPassword": "admin123",
+                "userName": "admin"
+            },
+            http: {
+                source: 'body'
+            }
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {verb: 'post', path: '/add-user'}
+    });
+
+    Gsuser.fetchUserList = async (accessToken, cb) => {
+        try {
+            let ownerUserId = await utils.getStoreOwnerUserId(accessToken);
+            let usersList = await Gsuser._fetchList(ownerUserId);
+            return {
+                STATUS: 'success',
+                USER_LIST: usersList
+            }
+        } catch(e) {
+            return {
+                STATUS: 'ERROR',
+                ERROR: e,
+                MSG: e.message || e.msg || 'Exception occured in fetching user List'
+            }
+        }
     }
 
     Gsuser.remoteMethod('fetchUserList', {
@@ -168,10 +241,11 @@ module.exports = function(Gsuser) {
         return new Promise( (resolve, reject) => {
             let theParams = {
                 username: custom.userName,
+                ownerId: custom.ownerId || 0,
                 email: custom.email,
                 password: custom.password,
                 phone: custom.phone,
-                guardianName: custom.guardianName
+                guardianName: custom.guardianName || ''
             }
             Gsuser.create(theParams, (err, user) => {
                 if(err) {
@@ -233,6 +307,21 @@ module.exports = function(Gsuser) {
                 } else {
                     console.log('New pledgebook_closed_bills table created!');       
                     return resolve(true);                 
+                }
+            });
+        });
+    }
+
+    Gsuser._fetchList = (ownerUserId) => {
+        return new Promise( (resolve, reject) => {
+            let where = '';
+            if(ownerUserId !== undefined)
+                where = {where: {ownerId: ownerUserId}};
+            Gsuser.find(where, (err, res) => {
+                if(err) {
+                    reject(err);
+                } else {
+                    resolve(res);
                 }
             });
         });
