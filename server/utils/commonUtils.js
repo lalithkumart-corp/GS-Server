@@ -1,7 +1,7 @@
 let app = require('../server.js')
 
 // Getting userId ie., Store owner's user id
-const getStoreUserId = (accessToken) => {
+const getStoreOwnerUserId = (accessToken) => {
     return new Promise( (resolve, reject) => {        
         app.models.AccessToken.findOne({where: {id: accessToken}}, (err, res) => {
             if(err) {
@@ -16,7 +16,7 @@ const getStoreUserId = (accessToken) => {
                             if(result.ownerId != 0)
                                 resolve(result.ownerId);
                             else
-                                resolve(res.userId);                        
+                                resolve(res.userId);
                         }
                     });
                 } else {
@@ -28,5 +28,5 @@ const getStoreUserId = (accessToken) => {
 }
 
 module.exports = {
-    getStoreUserId
+    getStoreOwnerUserId
 }

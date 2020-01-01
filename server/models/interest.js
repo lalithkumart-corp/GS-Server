@@ -39,7 +39,7 @@ module.exports = function(Interest) {
 
     Interest._getInterestRates = (accessToken) => {
         return new Promise( async (resolve, reject) => {
-            let _userId = await utils.getStoreUserId(accessToken);
+            let _userId = await utils.getStoreOwnerUserId(accessToken);
             Interest.find({where: {userId: _userId}}, (err, result) => {
                 if(err) {
                     return reject(err);

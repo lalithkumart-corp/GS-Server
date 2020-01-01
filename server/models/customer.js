@@ -9,7 +9,7 @@ module.exports = function(Customer) {
     Customer.getMetaData = async (accessToken, identifiers, params, cb) => {
         let metaData = {};
         Customer.metaData = null;
-        let userId = await utils.getStoreUserId(accessToken);
+        let userId = await utils.getStoreOwnerUserId(accessToken);
         for(let identifier of identifiers) {
             switch(identifier) {
                 case 'all':
@@ -489,7 +489,7 @@ module.exports = function(Customer) {
 
     Customer.updateByMergingIntoOther = async (params) => {
         try {
-            let _userId = await utils.getStoreUserId(params.accessToken);
+            let _userId = await utils.getStoreOwnerUserId(params.accessToken);
             params._userId = _userId;
             params.pledgebookTableName = await app.models.Pledgebook.getPledgebookTableName(_userId);
             params._customerIdForMerge = await Customer.getIdByHashKey(params.custHashkeyForMerge);
@@ -605,7 +605,7 @@ module.exports = function(Customer) {
 
     Customer.updateStatusAPI = async (data) => {
         try {
-            let _userId = await utils.getStoreUserId(data.accessToken);
+            let _userId = await utils.getStoreOwnerUserId(data.accessToken);
             let action = data.status?'Enabled':'Disabled';
             if(!data.status) { //ToDisable, then the customer should not have any pending bills
                 let pendingBills = await app.models.Pledgebook._getPendingBillsList(data.custId, _userId);

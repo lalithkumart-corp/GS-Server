@@ -18,7 +18,7 @@ module.exports = function(Ornament) {
 
     Ornament.fetchList = async (accessToken) => {
         try {
-            let userId = await utils.getStoreUserId(accessToken);
+            let userId = await utils.getStoreOwnerUserId(accessToken);
             let resp = await Ornament._fetchFromDB(userId);
             return {STATUS: 'SUCCESS', RESPONSE: resp};
         } catch(e) {

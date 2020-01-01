@@ -283,7 +283,7 @@ module.exports = function(Pledgebook) {
             if(!params.accessToken)
                 throw 'Access Token is missing';
             let parsedArg = Pledgebook.parseInputData(params);            
-            parsedArg._userId = await utils.getStoreUserId(params.accessToken);
+            parsedArg._userId = await utils.getStoreOwnerUserId(params.accessToken);
             let pledgebookTableName = await Pledgebook.getPledgebookTableName(parsedArg._userId);
             let validation = await Pledgebook.doValidation(parsedArg, pledgebookTableName);
             if(validation.status) {
@@ -346,7 +346,7 @@ module.exports = function(Pledgebook) {
         return new Promise( async (resolve, reject) => {
             try {
                 let queryValues = [(params.offsetEnd - params.offsetStart), params.offsetStart];
-                let userId = await utils.getStoreUserId(accessToken);
+                let userId = await utils.getStoreOwnerUserId(accessToken);
                 let pledgebookTableName = await Pledgebook.getPledgebookTableName(userId);
                 let pledgebookClosedBillTableName = await Pledgebook.getPledgebookClosedTableName(userId);
                 
@@ -405,7 +405,7 @@ module.exports = function(Pledgebook) {
             params.accessToken = data.accessToken;
             if(!params.accessToken)
                 throw 'Access Token is missing';
-            params._userId = await utils.getStoreUserId(params.accessToken);
+            params._userId = await utils.getStoreOwnerUserId(params.accessToken);
             params._pledgebookTableName = await Pledgebook.getPledgebookTableName(params._userId);
             params._pledgebookClosedBillTableName = await Pledgebook.getPledgebookClosedTableName(params._userId);
             params._status = 0;
@@ -814,7 +814,7 @@ module.exports = function(Pledgebook) {
     }
     Pledgebook._getPendingBillNumbers = (accessToken) => {
         return new Promise( async (resolve, reject) => {
-            let _userId = await utils.getStoreUserId(accessToken);
+            let _userId = await utils.getStoreOwnerUserId(accessToken);
             let pledgebookTableName = await Pledgebook.getPledgebookTableName(_userId);
             let query = Pledgebook.getQuery('pendingBillNumbers', {}, pledgebookTableName);
             Pledgebook.dataSource.connector.query(query, (err, result) => {
@@ -844,7 +844,7 @@ module.exports = function(Pledgebook) {
 
     Pledgebook._getBillDetails = (accessToken, billNoArray, fetchOnlyPending) => {
         return new Promise ( async (resolve, reject) => {
-            let _userId = await utils.getStoreUserId(accessToken);
+            let _userId = await utils.getStoreOwnerUserId(accessToken);
             let pledgebookTableName = await Pledgebook.getPledgebookTableName(_userId);
             let query = Pledgebook.getQuery('billDetails', billNoArray, pledgebookTableName);
             if(fetchOnlyPending)
@@ -871,7 +871,7 @@ module.exports = function(Pledgebook) {
             params.accessToken = data.accessToken;
             if(!params.accessToken)
                 throw 'Access Token is missing';
-            params._userId = await utils.getStoreUserId(params.accessToken);
+            params._userId = await utils.getStoreOwnerUserId(params.accessToken);
             params._pledgebookTableName = await Pledgebook.getPledgebookTableName(params._userId);
             params._pledgebookClosedBillTableName = await Pledgebook.getPledgebookClosedTableName(params._userId);
             params._status = 1;
@@ -893,7 +893,7 @@ module.exports = function(Pledgebook) {
 
     Pledgebook.fetchHistory = (data) => {        
         return new Promise( async (resolve, reject) => {
-            data._userId = await utils.getStoreUserId(data.accessToken);
+            data._userId = await utils.getStoreOwnerUserId(data.accessToken);
             data._pledgebookTableName = await Pledgebook.getPledgebookTableName(data._userId);
             data._pledgebookClosedBillTableName = await Pledgebook.getPledgebookClosedTableName(data._userId);
             let query = Pledgebook.getQuery('byCustomerId', data, data._pledgebookTableName, data._pledgebookClosedBillTableName);
@@ -918,7 +918,7 @@ module.exports = function(Pledgebook) {
             if(!params.accessToken)
                 throw 'Access Token is missing';
             let parsedArg = Pledgebook.parseInputDataForUpdate(params);            
-            parsedArg._userId = await utils.getStoreUserId(params.accessToken);
+            parsedArg._userId = await utils.getStoreOwnerUserId(params.accessToken);
             let pledgebookTableName = await Pledgebook.getPledgebookTableName(parsedArg._userId);                        
             parsedArg.ornPicture.id = parsedArg.ornPicture.imageId;
             let customerObj = await Pledgebook.app.models.Customer.handleCustomerData(parsedArg); //Save customer information in Customer Table
@@ -1025,7 +1025,7 @@ module.exports = function(Pledgebook) {
     Pledgebook.getPledgebookData = (accessToken, params) => {
         return new Promise( async (resolve, reject) => {
             let queryValues = [(params.offsetEnd - params.offsetStart), params.offsetStart];
-            let userId = await utils.getStoreUserId(accessToken);
+            let userId = await utils.getStoreOwnerUserId(accessToken);
             let pledgebookTableName = await Pledgebook.getPledgebookTableName(userId);
             let pledgebookClosedBillTableName = await Pledgebook.getPledgebookClosedTableName(userId);
             

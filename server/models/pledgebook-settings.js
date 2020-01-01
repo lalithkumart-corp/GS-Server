@@ -26,7 +26,7 @@ module.exports = function(Pledgebooksettings) {
     Pledgebooksettings.UpdateBillNumberAPIHanlder = async (params, cb) => {
         let resp = {STATUS: 'SUCCESS'};
         try {
-            params._userId = await utils.getStoreUserId(params.accessToken);
+            params._userId = await utils.getStoreOwnerUserId(params.accessToken);
             await Pledgebooksettings.updateLastBillDetail(params);       
             resp.MSG = 'Updated the bill settings successfully!';
         } catch(e) {
@@ -60,7 +60,7 @@ module.exports = function(Pledgebooksettings) {
     });
 
     Pledgebooksettings.getLastBillSeriesAndNumber =  (accessToken, cb) => {
-        utils.getStoreUserId(accessToken)
+        utils.getStoreOwnerUserId(accessToken)
         .then(
             (userId) => {
                 Pledgebooksettings.findOne({where: {userId: userId}}, (err, result) => {
