@@ -52,7 +52,7 @@ module.exports = function(Gsuser) {
 
         try{
             let user = await Gsuser._insertUser(custom);
-            await Gsuser._insertRoleMapping(custom, user);
+            await Gsuser._insertRoleMapping(user, 2);
             await Gsuser._createPledgebookTable(user);
             await Gsuser._createPledgebookClosingBillTable(user);
             return {STATUS: 'SUCCESS', MSG: 'New User Created Successfully!'};
@@ -151,6 +151,7 @@ module.exports = function(Gsuser) {
                     throw 'Owner User Id not found';
                 } else {
                     let newUser = await Gsuser._insertUser({...apiParams.formData, ownerId: ownerUserId});
+                    await Gsuser._insertRoleMapping(newUser, apiParams.formData.roleId);
                     console.log(newUser);
                 }
             } else {
@@ -258,12 +259,12 @@ module.exports = function(Gsuser) {
         });
     };
 
-    Gsuser._insertRoleMapping = (custom, user) => {
+    Gsuser._insertRoleMapping = (user, roleId) => {
         return new Promise( (resolve, reject) => {
             let params = {
                 principalType: "USER",
                 principalId: user.id,
-                roleId: 2
+                roleId: roleId
             };
             Gsuser.app.models.RoleMapping.create(params, (error, roleMapInstance) => {
                 if(error) {

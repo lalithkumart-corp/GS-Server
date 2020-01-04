@@ -132,10 +132,18 @@ module.exports = function(app) {
             // else if(typeof context.remotingContext.args.custom.auth_user_id !== 'undefined')
             //     tokenVal = context.remotingContext.args.custom.auth_user_id;
 
-            if(typeof context.remotingContext.args.apiParams.accessToken !== 'undefined')
-                tokenVal = context.remotingContext.args.apiParams.accessToken;
-            else if(typeof context.remotingContext.args.apiParams.access_token !== 'undefined')
-                tokenVal = context.remotingContext.args.apiParams.access_token;
+            if(context.remotingContext.args) {
+                if(context.remotingContext.args.accessToken)
+                    tokenVal = context.remotingContext.args.accessToken;
+                else if(context.remotingContext.args.access_token)
+                    tokenVal = context.remotingContext.args.access_token;
+                else if(context.remotingContext.args.apiParams) {
+                    if(typeof context.remotingContext.args.apiParams.accessToken !== 'undefined')
+                        tokenVal = context.remotingContext.args.apiParams.accessToken;
+                    else if(typeof context.remotingContext.args.apiParams.access_token !== 'undefined')
+                        tokenVal = context.remotingContext.args.apiParams.access_token;
+                }    
+            }
             return tokenVal;
         } catch(e){
             console.log('Exception catched in Role Resolver: Getting Token value... ');
