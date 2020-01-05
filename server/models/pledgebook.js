@@ -9,7 +9,7 @@ module.exports = function(Pledgebook) {
 
     Pledgebook.remoteMethod('insertNewBillAPIHandler', {
         accepts: {
-                arg: 'data',
+                arg: 'apiParams',
                 type: 'object',
                 default: {
                     
