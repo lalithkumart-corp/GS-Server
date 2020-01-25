@@ -5,10 +5,14 @@ var boot = require('loopback-boot');
 //let init = require('./dataMigration').init;
 //let uploadOrnamentData = require('./dataMigration').uploadOrnamentData;
 var app = module.exports = loopback();
+let GsLogger = require('./components/logger/gsLogger');
+app.set('logger', new GsLogger());
+let logger = app.get('logger');
 
 app.start = function() {
   // start the web server
   return app.listen(function() {
+    logger.info('App Started');
     app.emit('started');
     var baseUrl = app.get('url').replace(/\/$/, '');
     console.log('Web server listening at: %s', baseUrl);

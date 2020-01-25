@@ -134,6 +134,7 @@ class GsLogger {
         let rootLevels = [
             'userAgent', 'host',
             'req', 'res', 'err',
+            'requestId', 'forwardedRequestId', 'rootRequestId', 'inTime',
             'appId', 'userId', 'customerName', 'storeName', 'customerId', 'customerKey',
             'className', 'methodName', 'propertyValue', 'propertyName', 'level', 'errorType'
         ];

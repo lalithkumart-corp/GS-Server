@@ -2,6 +2,7 @@ let bunyan = require('bunyan');
 let appRoot = require('app-root-path');
 let defaultLogDir = appRoot + '/server/logs';
 let RotatingFileStream = require('bunyan-rotating-file-stream');
+let LogSerializer = require('./logSerializer');
 
 class Logger {
     constructor(logFilePath) {
@@ -24,11 +25,11 @@ class Logger {
         
         this.logger = bunyan.createLogger({
             name: this.name,
-            // serializers: {
-            //     req: new LogSerializer().req,
-            //     res: new LogSerializer().res,
-            //     err: new LogSerializer().err,
-            // },
+            serializers: {
+                req: new LogSerializer().req,
+                res: new LogSerializer().res,
+                err: new LogSerializer().err,
+            },
             streams: [
                 {
                     level: 10,
