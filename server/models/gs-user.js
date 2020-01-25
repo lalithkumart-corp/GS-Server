@@ -336,7 +336,7 @@ let pledgebookStructure = `CREATE TABLE TABLENAME (
                                 Amount int(11) DEFAULT NULL,
                                 Date varchar(45) DEFAULT NULL,
                                 CustomerId int(11) DEFAULT NULL,
-                                Orn varchar(500) DEFAULT NULL,
+                                Orn text DEFAULT NULL,
                                 Remarks text,
                                 OrnPictureId int(11) DEFAULT NULL,
                                 Status int(11) NOT NULL DEFAULT 1,
