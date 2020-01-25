@@ -1,0 +1,77 @@
+{
+    "name": "UserPreference",
+    "base": "PersistedModel",
+    "idInjection": false,
+    "options": {
+      "validateUpsert": true
+    },
+    "mysql": {
+      "schema": "developmentdb",
+      "table": "user_preferences"
+    },
+    "properties": {
+      "id": {
+        "type": "number",
+        "mysql": {
+          "columnName": "id",
+          "dataType": "int",
+          "dataLength": 11,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "userId": {
+        "type": "number",      
+        "mysql": {
+          "columnName": "user_id",
+          "dataType": "int",
+          "dataLength": "11",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "N"
+        }
+      },
+      "bill_create_place_default": {
+        "type": "string",
+        "required": true,
+        "mysql": {
+          "columnName": "bill_create_place_default",
+          "dataType": "varchar",
+          "dataLength": 255,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "bill_create_city_default": {
+        "type": "string",
+        "required": true,
+        "mysql": {
+          "columnName": "bill_create_city_default",
+          "dataType": "varchar",
+          "dataLength": 255,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "bill_create_pincode_default": {
+        "type": "string",
+        "required": true,
+        "mysql": {
+          "columnName": "bill_create_pincode_default",
+          "dataType": "varchar",
+          "dataLength": 255,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      }
+    },
+    "validations": [],
+    "relations": {},
+    "acls": [],
+    "methods": {}
+  }
+  

@@ -1,21 +1,28 @@
 'use strict';
+let app = require('../server');
 let addUserParamValidation = require('../utils/validateUtil').addUserParamValidation;
 let utils = require('../utils/commonUtils');
-
+let GsErrorCtrl = require('../components/logger/gsErrorCtrl');
+let logger = app.get('logger');
 module.exports = function(Gsuser) {
     Gsuser.loginUser = (custom, cb) => {
         Gsuser.login(custom, (err, res) => {
             if(err) {
                 cb(err, null);
             } else {
-                Gsuser.findOne({where: {id: res.userId}}, (err, ret) => {
+                Gsuser.findOne({where: {id: res.userId}}, async (err, ret) => {
                     if(err) {
                         cb(err, null);
                     } else {
                         res.ownerId = ret.ownerId;
                         res.username = ret.username;
                         res.email = ret.email;
-                        cb(null, res);
+                        let userPreferences = await Gsuser._getUserPreferences(res.userId);
+                        let response = {
+                            session: res,
+                            userPreferences: userPreferences
+                        }
+                        cb(null, response);
                     }                    
                 });                
             }
@@ -325,6 +332,27 @@ module.exports = function(Gsuser) {
                     resolve(res);
                 }
             });
+        });
+    }
+
+    Gsuser._getUserPreferences = (userId) => {
+        return new Promise( (resolve, reject) => {
+            try {
+                Gsuser.app.models.UserPreference.find({where: {userId: userId}}, (err, res) => {
+                    if(err) {
+                        logger.error(GsErrorCtrl.create({className: 'Gsuser', methodName: '_getUserPreferences', cause: err, message: 'Exception in sql query execution'}));
+                        return resolve({});
+                    } else {
+                        if(res.length > 0)
+                            return resolve(res[0]);
+                        else
+                            return resolve({});
+                    }
+                });
+            } catch(e) {
+                logger.error(GsErrorCtrl.create({className: 'Gsuser', methodName: '_getUserPreferences', cause: e, message: 'Exception caught while fetching user preferences'}));
+                return {};
+            }
         });
     }
 };
