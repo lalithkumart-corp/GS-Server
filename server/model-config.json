@@ -82,5 +82,9 @@
   "GsRole": {
     "dataSource": "developmentdb",
     "public": true
+  },
+  "UserPreference": {
+    "dataSource": "developmentdb",
+    "public": true
   }
 }

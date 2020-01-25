@@ -13,6 +13,8 @@
   "dependencies": {
     "app-root-path": "^3.0.0",
     "body-parser": "^1.18.3",
+    "bunyan": "^1.8.12",
+    "bunyan-rotating-file-stream": "^1.6.3",
     "compression": "^1.0.3",
     "cors": "^2.5.2",
     "csv": "^5.1.1",
