@@ -709,8 +709,8 @@ module.exports = function(Pledgebook) {
         if(params.filters) {
             if(params.filters.billNo)
                 filterQueries.push(`BillNo like '${params.filters.billNo}%'`);
-            if(params.filters.amount && params.filters.amount > 0)
-                filterQueries.push(`amount >= ${params.filters.amount}`);
+            // if(params.filters.amount && params.filters.amount > 0)
+            //     filterQueries.push(`amount >= ${params.filters.amount}`);
             if(params.filters.cName)
                 filterQueries.push(`Name like '${params.filters.cName}%'`);
             if(params.filters.gName)
@@ -722,7 +722,11 @@ module.exports = function(Pledgebook) {
             else if(params.filters.include && params.filters.include == 'closed')
                 filterQueries.push(`Status=0`);
             if(params.filters.date)
-                filterQueries.push(`Date between '${params.filters.date.startDate}' and '${params.filters.date.endDate}'`);            
+                filterQueries.push(`Date between '${params.filters.date.startDate}' and '${params.filters.date.endDate}'`);
+            if(params.filters.custom.pledgeAmt && (params.filters.custom.pledgeAmt.grt < params.filters.custom.pledgeAmt.lsr))
+                filterQueries.push(`Amount BETWEEN ${params.filters.custom.pledgeAmt.grt} AND ${params.filters.custom.pledgeAmt.lsr}`);
+            if(params.filters.custom.mobile)
+                filterQueries.push(`(Mobile like '${params.filters.custom.mobile}%' OR SecMobile like '${params.filters.custom.mobile}%')`)
             if(filterQueries.length != 0)
                 query += ' where ' + filterQueries.join(' AND ');
         }
