@@ -45,7 +45,7 @@ module.exports = function(UserPreference) {
     UserPreference.updateAPI = async (params) => {
         try {
             params._userId = await utils.getStoreOwnerUserId(params.accessToken);
-            await UserPreference._updateDefaultsInDB(params);
+            await UserPreference._insertOrUpdate(params);
             return {
                 STATUS: 'success'
             }
@@ -81,14 +81,32 @@ module.exports = function(UserPreference) {
         description: 'Update user preferences'
     });
 
-    UserPreference._updateDefaultsInDB = (params) => {
+    UserPreference._insertOrUpdate = (params) => {
         return new Promise( (resolve, reject) => {
-            UserPreference.update({userId: params._userId}, {bill_create_place_default: params.place, bill_create_city_default: params.city, bill_create_pincode_default: params.pincode}, (err, res) => {
+            UserPreference.findOne({where: {userId: params._userId}}, (err, res) => {
                 if(err) {
-                    GsErrorCtrl.create({className: 'UserPreference', methodName: '_updateDB', message: 'Error occured while updating defaults in DB', cause: e});
-                    return reject(err);
+                    let gsErr = GsErrorCtrl.create({className: 'UserPreference', methodName: '_insertOrUpdate', message: 'Error occured while updating defaults in DB', cause: err});
+                    return reject(gsErr);
                 } else {
-                    return resolve(res);
+                    if(res && res.length > 0) {
+                        UserPreference.update({userId: params._userId}, {bill_create_place_default: params.place, bill_create_city_default: params.city, bill_create_pincode_default: params.pincode}, (err, res) => {
+                            if(err) {
+                                let gsError = GsErrorCtrl.create({className: 'UserPreference', methodName: '_insertOrUpdate', message: 'Error occured while updating defaults in DB', cause: err});
+                                return reject(gsError);
+                            } else {
+                                return resolve(res);
+                            }
+                        });
+                    } else {
+                        UserPreference.create({userId: params._userId, bill_create_place_default: params.place, bill_create_city_default: params.city, bill_create_pincode_default: params.pincode}, (err, res) => {
+                            if(err) {
+                                let gsError = GsErrorCtrl.create({className: 'UserPreference', methodName: '_insertOrUpdate', message: 'Error occured while creating the defaults in DB', cause: err});
+                                return reject(gsError);
+                            } else {
+                                return resolve(res);
+                            }
+                        });
+                    }
                 }
             });
         });
