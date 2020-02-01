@@ -723,9 +723,9 @@ module.exports = function(Pledgebook) {
                 filterQueries.push(`Status=0`);
             if(params.filters.date)
                 filterQueries.push(`Date between '${params.filters.date.startDate}' and '${params.filters.date.endDate}'`);
-            if(params.filters.custom.pledgeAmt && (params.filters.custom.pledgeAmt.grt < params.filters.custom.pledgeAmt.lsr))
+            if(params.filters.custom && params.filters.custom.pledgeAmt && (params.filters.custom.pledgeAmt.grt < params.filters.custom.pledgeAmt.lsr))
                 filterQueries.push(`Amount BETWEEN ${params.filters.custom.pledgeAmt.grt} AND ${params.filters.custom.pledgeAmt.lsr}`);
-            if(params.filters.custom.mobile)
+            if(params.filters.custom && params.filters.custom.mobile)
                 filterQueries.push(`(Mobile like '${params.filters.custom.mobile}%' OR SecMobile like '${params.filters.custom.mobile}%')`)
             if(filterQueries.length != 0)
                 query += ' where ' + filterQueries.join(' AND ');
