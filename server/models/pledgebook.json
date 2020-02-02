@@ -80,21 +80,41 @@
         "nullable": "Y"
       }
     },
-    "remarks": {
-      "type": "any",
-      "mysql": {
-        "columnName": "Remarks",
-        "dataType": "text",
-        "dataPrecision": null,
-        "dataScale": null,
-        "nullable": "Y"
-      }
-    },
     "ornPictureId": {
       "type": "number",
       "mysql": {
         "columnName": "OrnPictureId",
         "dataType": "int",
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "totalWeight": {
+      "type": "number",
+      "mysql": {
+        "columnName": "TotalWeight",
+        "dataType": "int",
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "N"
+      }
+    },
+    "ornCategory": {
+      "type": "string",
+      "mysql": {
+        "columnName": "OrnCategory",
+        "dataType": "varchar",
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "remarks": {
+      "type": "any",
+      "mysql": {
+        "columnName": "Remarks",
+        "dataType": "text",
         "dataPrecision": null,
         "dataScale": null,
         "nullable": "Y"

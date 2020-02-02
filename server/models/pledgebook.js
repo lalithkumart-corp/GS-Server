@@ -326,8 +326,10 @@ module.exports = function(Pledgebook) {
                 params.orn,
                 params.billRemarks,
                 params.ornPicture.id,
+                params.ornCategory,
+                params.totalWeight,
                 1,
-                JSON.stringify({}),                
+                JSON.stringify({}), 
                 params.createdDate,
                 params.modifiedDate,
             ];
@@ -511,7 +513,8 @@ module.exports = function(Pledgebook) {
                                 CustomerId, 
                                 Orn, Remarks, 
                                 OrnPictureId,
-                                Status, History,                                
+                                OrnCategory, TotalWeight,
+                                Status, History,
                                 CreatedDate, ModifiedDate) 
                             VALUES
                                 (?, ?,
@@ -519,6 +522,7 @@ module.exports = function(Pledgebook) {
                                 ?, 
                                 ?, ?, 
                                 ?,
+                                ?, ?,
                                 ?, ?,                                 
                                 ?, ?);`
                 break;
@@ -693,6 +697,8 @@ module.exports = function(Pledgebook) {
                             Orn=?,
                             Remarks=?,                            
                             OrnPictureId=?,
+                            OrnCategory=?,
+                            TotalWeight=?,
                             ModifiedDate=?
                                 WHERE
                             UniqueIdentifier=?`;
@@ -958,6 +964,8 @@ module.exports = function(Pledgebook) {
                 parsedArg.orn,
                 parsedArg.billRemarks,
                 parsedArg.ornPicture.id,
+                parsedArg.ornCategory,
+                parsedArg.totalWeight,
                 parsedArg.modifiedDate,
                 parsedArg.uniqueIdentifier
             ]
