@@ -328,6 +328,10 @@ module.exports = function(Pledgebook) {
                 params.ornPicture.id,
                 params.ornCategory,
                 params.totalWeight,
+                params.interestPercent,
+                params.interestValue,
+                params.otherCharges,
+                params.landedCost,
                 1,
                 JSON.stringify({}), 
                 params.createdDate,
@@ -514,6 +518,7 @@ module.exports = function(Pledgebook) {
                                 Orn, Remarks, 
                                 OrnPictureId,
                                 OrnCategory, TotalWeight,
+                                IntPercent, IntVal, OtherCharges, LandedCost,
                                 Status, History,
                                 CreatedDate, ModifiedDate) 
                             VALUES
@@ -523,7 +528,8 @@ module.exports = function(Pledgebook) {
                                 ?, ?, 
                                 ?,
                                 ?, ?,
-                                ?, ?,                                 
+                                ?, ?, ?, ?,
+                                ?, ?,
                                 ?, ?);`
                 break;
             case 'normal':
@@ -699,6 +705,10 @@ module.exports = function(Pledgebook) {
                             OrnPictureId=?,
                             OrnCategory=?,
                             TotalWeight=?,
+                            IntPercent=?,
+                            IntVal=?,
+                            OtherCharges=?,
+                            LandedCost=?,
                             ModifiedDate=?
                                 WHERE
                             UniqueIdentifier=?`;
@@ -966,6 +976,10 @@ module.exports = function(Pledgebook) {
                 parsedArg.ornPicture.id,
                 parsedArg.ornCategory,
                 parsedArg.totalWeight,
+                parsedArg.interestPercent,
+                parsedArg.interestValue,
+                parsedArg.otherCharges,
+                parsedArg.landedCost,
                 parsedArg.modifiedDate,
                 parsedArg.uniqueIdentifier
             ]

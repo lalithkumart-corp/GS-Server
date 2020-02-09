@@ -357,7 +357,6 @@ module.exports = function(Gsuser) {
     }
 };
 
-
 let pledgebookStructure = `CREATE TABLE TABLENAME (
                                 UniqueIdentifier varchar(45),
                                 BillNo varchar(45) DEFAULT NULL,
@@ -366,6 +365,10 @@ let pledgebookStructure = `CREATE TABLE TABLENAME (
                                 CustomerId int(11) DEFAULT NULL,
                                 Orn text DEFAULT NULL,
                                 TotalWeight FLOAT NOT NULL DEFAULT 0.00,
+                                IntPercent FLOAT NULL DEFAULT 0,
+                                IntVal FLOAT NULL DEFAULT 0,
+                                OtherCharges FLOAT NULL DEFAULT 0,
+                                LandedCost FLOAT NULL DEFAULT 0,
                                 OrnCategory varchar(45) NULL,
                                 OrnPictureId int(11) DEFAULT NULL,
                                 Remarks text,
