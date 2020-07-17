@@ -274,7 +274,7 @@ module.exports = function(Pledgebook) {
           ],
         http: {path: '/export-pledgebook', verb: 'get'},
         description: 'For exporting the pledgebook'
-    })
+    });
 
     Pledgebook.insertNewBillAPIHandler = async (data, cb) => {
         try {
@@ -362,6 +362,8 @@ module.exports = function(Pledgebook) {
                         if(err) {
                             reject(err);
                         } else {
+                            if(params.totals_only) 
+                                result = Pledgebook._calculateTotals(result);
                             resolve(result);
                         }
                     });
@@ -401,7 +403,19 @@ module.exports = function(Pledgebook) {
                 reject(e);
             }
         });
-    }    
+    }
+
+    Pledgebook._calculateTotals = (billsList) => {
+        let amount = 0;
+        let intVal= 0;
+        let totalWeight = 0.00;
+        _.each(billsList, (aBill, index) => {
+            amount += aBill.Amount;
+            intVal += aBill.IntVal;
+            totalWeight += aBill.TotalWeight;
+        });
+        return {amount, intVal, totalWeight};
+    }
 
     Pledgebook.redeemPendingBillAPIHandler = async (data) => {
         try {
@@ -561,7 +575,9 @@ module.exports = function(Pledgebook) {
                     query += ` ORDER BY uid DESC`;
                 else
                     query += ` ORDER BY UniqueIdentifier DESC`;
-                query += ` LIMIT ? OFFSET ?`;
+                
+                if(!params.totals_only)
+                    query += ` LIMIT ? OFFSET ?`;
                 break;
             case 'countQuery':
                 query = `SELECT                         
@@ -743,6 +759,15 @@ module.exports = function(Pledgebook) {
                 filterQueries.push(`Amount BETWEEN ${params.filters.custom.pledgeAmt.grt} AND ${params.filters.custom.pledgeAmt.lsr}`);
             if(params.filters.custom && params.filters.custom.mobile)
                 filterQueries.push(`(Mobile like '${params.filters.custom.mobile}%' OR SecMobile like '${params.filters.custom.mobile}%')`)
+            if(params.filters.custom && params.filters.custom.ornCategory) {
+                if(params.filters.custom.ornCategory.length < 3 && params.filters.custom.ornCategory.length > 0) {
+                    let temp = [];
+                    _.each(params.filters.custom.ornCategory, (aCateg, index) => {
+                        temp.push(`OrnCategory = "${aCateg}"`);
+                    });
+                    filterQueries.push(`(${temp.join(' OR ')})`);
+                }
+            }
             if(filterQueries.length != 0)
                 query += ' where ' + filterQueries.join(' AND ');
         }
@@ -997,7 +1022,7 @@ module.exports = function(Pledgebook) {
     }
 
     Pledgebook.exportAPIHandler = async (accessToken, params, res, cb) => {
-        try {            
+        try {
             let pledgebook = await Pledgebook.getPledgebookData(accessToken, params);
             let exportDataJSON = Pledgebook._constructExportDataJSON(pledgebook);
             let csvStr = Pledgebook._convertToCsvString(exportDataJSON);
