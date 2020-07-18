@@ -370,7 +370,7 @@ module.exports = function(Pledgebook) {
                 });
 
 
-                let countQuery = Pledgebook.getQuery('countQuery', params, pledgebookTableName);            
+                let countQuery = Pledgebook.getQuery('countQuery', params, pledgebookTableName, pledgebookClosedBillTableName);            
                 let promise2 = new Promise((resolve, reject) => {
                     Pledgebook.dataSource.connector.query(countQuery, queryValues, (err, result) => {
                         if(err) {
@@ -411,7 +411,10 @@ module.exports = function(Pledgebook) {
         let totalWeight = 0.00;
         _.each(billsList, (aBill, index) => {
             amount += aBill.Amount;
-            intVal += aBill.IntVal;
+            if(aBill.Status)
+                intVal += aBill.IntVal;
+            else
+                intVal += (parseFloat(aBill.interest_amt) - parseFloat(aBill.discount_amt));
             totalWeight += aBill.TotalWeight;
         });
         return {amount, intVal, totalWeight};
@@ -571,11 +574,21 @@ module.exports = function(Pledgebook) {
                 
                 query = Pledgebook.appendFilters(params, query);
                 
-                if(params.filters.include && params.filters.include == 'closed')
-                    query += ` ORDER BY uid DESC`;
-                else
-                    query += ` ORDER BY UniqueIdentifier DESC`;
+                // if(params.filters.include && params.filters.include == 'closed')
+                //     query += ` ORDER BY uid DESC`;
+                // else
+                //     query += ` ORDER BY UniqueIdentifier DESC`;
                 
+                if(params.sortOrder) {
+                    params.sortOrder.sortBy = params.sortOrder.sortBy || "DESC";
+                    if(params.sortOrder.sortByColumn == "closedDate")
+                        query += ` ORDER BY uid ${params.sortOrder.sortBy}`;
+                    else
+                        query += ` ORDER BY UniqueIdentifier ${params.sortOrder.sortBy}`;
+                } else {
+                    query += ` ORDER BY UniqueIdentifier DESC`;
+                }
+
                 if(!params.totals_only)
                     query += ` LIMIT ? OFFSET ?`;
                 break;
@@ -587,7 +600,9 @@ module.exports = function(Pledgebook) {
                                 LEFT JOIN
                             customer ON ${pledgebookTableName}.CustomerId = customer.CustomerId
                                 LEFT JOIN
-                            image ON customer.ImageId = image.Id`;
+                            image ON customer.ImageId = image.Id
+                                LEFT JOIN
+                            ${pledgebookClosedBillTableName} ON ${pledgebookClosedBillTableName}.pledgebook_uid = ${pledgebookTableName}.UniqueIdentifier`;
                 query = Pledgebook.appendFilters(params, query);
                 break;
             case 'byCustomerId':
@@ -753,8 +768,12 @@ module.exports = function(Pledgebook) {
                 filterQueries.push(`Status=1`);
             else if(params.filters.include && params.filters.include == 'closed')
                 filterQueries.push(`Status=0`);
-            if(params.filters.date)
-                filterQueries.push(`Date between '${params.filters.date.startDate}' and '${params.filters.date.endDate}'`);
+            if(params.filters.date) {
+                if(params.filters.include == "closed")
+                    filterQueries.push(`(closed_date BETWEEN '${params.filters.date.startDate}' AND '${params.filters.date.endDate}')`);
+                else
+                    filterQueries.push(`(Date BETWEEN '${params.filters.date.startDate}' AND '${params.filters.date.endDate}')`);
+            }
             if(params.filters.custom && params.filters.custom.pledgeAmt && (params.filters.custom.pledgeAmt.grt < params.filters.custom.pledgeAmt.lsr))
                 filterQueries.push(`Amount BETWEEN ${params.filters.custom.pledgeAmt.grt} AND ${params.filters.custom.pledgeAmt.lsr}`);
             if(params.filters.custom && params.filters.custom.mobile)
@@ -768,8 +787,9 @@ module.exports = function(Pledgebook) {
                     filterQueries.push(`(${temp.join(' OR ')})`);
                 }
             }
+            
             if(filterQueries.length != 0)
-                query += ' where ' + filterQueries.join(' AND ');
+                query += ' WHERE ' + filterQueries.join(' AND ');
         }
         return query;
     }
