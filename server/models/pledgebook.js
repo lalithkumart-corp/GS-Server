@@ -409,6 +409,7 @@ module.exports = function(Pledgebook) {
         let amount = 0;
         let intVal= 0;
         let totalWeight = 0.00;
+        let totalRecords = 0;
         _.each(billsList, (aBill, index) => {
             amount += aBill.Amount;
             if(aBill.Status)
@@ -416,8 +417,9 @@ module.exports = function(Pledgebook) {
             else
                 intVal += (parseFloat(aBill.interest_amt) - parseFloat(aBill.discount_amt));
             totalWeight += aBill.TotalWeight;
+            totalRecords++;
         });
-        return {amount, intVal, totalWeight};
+        return {amount, intVal, totalWeight, totalRecords};
     }
 
     Pledgebook.redeemPendingBillAPIHandler = async (data) => {
