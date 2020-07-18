@@ -363,7 +363,7 @@ module.exports = function(Pledgebook) {
                             reject(err);
                         } else {
                             if(params.totals_only) 
-                                result = Pledgebook._calculateTotals(result);
+                                result = Pledgebook._calculateTotals(result, params.filters);
                             resolve(result);
                         }
                     });
@@ -405,14 +405,14 @@ module.exports = function(Pledgebook) {
         });
     }
 
-    Pledgebook._calculateTotals = (billsList) => {
+    Pledgebook._calculateTotals = (billsList, filters) => {
         let amount = 0;
         let intVal= 0;
         let totalWeight = 0.00;
         let totalRecords = 0;
         _.each(billsList, (aBill, index) => {
             amount += aBill.Amount;
-            if(aBill.Status)
+            if(filters.include != 'closed')
                 intVal += aBill.IntVal;
             else
                 intVal += (parseFloat(aBill.interest_amt) - parseFloat(aBill.discount_amt));
