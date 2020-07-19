@@ -1,4 +1,5 @@
 'use strict';
+let app = require('../server.js');
 let sh = require('shorthash');
 var multer = require('multer');
 var fs = require('fs');
@@ -29,10 +30,15 @@ module.exports = function(Image) {
                 }
             }
 
-            if(picData.imgCategory == 'ORN')
-                imageStatus.ID = await Image.app.models.OrnImage.saveImage(picture);
-            else
-                imageStatus.ID = await Image.saveImage(picture);
+            if(picData.imgCategory == 'ORN') {
+                let resp = await Image.app.models.OrnImage.saveImage(picture);
+                imageStatus.ID = resp.id;
+                imageStatus.URL = resp.url;
+            } else {
+                let resp = await Image.saveImage(picture);
+                imageStatus.ID = resp.id;
+                imageStatus.URL = resp.url;
+            }
 
         } catch(e) {
             imageStatus.STATUS = 'ERROR';
@@ -87,10 +93,15 @@ module.exports = function(Image) {
                     options: {originalName: uploadedDetail.options.originalName}
                 };                
             }
-            if(req.body.imgCategory == 'ORN')
-                imageStatus.ID = await Image.app.models.OrnImage.saveImage(picture);
-            else
-                imageStatus.ID = await Image.saveImage(picture);
+            if(req.body.imgCategory == 'ORN') {
+                let resp = await Image.app.models.OrnImage.saveImage(picture);
+                imageStatus.ID = resp.id;
+                imageStatus.URL = resp.url;
+            } else {
+                let resp = await Image.saveImage(picture);
+                imageStatus.ID = resp.id;
+                imageStatus.URL = resp.url;
+            }
         } catch(e) {            
             imageStatus.STATUS = 'ERROR';
             imageStatus.MSG = e.message || e;
@@ -305,7 +316,8 @@ module.exports = function(Image) {
                     error += err.message;
                     return reject(error);
                 } else {
-                    return resolve(result.id);
+                    let url = `http://${app.get('domain')}:${app.get('port')}${result.path.replace('client', '')}`;
+                    return resolve({id: result.id, url: url});
                 }
             });
         });        

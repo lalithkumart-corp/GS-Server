@@ -11,7 +11,8 @@ module.exports = function(OrnImage) {
                     error += err.message;
                     return reject(error);
                 } else {
-                    return resolve(result.id);
+                    let url = `http://${app.get('domain')}:${app.get('port')}${result.path.replace('client', '')}`;
+                    return resolve({id: result.id, url: url});
                 }
             });
         });        

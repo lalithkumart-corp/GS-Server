@@ -67,6 +67,18 @@
           "dataScale": null,
           "nullable": "Y"
         }
+      },
+      "auto_print_receipt": {
+        "type": "string",
+        "required": true,
+        "mysql": {
+          "columnName": "auto_print_receipt",
+          "dataType": "varchar",
+          "dataLength": 255,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
       }
     },
     "validations": [],
