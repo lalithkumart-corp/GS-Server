@@ -1,0 +1,29 @@
+{
+  "name": "customerMetadataList",
+  "base": "PersistedModel",
+  "idInjection": false,
+  "options": {
+    "validateUpsert": true,
+    "mysql": {
+      "table": "customer_metadata_list"
+    }
+  },
+  "properties": {
+    "serialNo": {
+      "type": "number",
+      "id": true
+    },
+    "key": {
+      "type": "number",
+      "required": true
+    },
+    "displayText": {
+      "type": "string",
+      "required": true
+    }
+  },
+  "validations": [],
+  "relations": {},
+  "acls": [],
+  "methods": {}
+}

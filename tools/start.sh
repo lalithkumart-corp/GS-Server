@@ -1,0 +1,1 @@
+npm start --prefix F:/lalith-workspace/backend/

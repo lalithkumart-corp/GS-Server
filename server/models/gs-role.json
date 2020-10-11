@@ -1,0 +1,30 @@
+{
+    "name": "GsRole",
+    "base": "Role",
+    "idInjection": true,
+    "options": {
+      "validateUpsert": true
+    },
+    "mysql": {
+      "schema": "developmentdb",
+      "table": "role"
+    },
+    "properties": {
+        "rank": {
+            "type": "number",
+            "mysql": {
+              "columnName": "rank",
+              "dataType": "int",
+              "dataLength": 11,
+              "dataPrecision": null,
+              "dataScale": null,
+              "nullable": "Y"
+            }
+          }
+    },
+    "validations": [],
+    "relations": {},
+    "acls": [],
+    "methods": {}
+  }
+  

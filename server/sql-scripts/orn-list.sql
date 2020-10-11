@@ -1,0 +1,5 @@
+CREATE TABLE `gs`.`orn_list` (
+  `Id` INT NOT NULL AUTO_INCREMENT,
+  `Category` VARCHAR(45) NOT NULL,
+  `Name` VARCHAR(255) NULL,
+  PRIMARY KEY (`Id`));

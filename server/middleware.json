@@ -28,23 +28,44 @@
     "helmet#noSniff": {},
     "helmet#noCache": {
       "enabled": false
+    },
+    "loopback-context#per-request": {
+      "params": {
+        "enableHttpContext": true
+      }
     }
   },
   "session": {},
   "auth": {},
-  "parse": {},
+  "parse": {
+    "body-parser#json": {},
+    "body-parser#urlencoded": {
+      "params": {
+        "extended": true
+      }
+    }
+  },
   "routes": {
     "loopback#rest": {
       "paths": [
         "${restApiRoot}"
       ]
     }
+  },  
+  "files": {
+    "loopback#static": {
+      "params": "$!../client" 
+    }
   },
-  "files": {},
   "final": {
     "loopback#urlNotFound": {}
   },
   "final:after": {
-    "strong-error-handler": {}
+    "strong-error-handler": {
+      "params": {
+        "debug": true,
+        "log": true
+      }
+    }
   }
 }

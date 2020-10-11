@@ -14,25 +14,77 @@
     ]
   },
   "User": {
-    "dataSource": "db"
+    "dataSource": "developmentdb"
   },
   "AccessToken": {
-    "dataSource": "db",
+    "dataSource": "developmentdb",
     "public": false
   },
   "ACL": {
-    "dataSource": "db",
+    "dataSource": "developmentdb",
     "public": false
   },
   "RoleMapping": {
-    "dataSource": "db",
+    "dataSource": "developmentdb",
     "public": true,
     "options": {
       "strictObjectIDCoercion": true
     }
   },
   "Role": {
-    "dataSource": "db",
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "Pledgebook": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "Image": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "Customer": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "customerMetadataList": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "PledgebookSettings": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "GsUser": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "Interest": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "OrnImage": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "Ornament": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "Note": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "Common": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "GsRole": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "UserPreference": {
+    "dataSource": "developmentdb",
     "public": true
   }
 }
