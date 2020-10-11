@@ -1,0 +1,89 @@
+{
+    "name": "JewellryOrnament",
+    "base": "PersistedModel",
+    "options": {
+      "validateUpsert": true,
+      "mysql": {
+        "schema": "developmentdb",
+        "table": "orn_list_jewellery"
+      }
+    },
+    "properties": {
+        "id": {
+            "type": "number",
+            "mysql": {
+              "columnName": "id",
+              "dataType": "int",
+              "dataLength": 11,
+              "dataPrecision": null,
+              "dataScale": null,
+              "nullable": "Y"
+            }
+        },
+        "userId": {
+            "type": "number",
+            "required": true,      
+            "mysql": {
+                "columnName": "user_id",
+                "dataType": "int",
+                "dataLength": "11",
+                "dataPrecision": null,
+                "dataScale": null,
+                "nullable": "N"
+            }
+        },
+        "metal": {
+            "type": "number",
+            "required": true,      
+            "mysql": {
+                "columnName": "metal",
+                "dataType": "int",
+                "dataLength": "11",
+                "dataPrecision": null,
+                "dataScale": null,
+                "nullable": "N"
+            }
+        },
+        "itemCategory": {
+            "type": "number",
+            "required": true,      
+            "mysql": {
+                "columnName": "item_category",
+                "dataType": "int",
+                "dataLength": "11",
+                "dataPrecision": null,
+                "dataScale": null,
+                "nullable": "N"
+            }
+        },
+        "itemSubCategory": {
+            "type": "number",
+            "required": true,      
+            "mysql": {
+                "columnName": "item_subcategory",
+                "dataType": "int",
+                "dataLength": "11",
+                "dataPrecision": null,
+                "dataScale": null,
+                "nullable": "N"
+            }
+        },
+        "code": {
+            "type": "string", 
+            "required": true,     
+            "mysql": {
+                "columnName": "code",
+                "dataType": "int",
+                "dataLength": "11",
+                "dataPrecision": null,
+                "dataScale": null,
+                "nullable": "N"
+            }
+        }
+    },
+    "validations": [],
+    "relations": {},
+    "acls": [],
+    "methods": {}
+  }
+  

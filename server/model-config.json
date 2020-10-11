@@ -63,6 +63,10 @@
     "dataSource": "developmentdb",
     "public": true
   },
+  "JewellryOrnament": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
   "OrnImage": {
     "dataSource": "developmentdb",
     "public": true
@@ -84,6 +88,10 @@
     "public": true
   },
   "UserPreference": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "Stock": {
     "dataSource": "developmentdb",
     "public": true
   }
