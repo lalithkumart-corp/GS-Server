@@ -5,14 +5,13 @@ let _ = require('lodash');
 let axios = require('axios');
 let moment = require('moment');
 
-readXlsxFile(`${appRootPath}/kingtech2.xlsx`).then(async (rows) => {
+let filePath = `${appRootPath}/kingtech3.xlsx`; 
+readXlsxFile(filePath).then(async (rows) => {
     await processRecords(rows);
 });
 
 const processRecords = async (rows) => {
-    //_.each(rows, (aRow, index) => {
     for(let i=0; i<rows.length; i++) {
-        //if(index != 0) {
             let aRow = rows[i];
             let date = getDateVal(aRow[1]);
             let billSeries = getBillSeries(aRow[2]);
@@ -47,7 +46,8 @@ const processRecords = async (rows) => {
                     interestPercent: interestPercent,
                     interestValue: interestValue,
                     otherCharges: 0,
-                    landedCost: landedCost
+                    landedCost: landedCost,
+                    createdDate: date,
                 }
             }
             try {
@@ -56,8 +56,6 @@ const processRecords = async (rows) => {
             } catch(e) {
                 console.log('------ITERATION ERROR------', i);
             }
-        //}
-    //});
     }
 }
 
@@ -78,10 +76,20 @@ const getDateVal = (dat) => {
         let formattedDate = moment(new Date(`${splits[2]}/${splits[1]}/${splits[0]}`)).format('YYYY-MM-DD HH:M:SS');
         return formattedDate;
     } else {
-        var date = new Date(1899, 12, dat );
-        let formattedDate = moment(date).format('YYYY-MM-DD HH:M:SS');
+        let correctDat = getCorrectdateFromRealNumber(dat);
+        let splits = correctDat.split('/')
+        //var date = new Date(1899, 12, dat );
+        //let formattedDate = moment(date).format('YYYY-MM-DD HH:M:SS');
+        let formattedDate = moment(new Date(`${splits[2]}/${splits[1]}/${splits[0]}`)).format('YYYY-MM-DD HH:M:SS');
         return formattedDate;
     }
+}
+
+const getCorrectdateFromRealNumber = (num) => {
+    var utc_value = Math.floor(num- 25569) * 86400;
+    var date_info = new Date(utc_value * 1000);
+    var month = parseInt(date_info.getMonth()) + 1;
+    return date_info.getFullYear()+ "/" + month + "/" + date_info.getDate();
 }
 
 const getBillSeries = (billNoStr) => {
@@ -198,27 +206,3 @@ const getLandedCost = (amt, intVal) => {
         landedCost = amt - intVal;
     return landedCost;
 }
-
-/*
- let obj = {
-                UniqueIdentifier: '',
-                BillNo: '',
-                Amount: '',
-                Date: aRow[1],
-                CustomerId: '',
-                Orn: '',
-                Remarks: '',
-                OrnPictureId: '',
-                OrnCategory: '',
-                TotalWeight: '',
-                IntPercent: '',
-                IntVal: '',
-                OtherCharges: '',
-                LandedCost: '',
-                Status: '',
-                History: '',
-                CreatedDate: '',
-                ModifiedDate: ''
-            }
-
-*/
