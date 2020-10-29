@@ -608,9 +608,9 @@ module.exports = function(Pledgebook) {
                     if(params.sortOrder.sortByColumn == "closedDate")
                         query += ` ORDER BY uid ${params.sortOrder.sortBy}`;
                     else
-                        query += ` ORDER BY CreatedDate ${params.sortOrder.sortBy}`;
+                        query += ` ORDER BY PledgedDate ${params.sortOrder.sortBy}`;
                 } else {
-                    query += ` ORDER BY CreatedDate DESC`;
+                    query += ` ORDER BY PledgedDate DESC`;
                 }
 
                 if(!params.totals_only)
