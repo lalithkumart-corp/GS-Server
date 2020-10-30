@@ -23,7 +23,7 @@ class DbBackup {
     
     schedule() {
         try {
-            console.log('CRON Module Enabled');
+            console.log('Database auto backup enabled: Daily @ 11:30 AM');
             cron.schedule("30 11 * * *", () => { // 11:30am
                 this.start()
                 .then(
@@ -59,11 +59,16 @@ class DbBackup {
                 let filePath = `${appRootPath}/backups/mysql/`;
                 let fullFilePath = filePath+fileName;
                 var wstream = fs.createWriteStream(fullFilePath);
+                
                 // mysqldump is a command, and it will be set in ENV variables alone with 'mysql'
                 // If mysqldump command not found, then set the path of mysql in ENV path, or mention the path of the mysqldump exe file. 
+                // NORMALLY - If mysqldump is set properly in ENV varialbe mean, just mention "mysqldump"
+                    // EX: spawn('mysqldump', [...]);
                 // In Mac OS, i have not set 'mysql' in Env path, and so the 'mysqldump' also will throw as command not found. Do, mention the path as below 
-                // Ex: /usr/local/mysql/bin/mysqldump
-                var mysqldump = spawn('mysqldump', [ // /usr/local/mysql/bin/mysqldump
+                    // Ex: spawn('/usr/local/mysql/bin/mysqldump' [...])
+                // IN WINDOWS
+                    //Ex2: C:/Program Files/MySQL/MySQL Server 8.0/bin/mysqldump
+                var mysqldump = spawn('mysqldump', [
                     '-u',
                     `${dataSource.developmentdb.username}`,
                     `-p${dataSource.developmentdb.password}`,
@@ -77,6 +82,7 @@ class DbBackup {
                         resolve({STATUS: 'success', fileName: fileName, filePath: filePath});
                     })
                     .on('error', (err) => {
+                        console.log('ERROR ', err);
                         reject({STATUS: 'error', ERROR: err});
                     });
             } catch(e) {
