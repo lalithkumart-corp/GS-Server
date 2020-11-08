@@ -1,0 +1,40 @@
+{
+    "name": "Supplier",
+    "base": "PersistedModel",
+    "options": {
+      "validateUpsert": true,
+      "mysql": {
+        "schema": "developmentdb",
+        "table": "suppliers"
+      }
+    },
+    "properties": {
+        "id": {
+            "type": "number",
+            "mysql": {
+              "columnName": "id",
+              "dataType": "int",
+              "dataLength": 11,
+              "dataPrecision": null,
+              "dataScale": null
+            }
+        },
+        "name": {
+            "type": "string", 
+            "required": false,     
+            "mysql": {
+                "columnName": "name",
+                "dataType": "varchar",
+                "dataLength": "45",
+                "dataPrecision": null,
+                "dataScale": null,
+                "nullable": "N"
+            }
+        }
+    },
+    "validations": [],
+    "relations": {},
+    "acls": [],
+    "methods": {}
+  }
+  

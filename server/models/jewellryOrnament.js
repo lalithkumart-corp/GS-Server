@@ -2,6 +2,7 @@
 let app = require('../server');
 let utils = require('../utils/commonUtils');
 let _ = require('lodash');
+let sh = require('shorthash');
 
 module.exports = function(JewellryOrnament) {
     JewellryOrnament.fetchList = async (accessToken) => {
@@ -22,7 +23,7 @@ module.exports = function(JewellryOrnament) {
                 } else {
                     let resp = [];
                     _.each(res, (anOrnObj, index) => {
-                        resp.push(anOrnObj);             
+                        resp.push(anOrnObj);
                     });
                     return resolve(resp);
                 }
@@ -50,10 +51,90 @@ module.exports = function(JewellryOrnament) {
         http: {path: '/fetch-orn-list', verb: 'get'},
         description: 'For fetching JewellryOrnament list.',
     });
+
+    JewellryOrnament.handleOrnData = async (params) => {
+        try {
+            let hashKey = JewellryOrnament._generateHashKey(params);
+            let ornRow = await JewellryOrnament._isAlreadyExists(hashKey);
+            if(!ornRow)
+                ornRow = await JewellryOrnament._create(params, hashKey);
+            return {
+                id: ornRow.id
+            }
+        } catch(e) {
+            throw e;
+        }
+    }
+
+    JewellryOrnament._create = async (params, hashKey) => {
+        try {
+            let result = await JewellryOrnament.create({
+                userId: params._userId,
+                metal: params.metal,
+                itemName: params.productName,
+                itemCategory: params.productCategory,
+                itemSubCategory: params.productSubCategory,
+                dimension: params.productDimension,
+                hashKey: hashKey
+            });
+            return result;
+        } catch(e) {
+            throw e;
+        }
+    }
+
+    JewellryOrnament._generateHashKey = (params) => {
+        let categ = (params.metal || '').toLowerCase();
+        let item = (params.productName || '').toLowerCase();
+        let productCateg = (params.productCategory || '').toLowerCase();
+        let productSubCategory = (params.productSubCategory || '').toLowerCase();
+        let dimension = (params.productDimension || '').toLowerCase();
+        return sh.unique( categ + item + productCateg + productSubCategory + dimension);
+    }
+
+    JewellryOrnament._isAlreadyExists = (hashKey, optional) => {
+        return new Promise( (resolve, reject) => {
+            let whereCondition = {hashKey: hashKey}
+
+            if(optional) {
+                if(optional.ignoreCustId)
+                    whereCondition.customerId = {neq: optional.ignoreCustId};
+                if(optional.onlyActive)
+                    whereCondition.status = {neq: 0};
+                if(optional.userId)
+                    whereCondition.userId = optional.userId;
+            }
+
+            JewellryOrnament.findOne({where: whereCondition}, (err, result) => {
+                if(err) {
+                    //TODO: Log the error
+                    reject(err);
+                } else {
+                    if(result)
+                        resolve(result);
+                    else
+                        resolve(false);
+                }
+            });
+        });
+    }
 };
 
 let SQL = {
     FETCH_LIST: `SELECT
+                    id,
+                    metal,
+                    item_name AS name,
+                    item_category AS category,
+                    item_subcategory AS subCategory,
+                    dimension,
+                    code,
+                    hashkey
+                FROM 
+                    orn_list_jewellery 
+                WHERE 
+                    user_id = ?`,
+    FETCH_LIST_OLD: `SELECT
                     orn_list_jewellery.id AS id,
                     metal.name AS metal,
                     item_category.name AS itemCategory,

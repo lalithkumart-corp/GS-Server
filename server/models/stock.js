@@ -68,11 +68,17 @@ module.exports = function(Stock) {
         description: 'For fetching stock list.',
     });
 
-    Stock.dummy = async () => {
-        return '';
-    }
-
-    Stock.remoteMethod('dummy', {
+    Stock.remoteMethod('insertApiHandler', {
+        accepts: {
+            arg: 'apiParams',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
         returns: {
             type: 'object',
             root: true,
@@ -80,9 +86,86 @@ module.exports = function(Stock) {
                 source: 'body',
             },
         },
-        http: {path: '/dummy', verb: 'get'},
+        http: {path: '/insert', verb: 'post'},
         description: 'For testing purpose.',
     });
+
+    Stock.insertApiHandler = async (data) => {
+        try {
+            let params = data.requestParams;
+            params.accessToken = data.accessToken;
+            params._userId = await utils.getStoreOwnerUserId(params.accessToken);
+            params._stockTableName = Stock._getStockTableName(params._userId);;
+            if(!params.ornamentId) {
+                let obj =  await Stock.app.models.JewellryOrnament.handleOrnData(params);
+                params.ornamentId = obj.id;
+            }
+            if(!params.touchId)
+                params.touchId = await Stock.app.models.Touch.getId(params.productPureTouch);
+            if(!params.supplierId)
+                params.supplierId = await Stock.app.models.Supplier.getId(params.dealerStoreName);
+            params.soldQty = 0;
+            params.avlQty = params.productQty;
+            await Stock._insert(params);
+            return {STATUS: 'SUCCESS', STATUS_MSG: 'Successfully inserted item in Stock'};
+        } catch(e) {
+            return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
+        }
+    }
+
+    Stock._insert = (params) => {
+        return new Promise((resolve, reject) => {
+            params._tableName = Stock._getStockTableName();
+            let query = Stock._constructQuery('insert', params);
+            Stock.dataSource.connector.query(query, (err, result) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(result);
+                }
+            });
+        });
+    }
+
+    Stock._getStockTableName = (userId) => {
+        let tableName = 'stock_' + userId;
+        return tableName;
+    }
+
+    Stock._constructQuery = (identifier, params) => {
+        let sql = '';
+        switch(identifier) {
+            case 'insert':
+                sql += `INSERT INTO ${params._stockTableName}
+                        (
+                            user_id, ornament,
+                            touch_id, i_touch,
+                            quantity, 
+                            gross_wt, net_wt, pure_wt,
+                            metal_rate, amount,
+                            cgst_percent, cgst_amt,
+                            sgst_percent, sgst_amt,
+                            igst_percent, igst_amt,
+                            total,
+                            supplierId, personName,
+                            sold_qty, avl_qty
+                        ) VALUES (
+                            ${params._userId}, ${params.ornamentId},
+                            ${params.touchId}, ${params.productITouch},
+                            ${params.productQty},
+                            ${params.productGWt}, ${params.productNWt}, ${params.productPWt},
+                            ${params.metalPrice}, ${params.calcAmtWithLabour},
+                            ${params.productCgstPercent || 0}, ${params.productCgstAmt || 0},
+                            ${params.productSgstPercent || 0}, ${params.productSgstAmt || 0},
+                            ${params.productIgstPercent || 0}, ${params.productIgstAmt || 0},
+                            ${params.productTotalAmt},
+                            ${params.supplierId}, "${params.dealerPersonName}",
+                            ${params.soldQty}, ${params.avlQty}
+                        )`;
+                break;
+        }
+        return sql;
+    }
 };
 
 let SQL = {

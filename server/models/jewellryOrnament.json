@@ -33,36 +33,69 @@
             }
         },
         "metal": {
-            "type": "number",
+            "type": "string",
             "required": true,      
             "mysql": {
                 "columnName": "metal",
-                "dataType": "int",
+                "dataType": "varchar",
                 "dataLength": "11",
+                "dataPrecision": null,
+                "dataScale": null,
+                "nullable": "N"
+            }
+        },
+        "itemName": {
+            "type": "string",
+            "required": true, 
+            "mysql": {
+                "columnName": "item_name",
+                "dataType": "varchar",
+                "dataLength": "45",
                 "dataPrecision": null,
                 "dataScale": null,
                 "nullable": "N"
             }
         },
         "itemCategory": {
-            "type": "number",
-            "required": true,      
+            "type": "string",
+            "required": false,
             "mysql": {
                 "columnName": "item_category",
-                "dataType": "int",
-                "dataLength": "11",
+                "dataType": "varchar",
+                "dataLength": "45",
                 "dataPrecision": null,
-                "dataScale": null,
-                "nullable": "N"
+                "dataScale": null
             }
         },
         "itemSubCategory": {
-            "type": "number",
-            "required": true,      
+            "type": "string",
+            "required": false,      
             "mysql": {
                 "columnName": "item_subcategory",
-                "dataType": "int",
-                "dataLength": "11",
+                "dataType": "varchar",
+                "dataLength": "45",
+                "dataPrecision": null,
+                "dataScale": null
+            }
+        },
+        "dimension": {
+            "type": "string", 
+            "required": false,     
+            "mysql": {
+                "columnName": "dimension",
+                "dataType": "varchar",
+                "dataLength": "45",
+                "dataPrecision": null,
+                "dataScale": null
+            }
+        },
+        "hashKey": {
+            "type": "string", 
+            "required": true,     
+            "mysql": {
+                "columnName": "hashkey",
+                "dataType": "varchar",
+                "dataLength": "45",
                 "dataPrecision": null,
                 "dataScale": null,
                 "nullable": "N"
@@ -70,14 +103,13 @@
         },
         "code": {
             "type": "string", 
-            "required": true,     
+            "required": false,
             "mysql": {
                 "columnName": "code",
-                "dataType": "int",
-                "dataLength": "11",
+                "dataType": "varchar",
+                "dataLength": "45",
                 "dataPrecision": null,
-                "dataScale": null,
-                "nullable": "N"
+                "dataScale": null
             }
         }
     },

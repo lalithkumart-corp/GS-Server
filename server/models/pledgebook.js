@@ -282,7 +282,7 @@ module.exports = function(Pledgebook) {
             params.accessToken = data.accessToken;
             if(!params.accessToken)
                 throw 'Access Token is missing';
-            let parsedArg = Pledgebook.parseInputData(params);            
+            let parsedArg = Pledgebook.parseInputData(params);
             parsedArg._userId = await utils.getStoreOwnerUserId(params.accessToken);
             let pledgebookTableName = await Pledgebook.getPledgebookTableName(parsedArg._userId);
             let validation = await Pledgebook.doValidation(parsedArg, pledgebookTableName);

@@ -94,5 +94,13 @@
   "Stock": {
     "dataSource": "developmentdb",
     "public": true
+  },
+  "Touch": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "Supplier": {
+    "dataSource": "developmentdb",
+    "public": true
   }
 }

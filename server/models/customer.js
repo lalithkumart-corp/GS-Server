@@ -341,6 +341,7 @@ module.exports = function(Customer) {
         return whereCondition;
     }
 
+    //TODO: missed to check with userId
     Customer.generateHashKey = (params) => {
         params.pincode = params.pinCode || params.pincode || '';
         let cname = (params.cname)?params.cname.toLowerCase():params.cname;
@@ -350,9 +351,10 @@ module.exports = function(Customer) {
         let city = (params.city)?params.city.toLowerCase():params.city;
         let pincode = (params.pincode)?params.pincode.toString().toLowerCase():params.pincode;        
 
-        return sh.unique( cname + gaurdianName + address + place + city + pincode)        
+        return sh.unique( cname + gaurdianName + address + place + city + pincode);
     }
 
+    //TODO: check with respect to UserId also in where condition
     Customer.isAlreadyExists = (hashKey, optional) => {
         return new Promise( (resolve, reject) => {
             let whereCondition = {hashKey: hashKey}
