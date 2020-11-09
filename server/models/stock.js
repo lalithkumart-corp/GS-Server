@@ -3,9 +3,9 @@ let app = require('../server');
 let utils = require('../utils/commonUtils');
 
 module.exports = function(Stock) {
-    Stock.fetchList = async (accessToken, params) => {
+    Stock.fetchList = async (accessToken, filters) => {
         try {
-            params = params || {};
+            let params = { filters };
             params._userId = await utils.getStoreOwnerUserId(accessToken);
             let list = await Stock._fetchList(params);
             return {STATUS: 'SUCCESS', STOCK_LIST: list};
@@ -18,6 +18,7 @@ module.exports = function(Stock) {
         return new Promise( (resolve, reject) => {
             let sql = SQL.FETCH_LIST;
             sql += Stock._getFilterQueryPart(params);
+            sql = sql.replace(/STOCK_TABLE/g, `stock_${params._userId}`);
             Stock.dataSource.connector.query(sql, (err, res) => {
                 if(err) {
                     reject(err);
@@ -29,14 +30,24 @@ module.exports = function(Stock) {
     }
 
     Stock._getFilterQueryPart = (params) => {
-        // let query = WHERE
-        // stock.user_id = ?
         let filterList = [];
-        if(params._userId)
-            filterList.push(`stock.user_id = ${params._userId}`);
-        if(params.supplier)
-            filterList.push(`suppliers.name like '${params.supplier}%'`);
-        return ` WHERE ${filterList.join(' AND ')}`;
+        // if(params._userId)
+        //     filterList.push(`STOCK_TABLE.user_id = ${params._userId}`);
+        if(params.filters) {
+            if(params.filters.supplier)
+                filterList.push(`suppliers.name like '${params.filters.supplier}%'`);
+            if(params.filters.itemName)
+                filterList.push(`orn_list_jewellery.item_name like '${params.filters.itemName}%'`);
+            if(params.filters.itemCategory)
+                filterList.push(`orn_list_jewellery.item_category like '${params.filters.itemCategory}%'`);
+            if(params.filters.itemSubCategory)
+                filterList.push(`orn_list_jewellery.item_subcategory like '${params.filters.itemSubCategory}%'`);
+            if(params.filters.dimension)
+                filterList.push(`orn_list_jewellery.dimension like '${params.filters.dimension}%'`);
+        }
+        if(filterList.length)
+            return ` WHERE ${filterList.join(' AND ')}`;
+        return '';
     }
 
     Stock.remoteMethod('fetchList', {
@@ -49,13 +60,13 @@ module.exports = function(Stock) {
                 },
                 description: 'Arguments goes here',
             }, {
-                arg: 'params', type: 'object', http: (ctx) => {
+                arg: 'filters', type: 'object', http: (ctx) => {
                     let req = ctx && ctx.req;
-                    let params = req && req.query.params;
-                    params = params ? JSON.parse(params) : {};
-                    return params;
+                    let filters = req && req.query.filters;
+                    filters = filters ? JSON.parse(filters) : {};
+                    return filters;
                 },
-                description: 'Arguments goes here',
+                description: 'filters Arguments goes here',
         }],
         returns: {
             type: 'object',
@@ -170,8 +181,41 @@ module.exports = function(Stock) {
 
 let SQL = {
     FETCH_LIST: `SELECT
+                    STOCK_TABLE.id AS Id,
+                    orn_list_jewellery.metal AS Metal,
+                    orn_list_jewellery.item_name AS ItemName,
+                    orn_list_jewellery.item_category AS ItemCategory,
+                    orn_list_jewellery.item_subcategory AS ItemSubCategory,
+                    orn_list_jewellery.dimension AS Dimension,
+                    orn_list_jewellery.code AS ItemCode,
+                    suppliers.name AS Supplier,
+                    STOCK_TABLE.personName AS SupplierPersonName,
+                    touch.purity AS PTouchValue,
+                    touch.name AS PTouchName,
+                    STOCK_TABLE.i_touch AS ITouchValue,
+                    STOCK_TABLE.quantity AS Qty,
+                    STOCK_TABLE.gross_wt AS GWt,
+                    STOCK_TABLE.net_wt AS NWt,
+                    STOCK_TABLE.pure_wt AS PWt,
+                    STOCK_TABLE.metal_rate AS MetalRate,
+                    STOCK_TABLE.amount AS Amount,
+                    STOCK_TABLE.cgst_percent AS CgstPercent,
+                    STOCK_TABLE.cgst_amt AS CgstAmt,
+                    STOCK_TABLE.sgst_percent AS SgstPercent,
+                    STOCK_TABLE.sgst_amt AS SgstAmt,
+                    STOCK_TABLE.igst_percent AS IgstPercent,
+                    STOCK_TABLE.igst_amt AS IgstAmt,
+                    STOCK_TABLE.total AS Total,
+                    STOCK_TABLE.sold_qty AS SoldQty,
+                    STOCK_TABLE.avl_qty AS AvlQty
+                FROM
+                    STOCK_TABLE
+                    LEFT JOIN orn_list_jewellery ON STOCK_TABLE.ornament = orn_list_jewellery.id
+                    LEFT JOIN suppliers ON STOCK_TABLE.supplierId = suppliers.id
+                    LEFT JOIN touch ON STOCK_TABLE.touch_id = touch.id`,
+    FETCH_LIST_OLD: `SELECT
                     dealer_purchase_bill.id AS PurchaseBillId,
-                    suppliers.name AS SuplierName,
+                    suppliers.name AS SupplierName,
                     metal.name AS Metal,
                     orn_list_jewellery.code AS ProductCode,
                     item_category.name AS Name,
