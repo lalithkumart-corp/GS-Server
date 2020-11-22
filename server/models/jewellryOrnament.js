@@ -3,8 +3,163 @@ let app = require('../server');
 let utils = require('../utils/commonUtils');
 let _ = require('lodash');
 let sh = require('shorthash');
+const { getStoreOwnerUserId } = require('../utils/commonUtils');
 
 module.exports = function(JewellryOrnament) {
+
+    JewellryOrnament.remoteMethod('createApiHandler', {
+        accepts: {
+            arg: 'apiParams',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            },
+        },
+        http: {path: '/create-new-orn', verb: 'post'},
+        description: 'For inserting new ornament in DB.',
+    });
+
+    JewellryOrnament.remoteMethod('updateApiHandler', {
+        accepts: {
+            arg: 'apiParams',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            },
+        },
+        http: {path: '/update-orn', verb: 'post'},
+        description: 'For updating the ornament in DB.',
+    });
+
+    JewellryOrnament.remoteMethod('deleteApiHandler', {
+        accepts: [
+            {
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let access_token = req && req.query.access_token;
+                    return access_token;
+                },
+                description: 'Accesstoken value',
+            }, {
+                arg: 'ornId', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let ornId = req && req.query.orn_id;
+                    return ornId;
+                },
+                description: 'Ornament Id',
+            }],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            },
+        },
+        http: {path: '/delete-orn', verb: 'delete'},
+        description: 'For Deleting the ornament in DB.',
+    });
+
+    JewellryOrnament.remoteMethod('fetchList', {
+        accepts: [
+            {
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let access_token = req && req.query.access_token;
+                    return access_token;
+                },
+                description: 'Accesstoken value',
+            }],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            },
+        },
+        http: {path: '/fetch-orn-list', verb: 'get'},
+        description: 'For fetching JewellryOrnament list.',
+    });
+
+    JewellryOrnament.createApiHandler = async (data, cb) => {
+        try {
+            //data = JewellryOrnament.normalizeData(data, 'create');
+            if(!data.accessToken)
+                throw 'Access Token is missing';
+            data._userId = await getStoreOwnerUserId(data.accessToken);
+            data._hashKey = JewellryOrnament._generateHashKey(data);
+            data._isAlreadyExists = await JewellryOrnament._isAlreadyExists(data._hashKey, {userId: data._userId});
+            if(!data._isAlreadyExists)
+                await JewellryOrnament._create(data);
+            else
+                throw new Error('Item already exists with same details');
+            return { STATUS: 'SUCCESS', MSG: 'Inserted new Item Successfully'};
+        } catch(e) {
+            return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
+        }
+    }
+
+    JewellryOrnament.updateApiHandler = async (data, cb) => {
+        try {
+            //data = JewellryOrnament.normalizeData(data, 'update');
+            if(!data.accessToken)
+                throw 'Access Token is missing';
+            data._userId = await getStoreOwnerUserId(data.accessToken);
+            data._hashKey = JewellryOrnament._generateHashKey(data);
+            data._isAlreadyExists = await JewellryOrnament._isAlreadyExists(data._hashKey, {userId: data._userId, ignoreOrnId: data.id});
+            if(!data._isAlreadyExists)
+                await JewellryOrnament._update(data);
+            else
+                throw new Error('Item With Same Detail already exists');
+            return { STATUS: 'SUCCESS', MSG: 'Updated the Item Successfully'};
+        } catch(e) {
+            return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
+        }
+    }
+
+    JewellryOrnament.deleteApiHandler = async (accessToken, ornId) => {
+        try {
+            if(!accessToken)
+                throw 'Access Token is missing';
+            let _userId = await getStoreOwnerUserId(accessToken);
+            await JewellryOrnament._delete(ornId, _userId);
+            return { STATUS: 'SUCCESS', MSG: 'Deleted the specific item Successfully'};
+        } catch(e) {
+            return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
+        }
+    }
+
+    JewellryOrnament.normalizeData = (data, remoteMethodName) => {
+        switch(remoteMethodName) {
+            case 'create':
+                //Placeholder. Can add some logic In Future if necessary.
+                break;
+            default:
+                console.log('Do Nothing.');
+                break;
+        }
+        return data;
+    }
+
     JewellryOrnament.fetchList = async (accessToken) => {
         try {
             let userId = await utils.getStoreOwnerUserId(accessToken);
@@ -31,27 +186,6 @@ module.exports = function(JewellryOrnament) {
         });
     }
 
-    JewellryOrnament.remoteMethod('fetchList', {
-        accepts: [
-            {
-                arg: 'accessToken', type: 'string', http: (ctx) => {
-                    let req = ctx && ctx.req;
-                    let access_token = req && req.query.access_token;
-                    return access_token;
-                },
-                description: 'Arguments goes here',
-            }],
-        returns: {
-            type: 'object',
-            root: true,
-            http: {
-                source: 'body',
-            },
-        },
-        http: {path: '/fetch-orn-list', verb: 'get'},
-        description: 'For fetching JewellryOrnament list.',
-    });
-
     JewellryOrnament.handleOrnData = async (params) => {
         try {
             let hashKey = JewellryOrnament._generateHashKey(params);
@@ -75,12 +209,50 @@ module.exports = function(JewellryOrnament) {
                 itemCategory: params.productCategory,
                 itemSubCategory: params.productSubCategory,
                 dimension: params.productDimension,
-                hashKey: hashKey
+                code: params.productCode,
+                hashKey: hashKey || params._hashKey
             });
             return result;
         } catch(e) {
             throw e;
         }
+    }
+
+    JewellryOrnament._update = async (params, hashKey) => {
+        return new Promise( (resolve, reject) => {
+            try {
+                let queryValues = [params.metal, params.productName,
+                                    params.productCategory, params.productSubCategory,
+                                    params.productDimension, params.productCode,
+                                    params._hashKey, params.id
+                                ];
+                JewellryOrnament.dataSource.connector.query(SQL.UPDATE_ORN_ITEM, queryValues, (err, result) => {
+                    if(err) {
+                        return reject(err);
+                    } else {
+                        return resolve(true);
+                    }
+                });
+            } catch(e) {
+                return reject(e);
+            }     
+        });
+    }
+
+    JewellryOrnament._delete = async (ornId, userId) => {
+        return new Promise( (resolve, reject) => {
+            try {
+                JewellryOrnament.dataSource.connector.query(SQL.DELETE_ORN_ITEM, [ornId, userId], (err, result) => {
+                    if(err) {
+                        return reject(err);
+                    } else {
+                        return resolve(true);
+                    }
+                })
+            } catch(e) {
+                return reject(e);
+            }
+        });
     }
 
     JewellryOrnament._generateHashKey = (params) => {
@@ -97,8 +269,8 @@ module.exports = function(JewellryOrnament) {
             let whereCondition = {hashKey: hashKey}
 
             if(optional) {
-                if(optional.ignoreCustId)
-                    whereCondition.customerId = {neq: optional.ignoreCustId};
+                if(optional.ignoreOrnId) // in "Update-orn" scenario
+                    whereCondition.id = {neq: optional.ignoreOrnId};
                 if(optional.onlyActive)
                     whereCondition.status = {neq: 0};
                 if(optional.userId)
@@ -124,16 +296,18 @@ let SQL = {
     FETCH_LIST: `SELECT
                     id,
                     metal,
-                    item_name AS name,
-                    item_category AS category,
-                    item_subcategory AS subCategory,
-                    dimension,
-                    code,
+                    item_name AS itemName,
+                    item_category AS itemCategory,
+                    item_subcategory AS itemSubCategory,
+                    dimension AS itemDim,
+                    code AS itemCode,
                     hashkey
                 FROM 
                     orn_list_jewellery 
                 WHERE 
                     user_id = ?`,
+    UPDATE_ORN_ITEM: `UPDATE orn_list_jewellery SET metal=?, item_name=?, item_category=?, item_subcategory=?, dimension=?, code=?, hashkey=? WHERE id=?`,
+    DELETE_ORN_ITEM: `DELETE FROM orn_list_jewellery WHERE id=? AND user_id=?`,
     FETCH_LIST_OLD: `SELECT
                     orn_list_jewellery.id AS id,
                     metal.name AS metal,
