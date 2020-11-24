@@ -107,10 +107,13 @@ module.exports = function(Stock) {
             params.accessToken = data.accessToken;
             params._userId = await utils.getStoreOwnerUserId(params.accessToken);
             params._stockTableName = Stock._getStockTableName(params._userId);;
-            if(!params.ornamentId) {
+            //if(!params.ornamentId) {
                 let obj =  await Stock.app.models.JewellryOrnament.handleOrnData(params);
                 params.ornamentId = obj.id;
-            }
+                params.productCodeTableId = obj.productCodeTableId;
+                params.productCodeSeries = obj.productCodeSeries;
+                params.productCodeNumber = obj.productCodeNumber;
+            //}
             if(!params.touchId)
                 params.touchId = await Stock.app.models.Touch.getId(params.productPureTouch);
             if(!params.supplierId)
@@ -118,6 +121,7 @@ module.exports = function(Stock) {
             params.soldQty = 0;
             params.avlQty = params.productQty;
             await Stock._insert(params);
+            await Stock.app.models.ProductCode.incrementSerialNumber(params.productCodeTableId);
             return {STATUS: 'SUCCESS', STATUS_MSG: 'Successfully inserted item in Stock'};
         } catch(e) {
             return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
@@ -150,6 +154,7 @@ module.exports = function(Stock) {
                 sql += `INSERT INTO ${params._stockTableName}
                         (
                             user_id, ornament,
+                            pr_code, pr_number,
                             touch_id, i_touch,
                             quantity, 
                             gross_wt, net_wt, pure_wt,
@@ -162,6 +167,7 @@ module.exports = function(Stock) {
                             sold_qty, avl_qty
                         ) VALUES (
                             ${params._userId}, ${params.ornamentId},
+                            "${params.productCodeSeries}", ${params.productCodeNumber},
                             ${params.touchId}, ${params.productITouch},
                             ${params.productQty},
                             ${params.productGWt}, ${params.productNWt}, ${params.productPWt},
@@ -187,7 +193,8 @@ let SQL = {
                     orn_list_jewellery.item_category AS ItemCategory,
                     orn_list_jewellery.item_subcategory AS ItemSubCategory,
                     orn_list_jewellery.dimension AS Dimension,
-                    orn_list_jewellery.code AS ItemCode,
+                    STOCK_TABLE.pr_code AS ItemCode,
+                    STOCK_TABLE.pr_number AS ItemCodeNumber,
                     suppliers.name AS Supplier,
                     STOCK_TABLE.personName AS SupplierPersonName,
                     touch.purity AS PTouchValue,

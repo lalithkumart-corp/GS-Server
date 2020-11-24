@@ -111,6 +111,17 @@
                 "dataPrecision": null,
                 "dataScale": null
             }
+        },
+        "codeId": {
+            "type": "number", 
+            "required": false,
+            "mysql": {
+                "columnName": "code_id",
+                "dataType": "int",
+                "dataLength": "11",
+                "dataPrecision": null,
+                "dataScale": null
+            }
         }
     },
     "validations": [],

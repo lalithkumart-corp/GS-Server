@@ -1,0 +1,60 @@
+{
+    "name": "ProductCode",
+    "base": "PersistedModel",
+    "options": {
+      "validateUpsert": true,
+      "mysql": {
+        "schema": "developmentdb",
+        "table": "product_code"
+      }
+    },
+    "properties": {
+        "id": {
+            "type": "number",
+            "mysql": {
+              "columnName": "id",
+              "dataType": "int",
+              "dataLength": 11,
+              "dataPrecision": null,
+              "dataScale": null
+            }
+        },
+        "userId": {
+            "type": "number",
+            "mysql": {
+              "columnName": "user_id",
+              "dataType": "int",
+              "dataLength": 11,
+              "dataPrecision": null,
+              "dataScale": null
+            }
+        },
+        "code": {
+            "type": "string", 
+            "required": false,
+            "mysql": {
+                "columnName": "code",
+                "dataType": "varchar",
+                "dataLength": "45",
+                "dataPrecision": null,
+                "dataScale": null,
+                "nullable": "N"
+            }
+        },
+        "nextSerial": {
+            "type": "number",
+            "mysql": {
+              "columnName": "next_serial",
+              "dataType": "int",
+              "dataLength": 11,
+              "dataPrecision": null,
+              "dataScale": null
+            }
+        }
+    },
+    "validations": [],
+    "relations": {},
+    "acls": [],
+    "methods": {}
+  }
+  

@@ -106,12 +106,15 @@ module.exports = function(JewellryOrnament) {
             if(!data.accessToken)
                 throw 'Access Token is missing';
             data._userId = await getStoreOwnerUserId(data.accessToken);
+            let productCodeRow = await JewellryOrnament.app.models.ProductCode.getCodeId(data.productCode, data._userId);
+            data._productCodeId = productCodeRow.id;
             data._hashKey = JewellryOrnament._generateHashKey(data);
             data._isAlreadyExists = await JewellryOrnament._isAlreadyExists(data._hashKey, {userId: data._userId});
-            if(!data._isAlreadyExists)
+            if(!data._isAlreadyExists) {
                 await JewellryOrnament._create(data);
-            else
+            } else {
                 throw new Error('Item already exists with same details');
+            }
             return { STATUS: 'SUCCESS', MSG: 'Inserted new Item Successfully'};
         } catch(e) {
             return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
@@ -124,6 +127,8 @@ module.exports = function(JewellryOrnament) {
             if(!data.accessToken)
                 throw 'Access Token is missing';
             data._userId = await getStoreOwnerUserId(data.accessToken);
+            let productCodeRow = await JewellryOrnament.app.models.ProductCode.getCodeId(data.productCode, data._userId);
+            data._productCodeId = productCodeRow.id;
             data._hashKey = JewellryOrnament._generateHashKey(data);
             data._isAlreadyExists = await JewellryOrnament._isAlreadyExists(data._hashKey, {userId: data._userId, ignoreOrnId: data.id});
             if(!data._isAlreadyExists)
@@ -188,12 +193,16 @@ module.exports = function(JewellryOrnament) {
 
     JewellryOrnament.handleOrnData = async (params) => {
         try {
-            let hashKey = JewellryOrnament._generateHashKey(params);
+            let productCodeRow = await JewellryOrnament.app.models.ProductCode.getCodeId(params.productCodeSeries, params._userId);
+            let hashKey = JewellryOrnament._generateHashKey({...params, _productCodeId: productCodeRow.id});
             let ornRow = await JewellryOrnament._isAlreadyExists(hashKey);
             if(!ornRow)
                 ornRow = await JewellryOrnament._create(params, hashKey);
             return {
-                id: ornRow.id
+                id: ornRow.id,
+                productCodeTableId: productCodeRow.id,
+                productCodeSeries: params.productCodeSeries,
+                productCodeNumber: productCodeRow.nextSerial
             }
         } catch(e) {
             throw e;
@@ -209,7 +218,8 @@ module.exports = function(JewellryOrnament) {
                 itemCategory: params.productCategory,
                 itemSubCategory: params.productSubCategory,
                 dimension: params.productDimension,
-                code: params.productCode,
+                //code: params.productCode,
+                codeId: params._productCodeId,
                 hashKey: hashKey || params._hashKey
             });
             return result;
@@ -223,7 +233,7 @@ module.exports = function(JewellryOrnament) {
             try {
                 let queryValues = [params.metal, params.productName,
                                     params.productCategory, params.productSubCategory,
-                                    params.productDimension, params.productCode,
+                                    params.productDimension, params._productCodeId,
                                     params._hashKey, params.id
                                 ];
                 JewellryOrnament.dataSource.connector.query(SQL.UPDATE_ORN_ITEM, queryValues, (err, result) => {
@@ -261,7 +271,8 @@ module.exports = function(JewellryOrnament) {
         let productCateg = (params.productCategory || '').toLowerCase();
         let productSubCategory = (params.productSubCategory || '').toLowerCase();
         let dimension = (params.productDimension || '').toLowerCase();
-        return sh.unique( categ + item + productCateg + productSubCategory + dimension);
+        let productId = params._productCodeId || 0;
+        return sh.unique( categ + item + productCateg + productSubCategory + dimension + productId);
     }
 
     JewellryOrnament._isAlreadyExists = (hashKey, optional) => {
@@ -294,19 +305,20 @@ module.exports = function(JewellryOrnament) {
 
 let SQL = {
     FETCH_LIST: `SELECT
-                    id,
+                    orn_list_jewellery.id AS id,
                     metal,
                     item_name AS itemName,
                     item_category AS itemCategory,
                     item_subcategory AS itemSubCategory,
                     dimension AS itemDim,
-                    code AS itemCode,
+                    product_code.code AS itemCode,
                     hashkey
                 FROM 
                     orn_list_jewellery 
+                    LEFT JOIN product_code ON orn_list_jewellery.code_id=product_code.id
                 WHERE 
-                    user_id = ?`,
-    UPDATE_ORN_ITEM: `UPDATE orn_list_jewellery SET metal=?, item_name=?, item_category=?, item_subcategory=?, dimension=?, code=?, hashkey=? WHERE id=?`,
+                    orn_list_jewellery.user_id = ?`,
+    UPDATE_ORN_ITEM: `UPDATE orn_list_jewellery SET metal=?, item_name=?, item_category=?, item_subcategory=?, dimension=?, code_id=?, hashkey=? WHERE id=?`,
     DELETE_ORN_ITEM: `DELETE FROM orn_list_jewellery WHERE id=? AND user_id=?`,
     FETCH_LIST_OLD: `SELECT
                     orn_list_jewellery.id AS id,
