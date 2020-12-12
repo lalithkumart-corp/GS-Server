@@ -1,7 +1,7 @@
 'use strict';
 let app = require('../server');
 let utils = require('../utils/commonUtils');
-
+let _ = require('lodash');
 module.exports = function(Stock) {
     Stock.fetchList = async (accessToken, filters) => {
         try {
@@ -101,6 +101,35 @@ module.exports = function(Stock) {
         description: 'For testing purpose.',
     });
 
+    Stock.remoteMethod('fetchProductIdsApiHandler', {
+        accepts: [
+            {
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let access_token = req && req.query.access_token;
+                    return access_token;
+                },
+                description: 'Arguments goes here',
+            }, {
+                arg: 'filters', type: 'object', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let filters = req && req.query.filters;
+                    filters = filters ? JSON.parse(filters) : {};
+                    return filters;
+                },
+                description: 'filters Arguments goes here',
+        }],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            },
+        },
+        http: {path: '/fetch-product-ids', verb: 'get'},
+        description: 'For fetching productIds.',
+    });
+
     Stock.insertApiHandler = async (data) => {
         try {
             let params = data.requestParams;
@@ -155,6 +184,7 @@ module.exports = function(Stock) {
                         (
                             user_id, ornament,
                             pr_code, pr_number,
+                            prod_id,
                             touch_id, i_touch,
                             quantity, 
                             gross_wt, net_wt, pure_wt,
@@ -168,6 +198,7 @@ module.exports = function(Stock) {
                         ) VALUES (
                             ${params._userId}, ${params.ornamentId},
                             "${params.productCodeSeries}", ${params.productCodeNumber},
+                            "${params.productCodeSeries}${params.productCodeNumber}",
                             ${params.touchId}, ${params.productITouch},
                             ${params.productQty},
                             ${params.productGWt}, ${params.productNWt}, ${params.productPWt},
@@ -182,6 +213,34 @@ module.exports = function(Stock) {
                 break;
         }
         return sql;
+    }
+
+    Stock.fetchProductIdsApiHandler = async (accessToken, filters) => {
+        try {
+            let params = {filters};
+            params._userId = await utils.getStoreOwnerUserId(accessToken);
+            let list = await Stock._fetchProductIds(params);
+            return {STATUS: 'SUCCESS', LIST: list};
+        } catch(e) {
+            return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
+        }
+    }
+
+    Stock._fetchProductIds = (params) => {
+        return new Promise((resolve, reject) => {
+            let sql = SQL.FETCH_PRODUCT_IDS.replace('STOCK_TABLE', `stock_${params._userId}`);
+            Stock.dataSource.connector.query(sql, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    let obj = [];
+                    _.each(res, (row, index) => {
+                        obj.push(row.prod_id);
+                    });
+                    return resolve(obj);
+                }
+            });
+        });
     }
 };
 
@@ -219,7 +278,8 @@ let SQL = {
                     STOCK_TABLE
                     LEFT JOIN orn_list_jewellery ON STOCK_TABLE.ornament = orn_list_jewellery.id
                     LEFT JOIN suppliers ON STOCK_TABLE.supplierId = suppliers.id
-                    LEFT JOIN touch ON STOCK_TABLE.touch_id = touch.id`,
+                    LEFT JOIN touch ON STOCK_TABLE.touch_id = touch.id
+                ORDER BY STOCK_TABLE.created_date DESC;`,
     FETCH_LIST_OLD: `SELECT
                     dealer_purchase_bill.id AS PurchaseBillId,
                     suppliers.name AS SupplierName,
@@ -244,5 +304,6 @@ let SQL = {
                     LEFT JOIN item_category ON orn_list_jewellery.item_category = item_category.id
                     LEFT JOIN item_subcategory ON orn_list_jewellery.item_subcategory = item_subcategory.id
                     LEFT JOIN touch ON stock.touch_id = touch.id
-                `
+                `,
+    FETCH_PRODUCT_IDS: `SELECT prod_id from STOCK_TABLE WHERE avl_qty <> 0`
 }

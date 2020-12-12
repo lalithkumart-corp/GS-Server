@@ -3,58 +3,54 @@ let _ = require('lodash');
 let sh = require('shorthash');
 let utils = require('../utils/commonUtils');
 let app = require('../server.js');
-
+let GsErrorCtrl = require('../components/logger/gsErrorCtrl');
+let logger = app.get('logger');
 module.exports = function(Customer) {
 
-    Customer.getMetaData = async (accessToken, identifiers, params, cb) => {
-        let metaData = {};
-        Customer.metaData = null;
-        let userId = await utils.getStoreOwnerUserId(accessToken);
-        for(let identifier of identifiers) {
-            switch(identifier) {
-                case 'all':
-                    let allData = await Customer._getMetaDataFromDB('all', userId, params);
-                    metaData.customers = {
-                        list: allData.results,
-                        count: allData.totalCount
-                    };
-                    break;
-                case 'customerNames':
-                    let customerNames = await Customer._getMetaDataFromDB('name', userId, params);
-                    metaData.customerNames = customerNames.results;
-                    break;
-                case 'guardianNames':
-                    let guardianNames = await Customer._getMetaDataFromDB('gaurdianName', userId, params);
-                    metaData.guardianNames = guardianNames.results;
-                    break;
-                case 'address':
-                    let address = await Customer._getMetaDataFromDB('address', userId, params);
-                    metaData.address = address.results;
-                    break;
-                case 'place':
-                    let place = await Customer._getMetaDataFromDB('place', userId, params);
-                    metaData.place = place.results;
-                    break;
-                case 'city':
-                    let city = await Customer._getMetaDataFromDB('city', userId, params);
-                    metaData.city = city.results;
-                    break;
-                case 'mobile':
-                    let mobile = await Customer._getMetaDataFromDB('mobile', userId, params);
-                    metaData.mobile = mobile.results;
-                    break;                
-                case 'pincode':
-                    let pincode = await Customer._getMetaDataFromDB('pincode', userId, params);
-                    metaData.pincode = pincode.results;
-                    break;
-                case 'otherDetails':
-                    let otherDetails = await Customer._getMetaDataFromDB('otherDetails', userId, params);
-                    metaData.otherDetails = otherDetails;
-                    break;
+
+    Customer.remoteMethod('createCustomerAPIHandler', {
+        accepts: {
+            arg: 'data',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
             }
-        }
-        return metaData;
-    }
+        },
+        http: {path: '/create-new', verb: 'post'},
+        description: 'Create New Customer'
+    });
+
+    Customer.remoteMethod('updateCustomerAPIHandler', {
+        accepts: {
+            arg: 'data',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/update-customer-detail', verb: 'post'},
+        description: 'Updated the customer general information'
+    });
 
     Customer.remoteMethod('getMetaData', {
         accepts: [
@@ -115,11 +111,72 @@ module.exports = function(Customer) {
         description: 'For fetching metadata from Customer Data.',
     });
 
+    Customer.createCustomerAPIHandler = async (data) => {
+        try {
+            data._userId = await utils.getStoreOwnerUserId(data.accessToken);
+            let obj = await Customer.handleCustomerData(data);
+            return {STATUS: "SUCCESS", CUSTOMER_ROW: obj.record};
+        } catch(e) {
+            logger.error(GsErrorCtrl.create({className: 'Customer', methodName: 'createCustomerAPIHandler', cause: e, message: 'Exception in Create-new Customer API'}));
+            return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
+        }
+    }
+
+    Customer.getMetaData = async (accessToken, identifiers, params, cb) => {
+        let metaData = {};
+        Customer.metaData = null;
+        let userId = await utils.getStoreOwnerUserId(accessToken);
+        for(let identifier of identifiers) {
+            switch(identifier) {
+                case 'all':
+                    let allData = await Customer._getMetaDataFromDB('all', userId, params);
+                    metaData.customers = {
+                        list: allData.results,
+                        count: allData.totalCount
+                    };
+                    break;
+                case 'customerNames':
+                    let customerNames = await Customer._getMetaDataFromDB('name', userId, params);
+                    metaData.customerNames = customerNames.results;
+                    break;
+                case 'guardianNames':
+                    let guardianNames = await Customer._getMetaDataFromDB('gaurdianName', userId, params);
+                    metaData.guardianNames = guardianNames.results;
+                    break;
+                case 'address':
+                    let address = await Customer._getMetaDataFromDB('address', userId, params);
+                    metaData.address = address.results;
+                    break;
+                case 'place':
+                    let place = await Customer._getMetaDataFromDB('place', userId, params);
+                    metaData.place = place.results;
+                    break;
+                case 'city':
+                    let city = await Customer._getMetaDataFromDB('city', userId, params);
+                    metaData.city = city.results;
+                    break;
+                case 'mobile':
+                    let mobile = await Customer._getMetaDataFromDB('mobile', userId, params);
+                    metaData.mobile = mobile.results;
+                    break;                
+                case 'pincode':
+                    let pincode = await Customer._getMetaDataFromDB('pincode', userId, params);
+                    metaData.pincode = pincode.results;
+                    break;
+                case 'otherDetails':
+                    let otherDetails = await Customer._getMetaDataFromDB('otherDetails', userId, params);
+                    metaData.otherDetails = otherDetails;
+                    break;
+            }
+        }
+        return metaData;
+    }
+
     Customer.handleCustomerData = async (params) => {
         //TODO: Valide the input arguments
         let hashKey = Customer.generateHashKey(params);
         let customerData = await Customer.isAlreadyExists(hashKey, {onlyActive: true});
-        if(!customerData) {            
+        if(!customerData) {
             params.hashKey = hashKey;
             customerData = await Customer.saveCustomerData(params);
         } else {
@@ -426,28 +483,6 @@ module.exports = function(Customer) {
             return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
         }
     }
-
-    Customer.remoteMethod('updateCustomerAPIHandler', {
-        accepts: {
-            arg: 'data',
-            type: 'object',
-            default: {
-                
-            },
-            http: {
-                source: 'body',
-            },
-        },
-        returns: {
-            type: 'object',
-            root: true,
-            http: {
-                source: 'body'
-            }
-        },
-        http: {path: '/update-customer-detail', verb: 'post'},
-        description: 'Updated the customer general information'
-    });  
 
     Customer.updateDetails = async (params) => {
         try{
