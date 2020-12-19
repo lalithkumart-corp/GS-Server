@@ -130,6 +130,34 @@ module.exports = function(Stock) {
         description: 'For fetching productIds.',
     });
 
+    Stock.remoteMethod('fetchItemByProdId', {
+        accepts: [
+            {
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let access_token = req && req.query.access_token;
+                    return access_token;
+                },
+                description: 'Arguments goes here',
+            }, {
+                arg: 'prodId', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let prodId = req && req.query.prod_id;
+                    return prodId;
+                },
+                description: 'prodId Arguments goes here',
+        }],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            },
+        },
+        http: {path: '/fetch-by-prod-id', verb: 'get'},
+        description: 'For fetching stock item by Prod Id',
+    });
+
     Stock.insertApiHandler = async (data) => {
         try {
             let params = data.requestParams;
@@ -188,6 +216,7 @@ module.exports = function(Stock) {
                             touch_id, i_touch,
                             quantity, 
                             gross_wt, net_wt, pure_wt,
+                            labour_charge, labour_charge_unit, calc_labour_amt,
                             metal_rate, amount,
                             cgst_percent, cgst_amt,
                             sgst_percent, sgst_amt,
@@ -202,6 +231,7 @@ module.exports = function(Stock) {
                             ${params.touchId}, ${params.productITouch},
                             ${params.productQty},
                             ${params.productGWt}, ${params.productNWt}, ${params.productPWt},
+                            ${params.productLabourCharges}, "${params.productLabourCalcUnit}", ${params.productCalcLabourAmt},
                             ${params.metalPrice}, ${params.calcAmtWithLabour},
                             ${params.productCgstPercent || 0}, ${params.productCgstAmt || 0},
                             ${params.productSgstPercent || 0}, ${params.productSgstAmt || 0},
@@ -238,6 +268,29 @@ module.exports = function(Stock) {
                         obj.push(row.prod_id);
                     });
                     return resolve(obj);
+                }
+            });
+        });
+    }
+
+    Stock.fetchItemByProdId = async (accessToken, prodId) => {
+        try {
+            let _userId = await utils.getStoreOwnerUserId(accessToken);
+            let item = await Stock._fetchItemByProdId(prodId, _userId);
+            return {STATUS: 'SUCCESS', ITEM: item};
+        } catch(e) {
+            return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
+        }
+    }
+
+    Stock._fetchItemByProdId = (prodId, _userId) => {
+        return new Promise((resolve, reject) => {
+            let sql = SQL.FETCH_ITEM_BY_PRODID.replace(/STOCK_TABLE/g, `stock_${_userId}`);
+            Stock.dataSource.connector.query(sql, [prodId], (err, result) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(result[0]);
                 }
             });
         });
@@ -305,5 +358,32 @@ let SQL = {
                     LEFT JOIN item_subcategory ON orn_list_jewellery.item_subcategory = item_subcategory.id
                     LEFT JOIN touch ON stock.touch_id = touch.id
                 `,
-    FETCH_PRODUCT_IDS: `SELECT prod_id from STOCK_TABLE WHERE avl_qty <> 0`
+    FETCH_PRODUCT_IDS: `SELECT prod_id from STOCK_TABLE WHERE avl_qty <> 0`,
+    FETCH_ITEM_BY_PRODID: `SELECT
+                                STOCK_TABLE.id,
+                                pr_code,
+                                pr_number,
+                                prod_id,
+                                i_touch,
+                                touch.purity AS pure_touch,
+                                quantity,
+                                gross_wt, net_wt, pure_wt,
+                                labour_charge, labour_charge_unit, calc_labour_amt,
+                                metal_rate, amount,
+                                cgst_percent, cgst_amt, sgst_amt, sgst_percent,
+                                total,
+                                sold_qty, avl_qty,
+                                suppliers.name,
+                                ornament,
+                                orn_list_jewellery.metal as metal,
+                                orn_list_jewellery.item_name as item_name,
+                                orn_list_jewellery.item_category as item_category,
+                                orn_list_jewellery.item_subcategory as item_subcategory,
+                                orn_list_jewellery.dimension as dimension
+                            FROM
+                                STOCK_TABLE
+                                LEFT JOIN suppliers ON suppliers.id = STOCK_TABLE.supplierId
+                                LEFT JOIN orn_list_jewellery ON orn_list_jewellery.id = STOCK_TABLE.ornament
+                                LEFT JOIN touch ON touch.id = STOCK_TABLE.touch_id
+                            WHERE prod_id=?`
 }
