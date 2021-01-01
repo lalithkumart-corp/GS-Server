@@ -27,6 +27,30 @@ const getStoreOwnerUserId = (accessToken) => {
     });
 }
 
+const executeSqlQuery = (dataSource, sql, arrValues) => {
+    return new Promise((resolve, reject) => {
+        console.log(sql);
+        if(arrValues) {
+            dataSource.connector.query(sql, arrValues, (err, result) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(result);
+                }
+            });
+        } else {
+            dataSource.connector.query(sql, (err, result) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(result);
+                }
+            });
+        }
+    });   
+}
+
 module.exports = {
-    getStoreOwnerUserId
+    getStoreOwnerUserId,
+    executeSqlQuery
 }

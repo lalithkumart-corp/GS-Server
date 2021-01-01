@@ -2,6 +2,8 @@
 let app = require('../server');
 let utils = require('../utils/commonUtils');
 let _ = require('lodash');
+let GsErrorCtrl = require('../components/logger/gsErrorCtrl');
+let logger = app.get('logger');
 module.exports = function(Stock) {
     Stock.fetchList = async (accessToken, filters) => {
         try {
@@ -158,6 +160,28 @@ module.exports = function(Stock) {
         description: 'For fetching stock item by Prod Id',
     });
 
+    Stock.remoteMethod('sellItemApiHandler', {
+        accepts: {
+            arg: 'payload',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            },
+        },
+        http: {path: '/sell-item', verb: 'post'},
+        description: 'For testing purpose.',
+    });
+
     Stock.insertApiHandler = async (data) => {
         try {
             let params = data.requestParams;
@@ -181,6 +205,7 @@ module.exports = function(Stock) {
             await Stock.app.models.ProductCode.incrementSerialNumber(params.productCodeTableId);
             return {STATUS: 'SUCCESS', STATUS_MSG: 'Successfully inserted item in Stock'};
         } catch(e) {
+            console.log(e);
             return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
         }
     }
@@ -189,6 +214,7 @@ module.exports = function(Stock) {
         return new Promise((resolve, reject) => {
             params._tableName = Stock._getStockTableName();
             let query = Stock._constructQuery('insert', params);
+            console.log(query);
             Stock.dataSource.connector.query(query, (err, result) => {
                 if(err) {
                     return reject(err);
@@ -295,6 +321,124 @@ module.exports = function(Stock) {
             });
         });
     }
+
+    Stock.sellItemApiHandler = async (payload) => {
+        try {
+            console.log(payload);
+            payload._userId = await utils.getStoreOwnerUserId(payload.accessToken);
+            payload._uniqString = (Date.now() + Math.random()).toString(36).replace('.', '');
+            let isAvl = await Stock.checkItemAvlQty(payload.apiParams.newProds);
+            if(!isAvl)
+                throw 'Please check item quantity';
+            let invoiceDetailResp = await Stock.insertInvoiceData(payload);
+            if(!invoiceDetailResp)
+                throw 'Invoice creation failed. Please check Logs.';
+            
+            await Stock.insertInSellingDetail(payload);
+            await Stock.updateQtyInStockTable(payload);
+
+            return {STATUS: 'SUCCESS'};
+        } catch(e) {
+            return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
+        }
+    }
+
+    Stock.checkItemAvlQty = async (items) => {
+        try {
+            let flag = true;
+            let groupObj = {};
+
+            //grouping by prod_id
+            _.each(items, (anItem, index) => {
+                groupObj[anItem.prodId] = groupObj[anItem.prodId] || 0;
+                groupObj[anItem.prodId]++;
+            });
+
+            //check in Database
+            let sql = `SELECT * FROM stock_1 WHERE `;
+            let bucket = [];
+            _.each(groupObj, (val, index) => {
+                bucket.push(`(prod_id='${index}' AND avl_qty>=${val})`);
+            });
+            sql += bucket.join(' OR ');
+            let result = await utils.executeSqlQuery(Stock.dataSource, sql);
+            if(result.length !== Object.keys(groupObj).length)
+                flag = false;
+            return flag;
+        } catch(e) {
+            console.log(e);
+            throw e;
+        }
+    }
+
+    Stock.insertInvoiceData = async (payload) => {
+        try {
+            let sql = SQL.INSERT_INVOICE_DETAIL.replace(/INVOICE_TABLE/g, `invoice_details_${payload._userId}`);
+            let queryVal = [
+                    payload._uniqString,
+                    payload.apiParams.customerId,
+                    'SOLD',
+                    payload.apiParams.paymentFormData.paid,
+                    payload.apiParams.paymentFormData.paymentMode,
+                    JSON.stringify(payload.apiParams.paymentFormData)
+                ];
+            let result = await utils.executeSqlQuery(Stock.dataSource, sql, queryVal);
+            return result;
+        } catch(e) {
+            logger.error(GsErrorCtrl.create({className: 'Stock', methodName: 'insertInvoiceData', cause: e, message: 'Exception in sql query execution'}));
+            console.log(e);
+            throw e;
+        }
+    }
+
+    Stock.insertInSellingDetail = async (payload) => {
+        try {
+            let sql = SQL.INSERT_INTO_STOCK_SOLD.replace(/STOCK_SOLD_TABLE/g, `stock_sold_${payload._userId}`);
+            let bucket = [];
+            _.each(payload.apiParams.newProds, (anItem, index) => {
+                let temp = [];
+                temp.push(`"${new Date().toISOString().replace('T', ' ').slice(0,23)}"`);
+                temp.push(`"${anItem.prodId}"`);
+                temp.push(payload.apiParams.metalRate);
+                temp.push(payload.apiParams.retailRate);
+                temp.push(anItem.qty);
+                temp.push(anItem.grossWt || 0);
+                temp.push(anItem.netWt || 0);
+    
+                temp.push(anItem.wastage || 0);
+                temp.push(anItem.labour || 0);
+                temp.push(anItem.cgstPercent || 0);
+                temp.push(anItem.sgstPercent || 0);
+                temp.push(anItem.discount || 0);
+                temp.push(anItem.price || 0);
+                temp.push(`"${payload._uniqString}"`);
+                bucket.push(`(${temp.join(',')})`);
+            });
+            sql += bucket.join(' , ');
+            let result = await utils.executeSqlQuery(Stock.dataSource, sql);
+            return true;
+        } catch(e) {
+            console.log(e);
+            logger.error(GsErrorCtrl.create({className: 'Stock', methodName: 'insertInSellingDetail', cause: e, message: 'Exception in sql query execution'}));
+            throw e;
+        }
+    }
+
+    Stock.updateQtyInStockTable = async (payload) => {
+        try {
+            let newProds = payload.apiParams.newProds;
+            for(let i=0; i<newProds.length; i++) {
+                let anItem = newProds[i];
+                let sql = `UPDATE stock_${payload._userId} SET sold_qty=sold_qty+${anItem.qty}, avl_qty=avl_qty-${anItem.qty}, invoice_ref="${payload._uniqString}" WHERE prod_id="${anItem.prodId}"`;
+                let result = await utils.executeSqlQuery(Stock.dataSource, sql);
+            }
+            return true;
+        } catch(e) {
+            console.log(e);
+            logger.error(GsErrorCtrl.create({className: 'Stock', methodName: 'updateQtyInStockTable', cause: e, message: 'Exception in sql query execution'}));
+            throw e;
+        }
+    }
 };
 
 let SQL = {
@@ -385,5 +529,15 @@ let SQL = {
                                 LEFT JOIN suppliers ON suppliers.id = STOCK_TABLE.supplierId
                                 LEFT JOIN orn_list_jewellery ON orn_list_jewellery.id = STOCK_TABLE.ornament
                                 LEFT JOIN touch ON touch.id = STOCK_TABLE.touch_id
-                            WHERE prod_id=?`
+                            WHERE prod_id=?`,
+    INSERT_INTO_STOCK_SOLD: `INSERT INTO STOCK_SOLD_TABLE (
+                                date, prod_id, metal_rate, retail_rate, qty, 
+                                gross_wt, net_wt, 
+                                wastage, labour,
+                                cgst_percent, sgst_percent, discount, total,
+                                invoice_ref
+                            ) 
+                            VALUES `
+                            ,
+    INSERT_INVOICE_DETAIL: `INSERT INTO INVOICE_TABLE (ukey, cust_id, action, payment_amt, payment_mode, raw_payment_data) VALUES (?, ?, ?, ?, ?, ?)`
 }
