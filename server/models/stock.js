@@ -31,11 +31,14 @@ module.exports = function(Stock) {
         });
     }
 
-    Stock._getFilterQueryPart = (params) => {
+    Stock._getFilterQueryPart = (params, requireOnlyTotals=false) => {
         let filterList = [];
         // if(params._userId)
         //     filterList.push(`STOCK_TABLE.user_id = ${params._userId}`);
+        let sql = '';
         if(params.filters) {
+            if(params.filters.prodId)
+                filterList.push(`STOCK_TABLE.prod_id like '${params.filters.prodId}'`);
             if(params.filters.supplier)
                 filterList.push(`suppliers.name like '${params.filters.supplier}%'`);
             if(params.filters.itemName)
@@ -46,10 +49,19 @@ module.exports = function(Stock) {
                 filterList.push(`orn_list_jewellery.item_subcategory like '${params.filters.itemSubCategory}%'`);
             if(params.filters.dimension)
                 filterList.push(`orn_list_jewellery.dimension like '${params.filters.dimension}%'`);
+            if(params.filters.date)
+                filterList.push(`(STOCK_TABLE.date BETWEEN '${params.filters.date.startDate}' AND '${params.filters.date.endDate}')`);
         }
         if(filterList.length)
-            return ` WHERE ${filterList.join(' AND ')}`;
-        return '';
+            sql = ` WHERE ${filterList.join(' AND ')}`;
+
+        sql += ' ORDER BY STOCK_TABLE.created_date DESC';
+    
+        if(!requireOnlyTotals) {
+            let limit = (params.filters.offsetEnd - params.filters.offsetStart);
+            sql += ` LIMIT ${limit} OFFSET ${params.filters.offsetStart}`;
+        }
+        return sql;
     }
 
     Stock.remoteMethod('fetchList', {
@@ -79,6 +91,35 @@ module.exports = function(Stock) {
         },
         http: {path: '/fetch-list', verb: 'get'},
         description: 'For fetching stock list.',
+    });
+
+    Stock.remoteMethod('fetchTotals', {
+        accepts: [
+            {
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let access_token = req && req.query.access_token;
+                    return access_token;
+                },
+                description: 'Arguments goes here',
+            }, {
+                arg: 'filters', type: 'object', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let filters = req && req.query.filters;
+                    filters = filters ? JSON.parse(filters) : {};
+                    return filters;
+                },
+                description: 'filters Arguments goes here',
+            }],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            },
+        },
+        http: {path: '/fetch-totals', verb: 'get'},
+        description: 'For fetching stock total count.',
     });
 
     Stock.remoteMethod('insertApiHandler', {
@@ -225,6 +266,33 @@ module.exports = function(Stock) {
         });
     }
 
+    Stock.fetchTotals = async (accessToken, filters) => {
+        try {
+            let params = { filters };
+            params._userId = await utils.getStoreOwnerUserId(accessToken);
+            let count = await Stock._fetchTotals(params);
+            return {STATUS: 'SUCCESS', TOTALS: {count}};
+        } catch(e) {
+            return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
+        }
+    }
+
+    Stock._fetchTotals = async (params) => {
+        try {
+            let sql = SQL.FETCH_COUNT;
+                sql += Stock._getFilterQueryPart(params, true);
+                sql = sql.replace(/STOCK_TABLE/g, `stock_${params._userId}`);
+            let result = await utils.executeSqlQuery(Stock.dataSource, sql);
+            if(result && result.length>0)
+                return result[0].Count;
+            return 0;
+        } catch(e) {
+            console.log(e);
+            logger.error(GsErrorCtrl.create({className: 'Stock', methodName: '_fetchTotals', cause: e, message: 'Exception in sql query execution'}));
+            throw e;
+        }
+    }
+
     Stock._getStockTableName = (userId) => {
         let tableName = 'stock_' + userId;
         return tableName;
@@ -236,7 +304,7 @@ module.exports = function(Stock) {
             case 'insert':
                 sql += `INSERT INTO ${params._stockTableName}
                         (
-                            user_id, ornament,
+                            date, user_id, ornament,
                             pr_code, pr_number,
                             prod_id,
                             touch_id, i_touch,
@@ -251,7 +319,7 @@ module.exports = function(Stock) {
                             supplierId, personName,
                             sold_qty, avl_qty
                         ) VALUES (
-                            ${params._userId}, ${params.ornamentId},
+                            "${params.date}", ${params._userId}, ${params.ornamentId},
                             "${params.productCodeSeries}", ${params.productCodeNumber},
                             "${params.productCodeSeries}${params.productCodeNumber}",
                             ${params.touchId}, ${params.productITouch},
@@ -442,6 +510,12 @@ module.exports = function(Stock) {
 };
 
 let SQL = {
+    FETCH_COUNT: `SELECT
+                    COUNT(*) AS Count
+                FROM STOCK_TABLE
+                    LEFT JOIN orn_list_jewellery ON STOCK_TABLE.ornament = orn_list_jewellery.id
+                    LEFT JOIN suppliers ON STOCK_TABLE.supplierId = suppliers.id
+                    LEFT JOIN touch ON STOCK_TABLE.touch_id = touch.id`,
     FETCH_LIST: `SELECT
                     STOCK_TABLE.id AS Id,
                     orn_list_jewellery.metal AS Metal,
@@ -470,13 +544,13 @@ let SQL = {
                     STOCK_TABLE.igst_amt AS IgstAmt,
                     STOCK_TABLE.total AS Total,
                     STOCK_TABLE.sold_qty AS SoldQty,
-                    STOCK_TABLE.avl_qty AS AvlQty
+                    STOCK_TABLE.avl_qty AS AvlQty,
+                    STOCK_TABLE.created_date AS CreatedDate
                 FROM
                     STOCK_TABLE
                     LEFT JOIN orn_list_jewellery ON STOCK_TABLE.ornament = orn_list_jewellery.id
                     LEFT JOIN suppliers ON STOCK_TABLE.supplierId = suppliers.id
-                    LEFT JOIN touch ON STOCK_TABLE.touch_id = touch.id
-                ORDER BY STOCK_TABLE.created_date DESC;`,
+                    LEFT JOIN touch ON STOCK_TABLE.touch_id = touch.id`,
     FETCH_LIST_OLD: `SELECT
                     dealer_purchase_bill.id AS PurchaseBillId,
                     suppliers.name AS SupplierName,
