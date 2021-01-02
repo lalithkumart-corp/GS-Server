@@ -21,6 +21,7 @@ module.exports = function(Stock) {
             let sql = SQL.FETCH_LIST;
             sql += Stock._getFilterQueryPart(params);
             sql = sql.replace(/STOCK_TABLE/g, `stock_${params._userId}`);
+            // console.log(sql);
             Stock.dataSource.connector.query(sql, (err, res) => {
                 if(err) {
                     reject(err);
@@ -33,12 +34,20 @@ module.exports = function(Stock) {
 
     Stock._getFilterQueryPart = (params, requireOnlyTotals=false) => {
         let filterList = [];
-        // if(params._userId)
-        //     filterList.push(`STOCK_TABLE.user_id = ${params._userId}`);
         let sql = '';
         if(params.filters) {
+            if(params.filters.metalCategory){
+                let t1 = [];
+                _.each(params.filters.metalCategory, (aCateg, index) => {
+                    t1.push(`orn_list_jewellery.metal = '${aCateg}'`);
+                })
+                if(t1.length)
+                    filterList.push(`(${t1.join(' OR ')})`);
+                else
+                    filterList.push(`orn_list_jewellery.metal NOT IN ('G', 'S')`);
+            }
             if(params.filters.prodId)
-                filterList.push(`STOCK_TABLE.prod_id like '${params.filters.prodId}'`);
+                filterList.push(`STOCK_TABLE.prod_id like '${params.filters.prodId.replace('-','')}%'`);
             if(params.filters.supplier)
                 filterList.push(`suppliers.name like '${params.filters.supplier}%'`);
             if(params.filters.itemName)
@@ -51,6 +60,8 @@ module.exports = function(Stock) {
                 filterList.push(`orn_list_jewellery.dimension like '${params.filters.dimension}%'`);
             if(params.filters.date)
                 filterList.push(`(STOCK_TABLE.date BETWEEN '${params.filters.date.startDate}' AND '${params.filters.date.endDate}')`);
+            if(params.filters.showOnlyAvlStockItems)
+                filterList.push(`STOCK_TABLE.avl_qty <> 0`);
         }
         if(filterList.length)
             sql = ` WHERE ${filterList.join(' AND ')}`;
@@ -199,6 +210,35 @@ module.exports = function(Stock) {
         },
         http: {path: '/fetch-by-prod-id', verb: 'get'},
         description: 'For fetching stock item by Prod Id',
+    });
+
+    Stock.remoteMethod('fetchSoldOutItemDetail', {
+        accepts: [
+            {
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let access_token = req && req.query.access_token;
+                    return access_token;
+                },
+                description: 'Arguments goes here',
+            }, {
+                arg: 'filters', type: 'object', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let filters = req && req.query.filters;
+                    filters = filters ? JSON.parse(filters) : {};
+                    return filters;
+                },
+                description: 'filters Arguments goes here',
+        }],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            },
+        },
+        http: {path: '/fetch-sold-out-item-detail', verb: 'get'},
+        description: 'For testing purpose.',
     });
 
     Stock.remoteMethod('sellItemApiHandler', {
@@ -447,6 +487,7 @@ module.exports = function(Stock) {
                     payload.apiParams.customerId,
                     'SOLD',
                     payload.apiParams.paymentFormData.paid,
+                    payload.apiParams.paymentFormData.balance,
                     payload.apiParams.paymentFormData.paymentMode,
                     JSON.stringify(payload.apiParams.paymentFormData)
                 ];
@@ -507,6 +548,30 @@ module.exports = function(Stock) {
             throw e;
         }
     }
+
+    Stock.fetchSoldOutItemDetail = async (accessToken) => {
+        try {
+            let _userId = await utils.getStoreOwnerUserId(accessToken);
+            let list = await Stock._fetchSoldOutItemDetail(_userId)
+            return {STATUS: 'SUCCESS', LIST: list};
+        } catch(e) {
+            return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
+        }
+    }
+    Stock._fetchSoldOutItemDetail = async (_userId) => {
+        try{
+            let sql = SQL.FETCH_SOLD_OUT_ITEMS_DETAIL;
+            sql = sql.replace(/STOCK_SOLD_TABLE/g, `stock_sold_${_userId}`);
+            sql = sql.replace(/INVOICE_DETAIL_TABLE/g, `invoice_details_${_userId}`);
+            let res = await utils.executeSqlQuery(Stock.dataSource, sql);
+            //TODO:
+            return res;
+        } catch(e) {
+            console.log(e);
+            logger.error(GsErrorCtrl.create({className: 'Stock', methodName: '_fetchSoldOutItemDetail', cause: e, message: 'Exception in sql query execution'}));
+            throw e;
+        }
+    }
 };
 
 let SQL = {
@@ -545,7 +610,7 @@ let SQL = {
                     STOCK_TABLE.total AS Total,
                     STOCK_TABLE.sold_qty AS SoldQty,
                     STOCK_TABLE.avl_qty AS AvlQty,
-                    STOCK_TABLE.created_date AS CreatedDate
+                    STOCK_TABLE.date AS Date
                 FROM
                     STOCK_TABLE
                     LEFT JOIN orn_list_jewellery ON STOCK_TABLE.ornament = orn_list_jewellery.id
@@ -613,5 +678,29 @@ let SQL = {
                             ) 
                             VALUES `
                             ,
-    INSERT_INVOICE_DETAIL: `INSERT INTO INVOICE_TABLE (ukey, cust_id, action, payment_amt, payment_mode, raw_payment_data) VALUES (?, ?, ?, ?, ?, ?)`
+    INSERT_INVOICE_DETAIL: `INSERT INTO INVOICE_TABLE (ukey, cust_id, action, paid_amt, balance_amt, payment_mode, raw_payment_data) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    FETCH_SOLD_OUT_ITEMS_DETAIL: `SELECT
+                            date AS InvoicingDate,
+                            customer.Name AS CustomerName,
+                            customer.GaurdianName AS GaurdianName,
+                            customer.Address AS Address,
+                            customer.City AS City,
+                            customer.Mobile AS Mobile,
+                            customer.SecMobile AS SecMobile,
+                            prod_id AS ProdId,
+                            metal_rate AS MetalRate,
+                            retail_rate AS RetailRate,
+                            qty AS Qty,
+                            gross_wt,
+                            net_wt,
+                            wastage,
+                            labour,
+                            cgst_percent,
+                            sgst_percent,
+                            discount,
+                            total
+                        FROM
+                            STOCK_SOLD_TABLE
+                            LEFT JOIN INVOICE_DETAIL_TABLE ON STOCK_SOLD_TABLE.invoice_ref = INVOICE_DETAIL_TABLE.ukey
+                            LEFT JOIN customer ON INVOICE_DETAIL_TABLE.cust_id = customer.CustomerId`
 }

@@ -29,7 +29,7 @@ const getStoreOwnerUserId = (accessToken) => {
 
 const executeSqlQuery = (dataSource, sql, arrValues) => {
     return new Promise((resolve, reject) => {
-        console.log(sql);
+        // console.log(sql);
         if(arrValues) {
             dataSource.connector.query(sql, arrValues, (err, result) => {
                 if(err) {
