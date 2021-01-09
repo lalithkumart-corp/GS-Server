@@ -50,7 +50,24 @@ const executeSqlQuery = (dataSource, sql, arrValues) => {
     });   
 }
 
+const getAppStatus = (ownerUserId) => {
+    return new Promise((resolve, reject) => {
+        app.models.AppManager.find({where: {userId: ownerUserId}}, (err, res) => {
+            if(err) {
+                console.log(err);
+                return reject(err);
+            } else {
+                if(res && res.length>0)
+                    return resolve(res[0].status);
+                else
+                    return reject('NO user application found');
+            }
+        });
+    });
+}
+
 module.exports = {
     getStoreOwnerUserId,
-    executeSqlQuery
+    executeSqlQuery,
+    getAppStatus
 }

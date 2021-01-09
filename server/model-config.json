@@ -106,5 +106,9 @@
   "ProductCode": {
     "dataSource": "developmentdb",
     "public": true
+  },
+  "AppManager": {
+    "dataSource": "developmentdb",
+    "public": true
   }
 }

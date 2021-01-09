@@ -1,0 +1,95 @@
+{
+    "name": "AppManager",
+    "base": "PersistedModel",
+    "idInjection": true,
+    "options": {
+      "validateUpsert": true,
+      "mysql": {
+        "schema": "developmentdb",
+        "table": "app"
+      }
+    },
+    "properties": {
+      "id": {
+        "type": "number",
+        "length": 11,
+        "mysql": {
+          "columnName": "id",
+          "dataType": "int",
+          "dataLength": 11,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "userId": {
+        "type": "number",
+        "length": 255,
+        "mysql": {
+          "columnName": "user_id",
+          "dataType": "int",
+          "dataLength": 11,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "N"
+        }
+      },
+      "status": {
+        "type": "number",
+        "length": 255,
+        "mysql": {
+          "columnName": "status",
+          "dataType": "int",
+          "dataLength": 11,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "N"
+        }
+      },
+      "key": {
+        "type": "string",
+        "mysql": {
+          "columnName": "key",
+          "dataType": "varchar",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "N"
+        }
+      },
+      "usedTrialOffer": {
+        "type": "number",
+        "mysql": {
+          "columnName": "used_trial_offer",
+          "dataType": "int",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "N"
+        }
+      },
+      "validTillDate": {
+        "type": "string",
+        "mysql": {
+          "columnName": "valid_till_date",
+          "dataType": "varchar",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "N"
+        }
+      },
+      "modifiedDate": {
+        "type": "string",
+        "mysql": {
+          "columnName": "modified_date",
+          "dataType": "varchar",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "N"
+        }
+      }
+    },
+    "validations": [],
+    "relations": {},
+    "acls": [],
+    "methods": {}
+  }
+  

@@ -284,6 +284,11 @@ module.exports = function(Pledgebook) {
                 throw 'Access Token is missing';
             let parsedArg = Pledgebook.parseInputData(params);
             parsedArg._userId = await utils.getStoreOwnerUserId(params.accessToken);
+
+            let isActiveUser = await utils.getAppStatus(parsedArg._userId);
+            if(!isActiveUser)
+                throw 'User is Not Active';
+            
             let pledgebookTableName = await Pledgebook.getPledgebookTableName(parsedArg._userId);
             let validation = await Pledgebook.doValidation(parsedArg, pledgebookTableName);
             if(validation.status) {
@@ -375,6 +380,12 @@ module.exports = function(Pledgebook) {
             try {
                 let queryValues = [(params.offsetEnd - params.offsetStart), params.offsetStart];
                 let userId = await utils.getStoreOwnerUserId(accessToken);
+                
+                // CHECK FOR USER ACTIVE STATUS
+                let isActiveUser = await utils.getAppStatus(userId);
+                if(!isActiveUser)
+                    throw 'User is Not Active';
+
                 let pledgebookTableName = await Pledgebook.getPledgebookTableName(userId);
                 let pledgebookClosedBillTableName = await Pledgebook.getPledgebookClosedTableName(userId);
                 

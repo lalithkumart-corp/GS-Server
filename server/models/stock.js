@@ -268,6 +268,12 @@ module.exports = function(Stock) {
             let params = data.requestParams;
             params.accessToken = data.accessToken;
             params._userId = await utils.getStoreOwnerUserId(params.accessToken);
+
+            // CHECK FOR USER ACTIVE STATUS
+            let isActiveUser = await utils.getAppStatus(params._userId);
+            if(!isActiveUser)
+                throw 'User is Not Active';
+
             params._stockTableName = Stock._getStockTableName(params._userId);;
             //if(!params.ornamentId) {
                 let obj =  await Stock.app.models.JewellryOrnament.handleOrnData(params);

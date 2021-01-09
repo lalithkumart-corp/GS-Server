@@ -175,7 +175,7 @@ module.exports = function(Customer) {
     Customer.handleCustomerData = async (params) => {
         //TODO: Valide the input arguments
         let hashKey = Customer.generateHashKey(params);
-        let customerData = await Customer.isAlreadyExists(hashKey, {onlyActive: true});
+        let customerData = await Customer.isAlreadyExists(hashKey, {onlyActive: true, _userId: params._userId});
         if(!customerData) {
             params.hashKey = hashKey;
             customerData = await Customer.saveCustomerData(params);
@@ -421,6 +421,8 @@ module.exports = function(Customer) {
                     whereCondition.customerId = {neq: optional.ignoreCustId};
                 if(optional.onlyActive)
                     whereCondition.status = {neq: 0};
+                if(optional._userId)
+                    whereCondition.userId = optional._userId;
             }
 
             // if(optional && optional.ignoreCustId)
@@ -486,6 +488,8 @@ module.exports = function(Customer) {
 
     Customer.updateDetails = async (params) => {
         try{
+            params._userId = await utils.getStoreOwnerUserId(params.accessToken);
+
             //TODO: DELETE the existing image
             let verification = await Customer.checkInputDetails(params);
             if(!verification.STATUS) {
@@ -508,7 +512,7 @@ module.exports = function(Customer) {
             params.mobile = null;
         let hashKey = Customer.generateHashKey(params);
         params._hashKey = hashKey;
-        let customerData = await Customer.isAlreadyExists(hashKey, {ignoreCustId: params.customerId, onlyActive: true});
+        let customerData = await Customer.isAlreadyExists(hashKey, {ignoreCustId: params.customerId, onlyActive: true, _userId: params._userId});
         if(customerData) {
             params._existingCustHashkey = customerData.hashKey;
             return {
@@ -650,7 +654,7 @@ module.exports = function(Customer) {
                     throw new Error('This Customer has Pending Bills. Redeem those bills to disable this customer...');
             } else { //To enable, there should not be any already existing hashkey
                 let custRecord = await Customer._getById(data.custId);
-                let custRecords = await Customer.isAlreadyExists(custRecord.hashKey, {onlyActive: true, ignoreCustId: data.custId});
+                let custRecords = await Customer.isAlreadyExists(custRecord.hashKey, {onlyActive: true, ignoreCustId: data.custId, _userId: _userId});
                 if(custRecords)
                     throw new Error(`Could not Enable! Snce there is another customer with Same key = ${custRecord.hashKey}`);
             }
