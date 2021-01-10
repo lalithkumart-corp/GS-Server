@@ -274,7 +274,7 @@ module.exports = function(Stock) {
             if(!isActiveUser)
                 throw 'User is Not Active';
 
-            params._stockTableName = Stock._getStockTableName(params._userId);;
+            params._stockTableName = Stock._getStockTableName(params._userId);
             //if(!params.ornamentId) {
                 let obj =  await Stock.app.models.JewellryOrnament.handleOrnData(params);
                 params.ornamentId = obj.id;
