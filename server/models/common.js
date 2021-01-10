@@ -289,10 +289,7 @@ let SQL = {
                     UNIQUE KEY prod_id_UNIQUE (prod_id),
                     KEY touch_idx (touch_id),
                     KEY supplier_idx (supplierId),
-                    KEY ornament_idx (ornament),
-                    CONSTRAINT ornament_fkey_REPLACE_USERID FOREIGN KEY (ornament) REFERENCES orn_list_jewellery (id),
-                    CONSTRAINT supplier_fkey_REPLACE_USERID FOREIGN KEY (supplierId) REFERENCES suppliers (id),
-                    CONSTRAINT touch_fkey_REPLACE_USERID FOREIGN KEY (touch_id) REFERENCES touch (id)
+                    KEY ornament_idx (ornament)
                 )`,
     STOCK_SOLD_TABLE: `CREATE TABLE stock_sold_REPLACE_USERID (
                     id int NOT NULL AUTO_INCREMENT,
