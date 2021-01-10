@@ -20,15 +20,17 @@ module.exports = function(Gsuser) {
                         res.ownerId = ret.ownerId;
                         res.username = ret.username;
                         res.email = ret.email;
+                        let setupActionsStatus = await checkForAnyPendingActions(res.userId, res.ownerId);
                         let userPreferences = await Gsuser._getUserPreferences(res.userId);
                         let status = await app.models.AppManager.updateValidityTime(res.userId, res.ownerId);
                         let response = {
                             session: res,
                             userPreferences: userPreferences,
-                            applicationStatus: status
+                            applicationStatus: status,
+                            setupActionsStatus: setupActionsStatus
                         }
                         cb(null, response);
-                    }                    
+                    }
                 });                
             }
         });
@@ -259,7 +261,8 @@ module.exports = function(Gsuser) {
                 email: custom.email,
                 password: custom.password,
                 phone: custom.phone,
-                guardianName: custom.guardianName || ''
+                guardianName: custom.guardianName || '',
+                pwd: custom.password
             }
             Gsuser.create(theParams, (err, user) => {
                 if(err) {
@@ -375,6 +378,23 @@ module.exports = function(Gsuser) {
                 return {};
             }
         });
+    }
+
+    Gsuser.checkForAnyPendingActions = () => {
+        try {
+            // check if atleast one interest rate added?
+            // check if the BillSeries + BillNumber got updated?
+            return {
+                interestCreated: true,
+                billSeriesAndNumberUpdated: true
+            }
+        } catch(e) {
+            console.log(e);
+            return {
+                interestCreated: false,
+                billSeriesAndNumberUpdated: false
+            }
+        }
     }
 };
 

@@ -42,6 +42,17 @@
         "dataScale": null,
         "nullable": "Y"
       }
+    },
+    "pwd": {
+      "type": "string",
+      "mysql": {
+        "columnName": "pwd",
+        "dataType": "varchar",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
     }
   },
   "validations": [],
