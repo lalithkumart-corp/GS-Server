@@ -33,6 +33,7 @@
     "node-cron": "^2.0.3",
     "read-excel-file": "^4.0.7",
     "serve-favicon": "^2.0.1",
+    "sha256": "^0.2.0",
     "shorthash": "0.0.2",
     "strong-error-handler": "^2.0.0"
   },

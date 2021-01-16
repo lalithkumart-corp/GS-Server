@@ -80,7 +80,7 @@ module.exports = function(ApplicationManager) {
             return { STATUS: 'SUCCESS', isActive: status };
         } catch(e) {
             console.log(e);
-            return { STATUS: 'ERROR', ERR: e };
+            return { STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
         }
     }
     ApplicationManager.findByUserId = (userId) => {

@@ -20,7 +20,7 @@ const getStoreOwnerUserId = (accessToken) => {
                         }
                     });
                 } else {
-                    reject(new Error('Authorization Error'));
+                    reject(new Error('SESSION EXPIRED. Login Again...'));
                 }
             }
         });

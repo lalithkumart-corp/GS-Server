@@ -110,5 +110,9 @@
   "AppManager": {
     "dataSource": "developmentdb",
     "public": true
+  },
+  "Store": {
+    "dataSource": "developmentdb",
+    "public": true
   }
 }
