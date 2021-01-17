@@ -98,11 +98,27 @@ module.exports = function(Store) {
                 loanBillAddrLine1: apiParams.loanBillAddrLine1,
                 loanBillAddrLine2: apiParams.loanBillAddrLine2,
             };
-            Store.updateAll({userId: apiParams._userId}, tableData, (err, resp) => {
-                if(err) {
-                    return reject(err);
+            Store.find({where: {userId: apiParams._userId}}, (error, res) => {
+                if(error) {
+                    return reject(error);
                 } else {
-                    return resolve(tableData);
+                    if(res && res.length > 0) {
+                        Store.updateAll({userId: apiParams._userId}, tableData, (err, resp) => {
+                            if(err) {
+                                return reject(err);
+                            } else {
+                                return resolve(tableData);
+                            }
+                        });
+                    } else {
+                        Store.create({userId: apiParams._userId, ...tableData}, (err, resp) => {
+                            if(err) {
+                                return reject(err);
+                            } else {
+                                return resolve(tableData);
+                            }
+                        });
+                    }
                 }
             });
         });

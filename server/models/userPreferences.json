@@ -34,7 +34,6 @@
       },
       "bill_create_place_default": {
         "type": "string",
-        "required": true,
         "mysql": {
           "columnName": "bill_create_place_default",
           "dataType": "varchar",
@@ -46,7 +45,6 @@
       },
       "bill_create_city_default": {
         "type": "string",
-        "required": true,
         "mysql": {
           "columnName": "bill_create_city_default",
           "dataType": "varchar",
@@ -58,7 +56,6 @@
       },
       "bill_create_pincode_default": {
         "type": "string",
-        "required": true,
         "mysql": {
           "columnName": "bill_create_pincode_default",
           "dataType": "varchar",
@@ -70,7 +67,6 @@
       },
       "auto_print_receipt": {
         "type": "string",
-        "required": true,
         "mysql": {
           "columnName": "auto_print_receipt",
           "dataType": "varchar",
