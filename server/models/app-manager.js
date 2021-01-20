@@ -197,7 +197,7 @@ module.exports = function(ApplicationManager) {
                 } else {
                     if(res && res.length>0) {
                         let date = res[0].validTillDate;
-                        let validityLastDate = moment(date);
+                        let validityLastDate = moment(new Date(date));
                         let todayDate = moment();
                         let diff = validityLastDate.diff(todayDate, 'days');
                         if(diff == 0) {
