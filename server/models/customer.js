@@ -58,7 +58,7 @@ module.exports = function(Customer) {
                 arg: 'accessToken', type: 'string', http: (ctx) => {
                     var req = ctx && ctx.req;
                     let access_token = req && req.query.access_token;
-                    return access_token;
+                    return access_token;                    
                 },
                 description: 'Arguments goes here',
             },{
@@ -96,8 +96,6 @@ module.exports = function(Customer) {
                         onlyIsActive: onlyIsActive
                     }
                 }
-            }, {
-                arg: 'filters', type: 'object'
             }
         ],
         returns: {
@@ -123,53 +121,72 @@ module.exports = function(Customer) {
     }
 
     Customer.getMetaData = async (accessToken, identifiers, params, cb) => {
-        let metaData = {};
-        Customer.metaData = null;
-        let userId = await utils.getStoreOwnerUserId(accessToken);
-        for(let identifier of identifiers) {
-            switch(identifier) {
-                case 'all':
-                    let allData = await Customer._getMetaDataFromDB('all', userId, params);
-                    metaData.customers = {
-                        list: allData.results,
-                        count: allData.totalCount
-                    };
-                    break;
-                case 'customerNames':
-                    let customerNames = await Customer._getMetaDataFromDB('name', userId, params);
-                    metaData.customerNames = customerNames.results;
-                    break;
-                case 'guardianNames':
-                    let guardianNames = await Customer._getMetaDataFromDB('gaurdianName', userId, params);
-                    metaData.guardianNames = guardianNames.results;
-                    break;
-                case 'address':
-                    let address = await Customer._getMetaDataFromDB('address', userId, params);
-                    metaData.address = address.results;
-                    break;
-                case 'place':
-                    let place = await Customer._getMetaDataFromDB('place', userId, params);
-                    metaData.place = place.results;
-                    break;
-                case 'city':
-                    let city = await Customer._getMetaDataFromDB('city', userId, params);
-                    metaData.city = city.results;
-                    break;
-                case 'mobile':
-                    let mobile = await Customer._getMetaDataFromDB('mobile', userId, params);
-                    metaData.mobile = mobile.results;
-                    break;                
-                case 'pincode':
-                    let pincode = await Customer._getMetaDataFromDB('pincode', userId, params);
-                    metaData.pincode = pincode.results;
-                    break;
-                case 'otherDetails':
-                    let otherDetails = await Customer._getMetaDataFromDB('otherDetails', userId, params);
-                    metaData.otherDetails = otherDetails;
-                    break;
-            }
+        try{
+            let metaData = {};
+            Customer.metaData = null;
+            let userId = await utils.getStoreOwnerUserId(accessToken);
+            metaData = await Customer._getMetaData(userId, identifiers, params);
+            // return Promise.resolve(metaData);
+            return metaData;
+        } catch(e) {
+            console.log(e);
+            return false;
         }
-        return metaData;
+    }
+
+    Customer._getMetaData = (userId, identifiers, params) => {
+        return new Promise( async (resolve, reject) => {
+            try {
+                let metaData = {};
+                for(let identifier of identifiers) {
+                    switch(identifier) {
+                        case 'all':
+                            let allData = await Customer._getMetaDataFromDB('all', userId, params);
+                            metaData.customers = {
+                                list: allData.results,
+                                count: allData.totalCount
+                            };
+                            break;
+                        case 'customerNames':
+                            let customerNames = await Customer._getMetaDataFromDB('name', userId, params);
+                            metaData.customerNames = customerNames.results;
+                            break;
+                        case 'guardianNames':
+                            let guardianNames = await Customer._getMetaDataFromDB('gaurdianName', userId, params);
+                            metaData.guardianNames = guardianNames.results;
+                            break;
+                        case 'address':
+                            let address = await Customer._getMetaDataFromDB('address', userId, params);
+                            metaData.address = address.results;
+                            break;
+                        case 'place':
+                            let place = await Customer._getMetaDataFromDB('place', userId, params);
+                            metaData.place = place.results;
+                            break;
+                        case 'city':
+                            let city = await Customer._getMetaDataFromDB('city', userId, params);
+                            metaData.city = city.results;
+                            break;
+                        case 'mobile':
+                            let mobile = await Customer._getMetaDataFromDB('mobile', userId, params);
+                            metaData.mobile = mobile.results;
+                            break;                
+                        case 'pincode':
+                            let pincode = await Customer._getMetaDataFromDB('pincode', userId, params);
+                            metaData.pincode = pincode.results;
+                            break;
+                        case 'otherDetails':
+                            let otherDetails = await Customer._getMetaDataFromDB('otherDetails', userId, params);
+                            metaData.otherDetails = otherDetails;
+                            break;
+                    }
+                }
+                return resolve(metaData);
+            } catch(e) {
+                return reject(e);
+            }
+            
+        });
     }
 
     Customer.handleCustomerData = async (params) => {
@@ -311,13 +328,37 @@ module.exports = function(Customer) {
     }
 
     Customer.parseMetaData = (rawResult) => {
+        let formatted = [];
         _.each(rawResult, (aRes, index) => {
-            if(aRes.userImagePath)
-                aRes.userImagePath = `http://${app.get('domain')}:${app.get('port')}${aRes.userImagePath.replace('client', '')}`;
-                aRes.mobile = ''+aRes.mobile;
-                aRes.pincode = ''+aRes.pincode;
+            let obj = {};
+                
+            obj.city = aRes.city;
+            obj.customerId = aRes.customerId;
+            obj.custStatus = aRes.custStatus;
+            obj.gaurdianName = aRes.gaurdianName;
+            obj.hashKey = aRes.hashKey;
+            obj.imageTableId = aRes.imageTableId;
+            obj.mobile = aRes.mobile;
+            obj.name = aRes.name;
+            obj.otherDetails = aRes.otherDetails;
+            obj.pincode = aRes.pincode;
+            obj.place = aRes.place;
+            obj.secMobile = aRes.secMobile;
+            obj.userId = aRes.userId;
+            obj.userImageFormat = aRes.userImageFormat;
+            obj.userImageOptionals = aRes.userImageOptionals;
+            obj.userImagePath = aRes.userImagePath;
+            obj.userImageStorageMode = aRes.userImageStorageMode;
+            
+            if(obj.userImagePath)
+                obj.userImagePath = `http://${app.get('domain')}:${app.get('port')}${aRes.userImagePath.replace('client', '')}`;
+
+            obj.mobile = ''+aRes.mobile;
+            obj.pincode = ''+aRes.pincode;
+
+            formatted.push(obj);
         });
-        return rawResult;
+        return formatted;
     }
 
     Customer.getQuery = (identifier, params) => {

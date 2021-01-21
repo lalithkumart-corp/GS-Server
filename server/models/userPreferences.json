@@ -75,6 +75,17 @@
           "dataScale": null,
           "nullable": "Y"
         }
+      },
+      "loan_bill_print_model": {
+        "type": "string",
+        "mysql": {
+          "columnName": "loan_bill_print_model",
+          "dataType": "varchar",
+          "dataLength": 255,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
       }
     },
     "validations": [],
