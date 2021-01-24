@@ -339,6 +339,7 @@ module.exports = function(Customer) {
         _.each(rawResult, (aRes, index) => {
             let obj = {};
                 
+            obj.address = aRes.address;
             obj.city = aRes.city;
             obj.customerId = aRes.customerId;
             obj.custStatus = aRes.custStatus;
