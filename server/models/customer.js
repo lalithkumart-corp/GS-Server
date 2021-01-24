@@ -72,21 +72,27 @@ module.exports = function(Customer) {
             }, {
                 arg: 'params', type: 'object', http: (ctx) => {
                     let req = ctx && ctx.req;
-                    let offsetStart = req && req.query.offsetStart || 0;
-                    let limit = req && req.query.limit || null;
-                    let filters = req.query.filters || null;
+                    let offsetStart = 0;
+                    let limit = null;
+                    let filters = null;
                     let cname = null;
                     let fgname = null;
                     let hashKey = null;
                     let onlyIsActive = false;
-                    if(filters) {
-                        filters = JSON.parse(filters);
-                        cname = filters.cname || null;
-                        fgname = filters.fgname || null;
-                        hashKey = filters.hashKey || null;
-                        onlyIsActive = filters.onlyIsActive;
-                    }
-                    
+                    try {
+                        offsetStart = req && req.query.offsetStart || 0;
+                        limit = req && req.query.limit || null;
+                        filters = req.query.filters || null;
+                        if(filters) {
+                            filters = JSON.parse(filters);
+                            cname = filters.cname || null;
+                            fgname = filters.fgname || null;
+                            hashKey = filters.hashKey || null;
+                            onlyIsActive = filters.onlyIsActive;
+                        }
+                    } catch(e) {
+                        console.log(e);
+                    }                                        
                     return {
                         start: offsetStart,
                         limit: limit,
