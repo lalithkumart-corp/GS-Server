@@ -274,9 +274,10 @@ module.exports = function(Customer) {
                         if(err) {
                             return reject(err);
                         } else {
-                            Customer.metaData = Customer.parseMetaData(result);
+                            let parsedResult = Customer.parseMetaData(result);
+                            Customer.metaData = parsedResult;
                             let bucket = [];
-                            _.each(result, (anItem, index) => {
+                            _.each(parsedResult, (anItem, index) => {
                                 if(identifier == 'all')
                                     bucket.push(anItem);
                                 else
