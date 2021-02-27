@@ -297,6 +297,7 @@ let SQL = {
                     prod_id varchar(45) DEFAULT NULL,
                     metal_rate int DEFAULT NULL,
                     retail_rate int DEFAULT NULL,
+                    ornament int DEFAULT NULL,
                     qty int DEFAULT NULL,
                     gross_wt float DEFAULT NULL,
                     net_wt float DEFAULT NULL,
