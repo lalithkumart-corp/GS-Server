@@ -191,11 +191,22 @@ module.exports = function(JewellryOrnament) {
         });
     }
 
-    JewellryOrnament.handleOrnData = async (params) => {
+    JewellryOrnament.handleOrnData = async (params, options) => {
         try {
             params = JSON.parse(JSON.stringify(params));
-            let productCodeRow = await JewellryOrnament.app.models.ProductCode.getCodeId(params.productCodeSeries, params._userId);
-            params.productCodeTableId = productCodeRow.id;
+
+            let productCodeRow;
+            if(options && options.updateAPI && params.productCodeNo && params.productCodeSeries) {
+                productCodeRow = {
+                    nextSerial: params.productCodeNo,
+                    isNewSerialNo: false
+                }
+            } else {
+                productCodeRow = await JewellryOrnament.app.models.ProductCode.getCodeId(params.productCodeSeries, params._userId);
+                productCodeRow.isNewSerialNo = true;
+                params.productCodeTableId = productCodeRow.id;
+            }
+
             let hashKey = JewellryOrnament._generateHashKey({...params});
             let ornRow = await JewellryOrnament._isAlreadyExists(hashKey);
             if(!ornRow)
@@ -204,7 +215,8 @@ module.exports = function(JewellryOrnament) {
                 id: ornRow.id,
                 productCodeTableId: productCodeRow.id,
                 productCodeSeries: params.productCodeSeries,
-                productCodeNumber: productCodeRow.nextSerial
+                productCodeNumber: productCodeRow.nextSerial,
+                isNewSerialNo: productCodeRow.isNewSerialNo
             }
         } catch(e) {
             throw e;

@@ -155,6 +155,28 @@ module.exports = function(Stock) {
         description: 'For testing purpose.',
     });
 
+    Stock.remoteMethod('updateApiHandler', {
+        accepts: {
+            arg: 'apiParams',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            },
+        },
+        http: {path: '/update-item', verb: 'post'},
+        description: 'For Updating stock item.',
+    });
+
     Stock.remoteMethod('fetchProductIdsApiHandler', {
         accepts: [
             {
@@ -317,6 +339,7 @@ module.exports = function(Stock) {
                 params.supplierId = await Stock.app.models.Supplier.getId(params.dealerStoreName);
             params.soldQty = 0;
             params.avlQty = params.productQty;
+            params._uid = (Date.now() + Math.random()).toString(36).replace('.', '');
             await Stock._insert(params);
             await Stock.app.models.ProductCode.incrementSerialNumber(params.productCodeTableId);
             return {STATUS: 'SUCCESS', STATUS_MSG: 'Successfully inserted item in Stock'};
@@ -331,6 +354,56 @@ module.exports = function(Stock) {
             params._tableName = Stock._getStockTableName();
             let query = Stock._constructQuery('insert', params);
             console.log(query);
+            Stock.dataSource.connector.query(query, (err, result) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(result);
+                }
+            });
+        });
+    }
+
+    Stock.updateApiHandler = async (data) => {
+        // productCodeNo
+        try {
+            let params = data.requestParams;
+            params.accessToken = data.accessToken;
+            params._userId = await utils.getStoreOwnerUserId(params.accessToken);
+
+            // CHECK FOR USER ACTIVE STATUS
+            let isActiveUser = await utils.getAppStatus(params._userId);
+            if(!isActiveUser)
+                throw 'User is Not Active';
+
+            params._stockTableName = Stock._getStockTableName(params._userId);
+
+            let obj =  await Stock.app.models.JewellryOrnament.handleOrnData(params, {updateAPI: true});
+            params.ornamentId = obj.id;
+            params.productCodeTableId = obj.productCodeTableId;
+            params.productCodeSeries = obj.productCodeSeries;
+            params.productCodeNumber = obj.productCodeNumber;
+
+            if(!params.touchId)
+                params.touchId = await Stock.app.models.Touch.getId(params.productPureTouch);
+            if(!params.supplierId)
+                params.supplierId = await Stock.app.models.Supplier.getId(params.dealerStoreName);
+            params.soldQty = 0;
+            params.avlQty = params.productQty;
+            await Stock._update(params);
+            if(obj.isNewSerialNo)
+                await Stock.app.models.ProductCode.incrementSerialNumber(params.productCodeTableId);
+            return {STATUS: 'SUCCESS', STATUS_MSG: 'Successfully updated item in Stock'};
+        } catch(e) {
+            console.log(e);
+            return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
+        }
+    }
+
+    Stock._update = (params) => {
+        return new Promise((resolve, reject) => {
+            params._tableName = Stock._getStockTableName();
+            let query = Stock._constructQuery('update', params);
             Stock.dataSource.connector.query(query, (err, result) => {
                 if(err) {
                     return reject(err);
@@ -379,6 +452,7 @@ module.exports = function(Stock) {
             case 'insert':
                 sql += `INSERT INTO ${params._stockTableName}
                         (
+                            uid,
                             date, user_id, ornament,
                             pr_code, pr_number,
                             prod_id,
@@ -396,6 +470,7 @@ module.exports = function(Stock) {
                             avl_g_wt, avl_n_wt, avl_p_wt,
                             sold_g_wt, sold_n_wt, sold_p_wt
                         ) VALUES (
+                            "${params._uid}",
                             "${params.date}", ${params._userId}, ${params.ornamentId},
                             "${params.productCodeSeries}", ${params.productCodeNumber},
                             "${params.productCodeSeries}${params.productCodeNumber}",
@@ -414,6 +489,43 @@ module.exports = function(Stock) {
                             0, 0, 0
                         )`;
                 break;
+            case 'update':
+                sql += `UPDATE 
+                            ${params._stockTableName} 
+                        SET 
+                            date="${params.date}",
+                            ornament=${params.ornamentId},
+                            pr_code="${params.productCodeSeries}",
+                            pr_number="${params.productCodeNumber}",
+                            prod_id="${params.productCodeSeries}${params.productCodeNumber}",
+                            touch_id=${params.touchId},
+                            i_touch=${params.productITouch},
+                            quantity=${params.productQty}, 
+                            gross_wt=${params.productGWt},
+                            net_wt=${params.productNWt},
+                            pure_wt=${params.productPWt},
+                            labour_charge=${params.productLabourCharges},
+                            labour_charge_unit="${params.productLabourCalcUnit}",
+                            calc_labour_amt=${params.productCalcLabourAmt},
+                            metal_rate=${params.metalPrice},
+                            amount=${params.calcAmtWithLabour},
+                            cgst_percent=${params.productCgstPercent || 0},
+                            cgst_amt=${params.productCgstAmt || 0},
+                            sgst_percent=${params.productSgstPercent || 0},
+                            sgst_amt=${params.productSgstAmt || 0},
+                            igst_percent=${params.productIgstPercent || 0},
+                            igst_amt=${params.productIgstAmt || 0},
+                            total=${params.productTotalAmt},
+                            supplierId=${params.supplierId},
+                            personName="${params.dealerPersonName}",
+                            sold_qty=${params.soldQty},
+                            avl_qty=${params.avlQty},
+                            avl_g_wt=${params.productGWt},
+                            avl_n_wt=${params.productNWt},
+                            avl_p_wt=${params.productPWt}
+                        WHERE
+                            uid="${params._uid}"
+                        `;
         }
         return sql;
     }
@@ -677,6 +789,7 @@ let SQL = {
                     LEFT JOIN touch ON STOCK_TABLE.touch_id = touch.id`,
     FETCH_LIST: `SELECT
                     STOCK_TABLE.id AS Id,
+                    STOCK_TABLE.uid AS UID,
                     orn_list_jewellery.metal AS Metal,
                     orn_list_jewellery.item_name AS ItemName,
                     orn_list_jewellery.item_category AS ItemCategory,
@@ -701,6 +814,9 @@ let SQL = {
                     STOCK_TABLE.sgst_amt AS SgstAmt,
                     STOCK_TABLE.igst_percent AS IgstPercent,
                     STOCK_TABLE.igst_amt AS IgstAmt,
+                    STOCK_TABLE.labour_charge AS LabourCharge,
+                    STOCK_TABLE.labour_charge_unit AS LabourChargeUnit,
+                    STOCK_TABLE.calc_labour_amt AS LabourAmtCalc,
                     STOCK_TABLE.total AS Total,
                     STOCK_TABLE.sold_qty AS SoldQty,
                     STOCK_TABLE.sold_g_wt AS SoldGWt,
