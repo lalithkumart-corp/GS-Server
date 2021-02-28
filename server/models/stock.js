@@ -418,8 +418,8 @@ module.exports = function(Stock) {
         try {
             let params = { filters };
             params._userId = await utils.getStoreOwnerUserId(accessToken);
-            let count = await Stock._fetchTotals(params);
-            return {STATUS: 'SUCCESS', TOTALS: {count}};
+            let obj = await Stock._fetchTotals(params);
+            return {STATUS: 'SUCCESS', TOTALS: obj};
         } catch(e) {
             return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
         }
@@ -427,13 +427,19 @@ module.exports = function(Stock) {
 
     Stock._fetchTotals = async (params) => {
         try {
+            let returnVal = {count: 0, netWt: 0, soldNetWt: 0, avlNetWt: 0};
             let sql = SQL.FETCH_COUNT;
                 sql += Stock._getFilterQueryPart(params, true);
                 sql = sql.replace(/STOCK_TABLE/g, `stock_${params._userId}`);
             let result = await utils.executeSqlQuery(Stock.dataSource, sql);
-            if(result && result.length>0)
-                return result[0].Count;
-            return 0;
+            if(result && result.length>0) {
+                let rs = result[0];
+                returnVal.count = rs.Count;
+                returnVal.netWt = rs.NetWt;
+                returnVal.soldNetWt = rs.SoldNetWt;
+                returnVal.avlNetWt = rs.AvlNetWt;
+            }
+            return returnVal;
         } catch(e) {
             console.log(e);
             logger.error(GsErrorCtrl.create({className: 'Stock', methodName: '_fetchTotals', cause: e, message: 'Exception in sql query execution'}));
@@ -694,13 +700,13 @@ module.exports = function(Stock) {
                 let anItem = newProds[i];
                 let sql = `UPDATE stock_${payload._userId} SET 
                             sold_qty=sold_qty+${anItem.qty}, 
-                            sold_g_wt=sold_g_wt+${anItem.grossWt},
-                            sold_n_wt=sold_n_wt+${anItem.netWt},
-                            sold_p_wt=sold_p_wt+${anItem.pureWt},
+                            sold_g_wt=sold_g_wt+${parseFloat(anItem.grossWt)},
+                            sold_n_wt=sold_n_wt+${parseFloat(anItem.netWt)},
+                            sold_p_wt=sold_p_wt+${parseFloat(anItem.pureWt)},
                             avl_qty=avl_qty-${anItem.qty}, 
-                            avl_g_wt=avl_g_wt-${anItem.grossWt},
-                            avl_n_wt=avl_n_wt-${anItem.netWt},
-                            avl_p_wt=avl_p_wt-${anItem.pureWt},
+                            avl_g_wt=avl_g_wt-${parseFloat(anItem.grossWt)},
+                            avl_n_wt=avl_n_wt-${parseFloat(anItem.netWt)},
+                            avl_p_wt=avl_p_wt-${parseFloat(anItem.pureWt)},
                             invoice_ref="${payload._uniqString}" 
                         WHERE 
                             prod_id="${anItem.prodId}"`;
@@ -782,7 +788,10 @@ module.exports = function(Stock) {
 
 let SQL = {
     FETCH_COUNT: `SELECT
-                    COUNT(*) AS Count
+                    COUNT(*) AS Count,
+                    SUM(net_wt) AS NetWt,
+                    SUM(sold_n_wt) AS SoldNetWt,
+                    SUM(avl_n_wt) AS AvlNetWt
                 FROM STOCK_TABLE
                     LEFT JOIN orn_list_jewellery ON STOCK_TABLE.ornament = orn_list_jewellery.id
                     LEFT JOIN suppliers ON STOCK_TABLE.supplierId = suppliers.id

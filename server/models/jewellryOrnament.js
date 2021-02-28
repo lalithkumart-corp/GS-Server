@@ -195,18 +195,18 @@ module.exports = function(JewellryOrnament) {
         try {
             params = JSON.parse(JSON.stringify(params));
 
-            let productCodeRow;
+            let productCodeRow = await JewellryOrnament.app.models.ProductCode.getCodeId(params.productCodeSeries, params._userId);
             if(options && options.updateAPI && params.productCodeNo && params.productCodeSeries) {
                 productCodeRow = {
+                    id: productCodeRow.id,
                     nextSerial: params.productCodeNo,
                     isNewSerialNo: false
                 }
             } else {
-                productCodeRow = await JewellryOrnament.app.models.ProductCode.getCodeId(params.productCodeSeries, params._userId);
                 productCodeRow.isNewSerialNo = true;
-                params.productCodeTableId = productCodeRow.id;
             }
 
+            params.productCodeTableId = productCodeRow.id;
             let hashKey = JewellryOrnament._generateHashKey({...params});
             let ornRow = await JewellryOrnament._isAlreadyExists(hashKey);
             if(!ornRow)
