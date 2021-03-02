@@ -34,7 +34,7 @@ module.exports = function(Touch) {
 
     Touch._fetchTouchListFromDB = () => {
         return new Promise( (resolve, reject) => {
-            Touch.dataSource.connector.query(`SELECT * FROM Touch`, (err, res) => {
+            Touch.dataSource.connector.query(`SELECT * FROM touch`, (err, res) => {
                 if(err) {
                     return reject(err);
                 } else {
