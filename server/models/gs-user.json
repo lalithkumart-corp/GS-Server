@@ -7,7 +7,7 @@
   },
   "mysql": {
     "schema": "developmentdb",
-    "table": "user"
+    "table": "User"
   },
   "properties": {
     "ownerId": {

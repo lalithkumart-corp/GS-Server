@@ -7,7 +7,7 @@
     },
     "mysql": {
       "schema": "developmentdb",
-      "table": "role"
+      "table": "Role"
     },
     "properties": {
         "rank": {
