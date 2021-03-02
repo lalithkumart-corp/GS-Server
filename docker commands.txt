@@ -1,0 +1,48 @@
+docker build -t <imagename>:<tag> .
+
+docker run -p 3005:3005 -d <imagename>:<tag>
+docker run --name <containerName> -e <env_variable_name>=<env_variable_value> -d <imagename>:<tag>
+
+docker logs <containerId>
+
+
+EX: 0
+1. docker build -t gs-client:1 .
+2. docker run -d --name gs-client-contner --restart always -p 3000:3000 gs-client:1
+
+EX:1    (Build image via Dockerfile)
+1. docker build -t gs-server-prj:1 .
+2. docker run -p 3005:3005 -d gs-server-prj:1
+   docker run -d --name gs-server-contner --restart always -p 3003:3003 gs-server:1
+   docker run -d --name gs-server-container -p 3102:3102 -v gs-server-logs:/usr/src/app/server/logs gs-server-img:1
+    
+
+EX:2     for mysql
+1. docker pull mysql
+2. docker run --name mysql-contr -e MYSQL_ROOT_PASSWORD=root -d mysql:latest
+   docker run --name mysql-contr -p3307:3306 -e MYSQL_ROOT_PASSWORD=root -v gs-mysql-data:/var/lib/mysql -d mysql:latest
+3. docker exec -i 5cb441b1e156 mysql -uroot -proot gsprod < backupforDocker.sql
+
+
+
+
+
+docker run -d --name gs-server-contr --link mysql-contr gs-server-prj:2
+docker run -d --name gs-server-contr --network my_network gs-server-prj:2
+docker run -p 3005:3005 -d --network my_network gs-server-prj:2
+docker run --name mysql-contr -e MYSQL_ROOT_PASSWORD=root -d --network my_network mysql:latest
+docker run --name mysql-contr -p 3307:3306 -e MYSQL_ROOT_PASSWORD=root -d mysql:latest mysqld --default-authentication-plugin=mysql_native_password
+
+
+
+ALTER USER 'dockeruser'@'localhost' IDENTIFIED WITH mysql_native_password BY 'root'
+ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'root'
+
+
+CREATE USER 'gsuser'@'%' IDENTIFIED WITH mysql_native_password BY 'gsuserpass';
+CREATE USER 'gsuser'@'localhost' IDENTIFIED WITH mysql_native_password BY 'gsuserpass';
+GRANT ALL PRIVILEGES ON gsprod.* TO 'gsuser'@'%';
+GRANT ALL PRIVILEGES ON gsprod.* TO 'gsuser'@'localhost';
+flush privileges;
+
+
