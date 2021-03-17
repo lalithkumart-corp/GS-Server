@@ -7,7 +7,7 @@
   },
   "mysql": {
     "schema": "developmentdb",
-    "table": "user"
+    "table": "User"
   },
   "properties": {
     "ownerId": {
@@ -38,6 +38,17 @@
         "columnName": "phone",
         "dataType": "varchar",
         "dataLength": 45,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "pwd": {
+      "type": "string",
+      "mysql": {
+        "columnName": "pwd",
+        "dataType": "varchar",
+        "dataLength": 255,
         "dataPrecision": null,
         "dataScale": null,
         "nullable": "Y"

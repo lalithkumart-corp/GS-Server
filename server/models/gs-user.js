@@ -4,8 +4,11 @@ let addUserParamValidation = require('../utils/validateUtil').addUserParamValida
 let utils = require('../utils/commonUtils');
 let GsErrorCtrl = require('../components/logger/gsErrorCtrl');
 let logger = app.get('logger');
+let sha256 = require('sha256');
+
 module.exports = function(Gsuser) {
     Gsuser.loginUser = (custom, cb) => {
+        custom.ttl = 86400; // 1 DAY <------ 60 * 60 * 24
         Gsuser.login(custom, (err, res) => {
             if(err) {
                 cb(err, null);
@@ -17,13 +20,17 @@ module.exports = function(Gsuser) {
                         res.ownerId = ret.ownerId;
                         res.username = ret.username;
                         res.email = ret.email;
+                        let setupActionsStatus = await Gsuser.checkForAnyPendingActions(res.userId, res.ownerId);
                         let userPreferences = await Gsuser._getUserPreferences(res.userId);
+                        let status = await app.models.AppManager.updateValidityTime(res.userId, res.ownerId);
                         let response = {
                             session: res,
-                            userPreferences: userPreferences
+                            userPreferences: userPreferences,
+                            applicationStatus: status,
+                            setupActionsStatus: setupActionsStatus
                         }
                         cb(null, response);
-                    }                    
+                    }
                 });                
             }
         });
@@ -60,8 +67,9 @@ module.exports = function(Gsuser) {
         try{
             let user = await Gsuser._insertUser(custom);
             await Gsuser._insertRoleMapping(user, 2);
-            await Gsuser._createPledgebookTable(user);
-            await Gsuser._createPledgebookClosingBillTable(user);
+            // await Gsuser._createPledgebookTable(user);
+            // await Gsuser._createPledgebookClosingBillTable(user);
+            await Gsuser._insertNewApplication(user);
             return {STATUS: 'SUCCESS', MSG: 'New User Created Successfully!'};
         } catch(e) {
             return {STATUS: 'ERROR', ERROR: e};
@@ -253,7 +261,8 @@ module.exports = function(Gsuser) {
                 email: custom.email,
                 password: custom.password,
                 phone: custom.phone,
-                guardianName: custom.guardianName || ''
+                guardianName: custom.guardianName || '',
+                pwd: custom.password
             }
             Gsuser.create(theParams, (err, user) => {
                 if(err) {
@@ -285,36 +294,51 @@ module.exports = function(Gsuser) {
         });
     }
 
-    Gsuser._createPledgebookTable = (user) => {
-        return new Promise( (resolve, reject) => {
-            let sql = pledgebookStructure;
-            sql = sql.replace(/TABLENAME/g, 'pledgebook_'+user.id);
-            Gsuser.dataSource.connector.query(sql, (err, resp) => {
-                if(err) {
-                    console.log(err);
-                    console.log('Error occured while creating a new pledgebbok table for the user: ', user.id);
-                    return reject(err);
-                } else {
-                    console.log('New Pledgebook table created!');
-                    return resolve(true);
-                }
-            });
-        });        
-    }
+    // Gsuser._createPledgebookTable = (user) => {
+    //     return new Promise( (resolve, reject) => {
+    //         let sql = pledgebookStructure;
+    //         sql = sql.replace(/TABLENAME/g, 'pledgebook_'+user.id);
+    //         Gsuser.dataSource.connector.query(sql, (err, resp) => {
+    //             if(err) {
+    //                 console.log(err);
+    //                 console.log('Error occured while creating a new pledgebbok table for the user: ', user.id);
+    //                 return reject(err);
+    //             } else {
+    //                 console.log('New Pledgebook table created!');
+    //                 return resolve(true);
+    //             }
+    //         });
+    //     });        
+    // }
 
-    Gsuser._createPledgebookClosingBillTable = (user) => {
-        return new Promise ( (resolve, reject) => {
-            let sql_closed_bills = pledgebookClosedStructure;
-            sql_closed_bills = sql_closed_bills.replace(/TABLENAME/g, 'pledgebook_closed_bills_'+user.id);
-            sql_closed_bills = sql_closed_bills.replace(/PLEDGEBOOKTABLE/g, 'pledgebook_'+user.id);
-            Gsuser.dataSource.connector.query(sql_closed_bills, (err, resp) => {
+    // Gsuser._createPledgebookClosingBillTable = (user) => {
+    //     return new Promise ( (resolve, reject) => {
+    //         let sql_closed_bills = pledgebookClosedStructure;
+    //         sql_closed_bills = sql_closed_bills.replace(/TABLENAME/g, 'pledgebook_closed_bills_'+user.id);
+    //         sql_closed_bills = sql_closed_bills.replace(/PLEDGEBOOKTABLE/g, 'pledgebook_'+user.id);
+    //         Gsuser.dataSource.connector.query(sql_closed_bills, (err, resp) => {
+    //             if(err) {
+    //                 console.log(err);
+    //                 console.log('Error occured while creating a new pledgebook_closed_bills table for the user: ', user.id);
+    //                 return reject(err);
+    //             } else {
+    //                 console.log('New pledgebook_closed_bills table created!');       
+    //                 return resolve(true);                 
+    //             }
+    //         });
+    //     });
+    // }
+
+    Gsuser._insertNewApplication = (user) => {
+        return new Promise((resolve, reject) => {
+            let shaCode = sha256(user.id.toString());
+            Gsuser.app.models.AppManager.create({userId: user.id, status: 0, key: shaCode}, (err, res) => {
                 if(err) {
                     console.log(err);
-                    console.log('Error occured while creating a new pledgebook_closed_bills table for the user: ', user.id);
                     return reject(err);
                 } else {
-                    console.log('New pledgebook_closed_bills table created!');       
-                    return resolve(true);                 
+                    console.log('INSERTED APPLICATION ROW');
+                    return resolve(true);
                 }
             });
         });
@@ -355,6 +379,23 @@ module.exports = function(Gsuser) {
             }
         });
     }
+
+    Gsuser.checkForAnyPendingActions = () => {
+        try {
+            // check if atleast one interest rate added?
+            // check if the BillSeries + BillNumber got updated?
+            return {
+                interestCreated: true,
+                billSeriesAndNumberUpdated: true
+            }
+        } catch(e) {
+            console.log(e);
+            return {
+                interestCreated: false,
+                billSeriesAndNumberUpdated: false
+            }
+        }
+    }
 };
 
 let pledgebookStructure = `CREATE TABLE TABLENAME (
@@ -364,13 +405,13 @@ let pledgebookStructure = `CREATE TABLE TABLENAME (
                                 Date varchar(45) DEFAULT NULL,
                                 CustomerId int(11) DEFAULT NULL,
                                 Orn text DEFAULT NULL,
+                                OrnPictureId int(11) DEFAULT NULL,
+                                OrnCategory varchar(45) NULL,
                                 TotalWeight FLOAT NOT NULL DEFAULT 0.00,
                                 IntPercent FLOAT NULL DEFAULT 0,
                                 IntVal FLOAT NULL DEFAULT 0,
                                 OtherCharges FLOAT NULL DEFAULT 0,
                                 LandedCost FLOAT NULL DEFAULT 0,
-                                OrnCategory varchar(45) NULL,
-                                OrnPictureId int(11) DEFAULT NULL,
                                 Remarks text,
                                 Status int(11) NOT NULL DEFAULT 1,
                                 closedBillReference varchar(45) DEFAULT NULL,
@@ -399,3 +440,61 @@ let pledgebookClosedStructure = `CREATE TABLE TABLENAME (
                                 KEY UniqueIdentifier_idx (pledgebook_uid),
                                 CONSTRAINT TABLENAME_ibfk_1 FOREIGN KEY (pledgebook_uid) REFERENCES PLEDGEBOOKTABLE (UniqueIdentifier)
                                 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;`;
+
+
+
+/** 
+
+CREATE TABLE `gsprod-backup`.`stock_1` (
+  `id` INT NOT NULL AUTO_INCREMENT,
+  `user_id` INT NULL,
+  `ornament` INT NULL,
+  `touch_id` INT NULL,
+  `i_touch` VARCHAR(45) NULL,
+  `quantity` INT NULL,
+  `gross_wt` FLOAT NULL,
+  `net_wt` FLOAT NULL,
+  `pure_wt` FLOAT NULL,
+  `metal_rate` FLOAT NULL,
+  `amount` FLOAT NULL,
+  `cgst_percent` FLOAT NULL,
+  `cgst_amt` FLOAT NULL,
+  `sgst_percent` FLOAT NULL,
+  `sgst_amt` FLOAT NULL,
+  `igst_percent` FLOAT NULL,
+  `igst_amt` FLOAT NULL,
+  `total` FLOAT NULL,
+  `supplierId` INT NULL,
+  `personName` VARCHAR(255) NULL,
+  `sold_qty` INT NULL,
+  `avl_qty` INT NULL,
+  PRIMARY KEY (`id`));
+
+
+ALTER TABLE `gsprod-backup`.`stock_1` 
+ADD INDEX `ornament_1_idx` (`ornament` ASC) VISIBLE,
+ADD INDEX `touch_1_idx` (`touch_id` ASC) VISIBLE,
+ADD INDEX `supplier_1_idx` (`supplierId` ASC) VISIBLE;
+;
+ALTER TABLE `gsprod-backup`.`stock_1` 
+ADD CONSTRAINT `ornament_11`
+  FOREIGN KEY (`ornament`)
+  REFERENCES `gsprod-backup`.`orn_list_jewellery` (`id`)
+  ON DELETE NO ACTION
+  ON UPDATE NO ACTION,
+ADD CONSTRAINT `supplier_11`
+  FOREIGN KEY (`supplierId`)
+  REFERENCES `gsprod-backup`.`suppliers` (`id`)
+  ON DELETE NO ACTION
+  ON UPDATE NO ACTION,
+ADD CONSTRAINT `touch_11`
+  FOREIGN KEY (`touch_id`)
+  REFERENCES `gsprod-backup`.`touch` (`id`)
+  ON DELETE NO ACTION
+  ON UPDATE NO ACTION;
+
+
+
+ * 
+ * 
+*/

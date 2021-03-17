@@ -282,8 +282,13 @@ module.exports = function(Pledgebook) {
             params.accessToken = data.accessToken;
             if(!params.accessToken)
                 throw 'Access Token is missing';
-            let parsedArg = Pledgebook.parseInputData(params);            
+            let parsedArg = Pledgebook.parseInputData(params);
             parsedArg._userId = await utils.getStoreOwnerUserId(params.accessToken);
+
+            let isActiveUser = await utils.getAppStatus(parsedArg._userId);
+            if(!isActiveUser)
+                throw 'User is Not Active';
+            
             let pledgebookTableName = await Pledgebook.getPledgebookTableName(parsedArg._userId);
             let validation = await Pledgebook.doValidation(parsedArg, pledgebookTableName);
             if(validation.status) {
@@ -292,17 +297,39 @@ module.exports = function(Pledgebook) {
                 let customerObj = await Pledgebook.app.models.Customer.handleCustomerData(parsedArg); //Save customer information in Customer Table
                 parsedArg.customerId = customerObj.customerId;
 
-                //CUSTOM: Mobile number Handling:  ---- > If the given phone number in Bill is different, then save the number given in bill as Comment)
-                if(parsedArg.mobile && customerObj.record.mobile !== parsedArg.mobile) {
-                    if(!customerObj.record.mobile || customerObj.record.mobile == 'null')
+
+                if(parsedArg.mobile) {
+                    if(!customerObj.record.mobile || customerObj.record.mobile == 'null') {
                         await app.models.Customer._updatePrimaryMobile(parsedArg.mobile, parsedArg.customerId);
-                    else if(!customerObj.record.secMobile)
-                        await app.models.Customer._updateSecMobile(parsedArg.mobile, parsedArg.customerId);
-                    else if(customerObj.record.secMobile == parsedArg.mobile)
-                        console.log('Sec mobile is already filled, so do nothing now');
-                    else
-                        parsedArg.billRemarks += ` Other Mobile: ${parsedArg.mobile}`;
+                    } else if(customerObj.record.mobile !== parsedArg.mobile){ //CUSTOM: Mobile number Handling:  ---- > If the given phone number in Bill is different, then save the number given in bill as Comment)
+                        
+                        let oldPrimaryNumber = customerObj.record.mobile;
+                        await app.models.Customer._updatePrimaryMobile(parsedArg.mobile, parsedArg.customerId);
+                        if(!customerObj.record.secMobile || customerObj.record.secMobile == 'null')
+                            await app.models.Customer._updateSecMobile(oldPrimaryNumber, parsedArg.customerId);
+                        else {
+                            let oldSecNumber = customerObj.record.secMobile;
+                            await app.models.Customer._updateSecMobile(oldPrimaryNumber, parsedArg.customerId);
+                            
+                            if(customerObj.record.secMobile == parsedArg.mobile) {
+                                console.log('Mobile number shiffling only happened. So, dont add in BillRemarks section');
+                            } else if(parsedArg.billRemarks.indexOf(parsedArg.mobile) == -1)
+                                parsedArg.billRemarks += ` Other Mobile: ${oldSecNumber}`;
+                        }
+                    }
                 }
+
+                // //CUSTOM: Mobile number Handling:  ---- > If the given phone number in Bill is different, then save the number given in bill as Comment)
+                // if(parsedArg.mobile && customerObj.record.mobile !== parsedArg.mobile) {
+                //     if(!customerObj.record.mobile || customerObj.record.mobile == 'null')
+                //         await app.models.Customer._updatePrimaryMobile(parsedArg.mobile, parsedArg.customerId);
+                //     else if(!customerObj.record.secMobile)
+                //         await app.models.Customer._updateSecMobile(parsedArg.mobile, parsedArg.customerId);
+                //     else if(customerObj.record.secMobile == parsedArg.mobile)
+                //         console.log('Sec mobile is already filled, so do nothing now');
+                //     else
+                //         parsedArg.billRemarks += ` Other Mobile: ${parsedArg.mobile}`;
+                // }
 
                 await Pledgebook.saveBillDetails(parsedArg, pledgebookTableName); //Save ImageId, CustomerID, ORNAMENT and other Bill details in Pledgebook
                 await Pledgebook.app.models.PledgebookSettings.updateLastBillDetail(parsedArg);
@@ -353,6 +380,12 @@ module.exports = function(Pledgebook) {
             try {
                 let queryValues = [(params.offsetEnd - params.offsetStart), params.offsetStart];
                 let userId = await utils.getStoreOwnerUserId(accessToken);
+                
+                // CHECK FOR USER ACTIVE STATUS
+                let isActiveUser = await utils.getAppStatus(userId);
+                if(!isActiveUser)
+                    throw 'User is Not Active';
+
                 let pledgebookTableName = await Pledgebook.getPledgebookTableName(userId);
                 let pledgebookClosedBillTableName = await Pledgebook.getPledgebookClosedTableName(userId);
                 
@@ -586,9 +619,9 @@ module.exports = function(Pledgebook) {
                     if(params.sortOrder.sortByColumn == "closedDate")
                         query += ` ORDER BY uid ${params.sortOrder.sortBy}`;
                     else
-                        query += ` ORDER BY UniqueIdentifier ${params.sortOrder.sortBy}`;
+                        query += ` ORDER BY PledgedDate ${params.sortOrder.sortBy}, UniqueIdentifier ${params.sortOrder.sortBy}`;
                 } else {
-                    query += ` ORDER BY UniqueIdentifier DESC`;
+                    query += ` ORDER BY PledgedDate DESC, UniqueIdentifier DESC`;
                 }
 
                 if(!params.totals_only)
@@ -805,7 +838,7 @@ module.exports = function(Pledgebook) {
         parsedArg.billNoWithSeries = billNo;
         parsedArg.uniqueIdentifier=  (+ new Date()); //TEMPORARY: for migration:  params.uniqueIdentifier;
         parsedArg.orn = JSON.stringify(params.orn);
-        parsedArg.createdDate = new Date().toISOString().replace('T', ' ').slice(0,23);
+        parsedArg.createdDate = params.createdDate || new Date().toISOString().replace('T', ' ').slice(0,23);
         parsedArg.modifiedDate= new Date().toISOString().replace('T', ' ').slice(0,23);
         if(parsedArg.mobile && parsedArg.mobile == 'null')
             parsedArg.mobile = null;
@@ -991,17 +1024,38 @@ module.exports = function(Pledgebook) {
             let customerObj = await Pledgebook.app.models.Customer.handleCustomerData(parsedArg); //Save customer information in Customer Table
             parsedArg.customerId = customerObj.customerId;
 
-            //CUSTOM: Mobile number Handling:  ---- > If the given phone number in Bill is different, then save the number given in bill as Comment)
-            if(parsedArg.mobile && customerObj.record.mobile !== parsedArg.mobile) {
-                if(!customerObj.record.mobile || customerObj.record.mobile == 'null')
+            if(parsedArg.mobile) {
+                if(!customerObj.record.mobile || customerObj.record.mobile == 'null') {
                     await app.models.Customer._updatePrimaryMobile(parsedArg.mobile, parsedArg.customerId);
-                else if(!customerObj.record.secMobile)
-                    await app.models.Customer._updateSecMobile(parsedArg.mobile, parsedArg.customerId);
-                else if(customerObj.record.secMobile == parsedArg.mobile)
-                    console.log('Sec mobile is already filled, so do nothing now');
-                else if(parsedArg.billRemarks.indexOf(parsedArg.mobile) == -1)
-                    parsedArg.billRemarks += ` Other Mobile: ${parsedArg.mobile}`;
-            };
+                } else if(customerObj.record.mobile !== parsedArg.mobile){ //CUSTOM: Mobile number Handling:  ---- > If the given phone number in Bill is different, then save the number given in bill as Comment)
+                    
+                    let oldPrimaryNumber = customerObj.record.mobile;
+                    await app.models.Customer._updatePrimaryMobile(parsedArg.mobile, parsedArg.customerId);
+                    if(!customerObj.record.secMobile || customerObj.record.secMobile == 'null')
+                        await app.models.Customer._updateSecMobile(oldPrimaryNumber, parsedArg.customerId);
+                    else {
+                        let oldSecNumber = customerObj.record.secMobile;
+                        await app.models.Customer._updateSecMobile(oldPrimaryNumber, parsedArg.customerId);
+                        
+                        if(customerObj.record.secMobile == parsedArg.mobile) {
+                            console.log('Mobile number shiffling only happened. So, dont add in BillRemarks section');
+                        } else if(parsedArg.billRemarks.indexOf(parsedArg.mobile) == -1)
+                            parsedArg.billRemarks += ` Other Mobile: ${oldSecNumber}`;
+                    }
+                }
+            }
+
+            
+            // if(parsedArg.mobile && customerObj.record.mobile !== parsedArg.mobile) {
+            //     if(!customerObj.record.mobile || customerObj.record.mobile == 'null')
+            //         await app.models.Customer._updatePrimaryMobile(parsedArg.mobile, parsedArg.customerId);
+            //     else if(!customerObj.record.secMobile)
+            //         await app.models.Customer._updateSecMobile(parsedArg.mobile, parsedArg.customerId);
+            //     else if(customerObj.record.secMobile == parsedArg.mobile)
+            //         console.log('Sec mobile is already filled, so do nothing now');
+            //     else if(parsedArg.billRemarks.indexOf(parsedArg.mobile) == -1)
+            //         parsedArg.billRemarks += ` Other Mobile: ${parsedArg.mobile}`;
+            // };
 
             await Pledgebook.updateBillDetails(parsedArg, pledgebookTableName); //Save ImageId, CustomerID, ORNAMENT and other Bill details in Pledgebook                
             return {STATUS: 'SUCCESS', STATUS_MSG: 'Successfully Updated the bill'};
@@ -1112,7 +1166,6 @@ module.exports = function(Pledgebook) {
             });
         });        
     }
-
     Pledgebook._constructExportDataJSON = (rawData) => {
         let mainBucket = [];
         let pendingBillsBucket = [];

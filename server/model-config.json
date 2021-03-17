@@ -63,6 +63,10 @@
     "dataSource": "developmentdb",
     "public": true
   },
+  "JewellryOrnament": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
   "OrnImage": {
     "dataSource": "developmentdb",
     "public": true
@@ -84,6 +88,30 @@
     "public": true
   },
   "UserPreference": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "Stock": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "Touch": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "Supplier": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "ProductCode": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "AppManager": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "Store": {
     "dataSource": "developmentdb",
     "public": true
   }
