@@ -1,0 +1,156 @@
+{
+    "name": "Alert",
+    "base": "PersistedModel",
+    "idInjection": true,
+    "options": {
+      "validateUpsert": true,
+      "mysql": {
+        "schema": "developmentdb",
+        "table": "alerts"
+      }
+    },
+    "properties": {
+      "id": {
+        "type": "number",
+        "id": true,
+        "mysql": {
+          "columnName": "Id",
+          "dataType": "int",
+          "dataLength": 22,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "userId": {
+        "type": "number",
+        "required": true,
+        "mysql": {
+          "columnName": "user_id",
+          "dataType": "int",
+          "dataLength": 11,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "N"
+        }
+      },
+      "triggerTime": {
+        "type": "date",
+        "mysql": {
+          "columnName": "trigger_time",
+          "dataType": "datetime",
+          "dataLength": 255,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "code": {
+        "type": "string",
+        "mysql": {
+          "columnName": "Code",
+          "dataType": "varchar",
+          "dataLength": 255,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "title": {
+        "type": "string",
+        "mysql": {
+          "columnName": "title",
+          "dataType": "varchar",
+          "dataLength": 255,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "message": {
+        "type": "any",
+        "mysql": {
+          "columnName": "message",
+          "dataType": "text",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "extraCtx": {
+        "type": "any",
+        "mysql": {
+          "columnName": "extra_ctx",
+          "dataType": "text",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "hasRead": {
+        "type": "number",
+        "mysql": {
+          "columnName": "has_read",
+          "dataType": "int",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "archived": {
+        "type": "number",
+        "mysql": {
+          "columnName": "archived",
+          "dataType": "int",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "module": {
+        "type": "string",
+        "mysql": {
+          "columnName": "module",
+          "dataType": "varchar",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "readTime": {
+        "type": "date",
+        "mysql": {
+          "columnName": "read_time",
+          "dataType": "datetime",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "createdDate": {
+        "type": "date",
+        "mysql": {
+          "columnName": "created_date",
+          "dataType": "datetime",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "modifiedDate": {
+        "type": "date",
+        "mysql": {
+          "columnName": "modified_date",
+          "dataType": "datetime",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      }
+    },
+    "validations": [],
+    "relations": {},
+    "acls": [],
+    "methods": {}
+  }
+  

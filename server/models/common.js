@@ -229,6 +229,7 @@ let SQL = {
                             Status int(11) NOT NULL DEFAULT 1,
                             closedBillReference varchar(45) DEFAULT NULL,
                             History text,
+                            Alert int(11) DEFAULT NULL,
                             CreatedDate datetime DEFAULT NULL,
                             ModifiedDate datetime DEFAULT NULL,
                             PRIMARY KEY (UniqueIdentifier)

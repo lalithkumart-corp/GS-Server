@@ -9,3 +9,7 @@ ADD COLUMN `Orn` VARCHAR(500) NULL AFTER `ImageId`,
 ADD COLUMN `Remarks` TEXT NULL AFTER `Orn`,
 ADD COLUMN `CreatedDate` DATETIME NULL AFTER `Remarks`,
 ADD COLUMN `ModifiedDate` DATETIME NULL AFTER `CreatedDate`;
+
+
+ALTER TABLE `gsprod`.`pledgebook_1` 
+ADD COLUMN `Alert` INT NULL AFTER `History`;

@@ -389,7 +389,7 @@ module.exports = function(Pledgebook) {
                 let pledgebookTableName = await Pledgebook.getPledgebookTableName(userId);
                 let pledgebookClosedBillTableName = await Pledgebook.getPledgebookClosedTableName(userId);
                 
-                let query = Pledgebook.getQuery('normal', params, pledgebookTableName, pledgebookClosedBillTableName);             
+                let query = Pledgebook.getQuery('normal', {...params, getAlerts: true}, pledgebookTableName, pledgebookClosedBillTableName);             
                 let promise1 = new Promise((resolve, reject) => {
                     Pledgebook.dataSource.connector.query(query, queryValues, (err, result) => {
                         if(err) {
@@ -595,7 +595,16 @@ module.exports = function(Pledgebook) {
                                 image.Format AS UserImageFormat,
                                 orn_images.Image AS OrnImageBlob,
                                 orn_images.Path AS OrnImagePath,
-                                orn_images.Format AS OrnImageFormat
+                                orn_images.Format AS OrnImageFormat,
+                                alerts.id AS alertId,
+                                alerts.title AS alertTitle,
+                                alerts.message AS alertMsg,
+                                alerts.extra_ctx AS alertExtraCtx,
+                                alerts.has_read AS alertReadFlag,
+                                alerts.archived AS alertArchivedFlag,
+                                alerts.module AS alertModule,
+                                alerts.trigger_time AS alertTriggerTime,
+                                alerts.created_date AS alertCreatedDate
                             FROM
                                 ${pledgebookTableName}
                                     LEFT JOIN
@@ -605,7 +614,9 @@ module.exports = function(Pledgebook) {
                                     LEFT JOIN
                                 orn_images ON ${pledgebookTableName}.OrnPictureId = orn_images.Id
                                     LEFT JOIN
-                                ${pledgebookClosedBillTableName} ON ${pledgebookClosedBillTableName}.pledgebook_uid = ${pledgebookTableName}.UniqueIdentifier`;
+                                ${pledgebookClosedBillTableName} ON ${pledgebookClosedBillTableName}.pledgebook_uid = ${pledgebookTableName}.UniqueIdentifier
+                                    LEFT JOIN
+                                alerts ON (${pledgebookTableName}.alert = alerts.id AND alerts.archived=0)`;
                 
                 query = Pledgebook.appendFilters(params, query);
                 

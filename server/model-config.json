@@ -114,5 +114,9 @@
   "Store": {
     "dataSource": "developmentdb",
     "public": true
+  },
+  "Alert": {
+    "dataSource": "developmentdb",
+    "public": true
   }
 }
