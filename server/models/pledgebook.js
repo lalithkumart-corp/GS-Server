@@ -276,6 +276,116 @@ module.exports = function(Pledgebook) {
         description: 'For exporting the pledgebook'
     });
 
+    Pledgebook.remoteMethod('archiveBillsApiHandler', {
+        accepts: {
+            arg: 'data',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/archive-bills', verb: 'put'},
+        description: 'Archive the bills in pledgebook'
+    });
+
+    Pledgebook.remoteMethod('unArchiveBillsApiHandler', {
+        accepts: {
+            arg: 'data',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/un-archive-bills', verb: 'put'},
+        description: 'Archive the bills in pledgebook'
+    });
+
+    Pledgebook.remoteMethod('trashBillsApiHandler', {
+        accepts: {
+            arg: 'data',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/trash-bills', verb: 'put'},
+        description: 'Trash the bills in pledgebook'
+    });
+
+    Pledgebook.remoteMethod('restoreTrashedBillsApiHandler', {
+        accepts: {
+            arg: 'data',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/restore-trashed-bills', verb: 'put'},
+        description: 'Resote the trahsed bills in pledgebook'
+    });
+
+    Pledgebook.remoteMethod('deleteBillApiHandler', {
+        accepts: {
+            arg: 'data',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/delete-bills', verb: 'del'},
+        description: 'Delete Bills in Pledgebook'
+    });
+
     Pledgebook.insertNewBillAPIHandler = async (data, cb) => {
         try {
             let params = data.requestParams;
@@ -588,6 +698,8 @@ module.exports = function(Pledgebook) {
                 query = `SELECT                         
                                 *,                        
                                 ${pledgebookTableName}.Date AS PledgedDate,
+                                ${pledgebookTableName}.Archived AS PledgebookBillArchived,
+                                ${pledgebookTableName}.Trashed AS PledgebookBillTrashed,
                                 image.Id AS ImageTableID,
                                 image.Image AS UserImageBlob,
                                 orn_images.Id AS OrnImageTableID,
@@ -618,7 +730,7 @@ module.exports = function(Pledgebook) {
                                     LEFT JOIN
                                 alerts ON (${pledgebookTableName}.alert = alerts.id AND alerts.archived=0)`;
                 
-                query = Pledgebook.appendFilters(params, query);
+                query = Pledgebook.appendFilters(params, query, pledgebookTableName, pledgebookClosedBillTableName);
                 
                 // if(params.filters.include && params.filters.include == 'closed')
                 //     query += ` ORDER BY uid DESC`;
@@ -649,7 +761,7 @@ module.exports = function(Pledgebook) {
                             image ON customer.ImageId = image.Id
                                 LEFT JOIN
                             ${pledgebookClosedBillTableName} ON ${pledgebookClosedBillTableName}.pledgebook_uid = ${pledgebookTableName}.UniqueIdentifier`;
-                query = Pledgebook.appendFilters(params, query);
+                query = Pledgebook.appendFilters(params, query, pledgebookTableName, pledgebookClosedBillTableName);
                 break;
             case 'byCustomerId':
                 query = `SELECT                         
@@ -797,7 +909,7 @@ module.exports = function(Pledgebook) {
         return query;
     }
 
-    Pledgebook.appendFilters = (params, query) => {
+    Pledgebook.appendFilters = (params, query, pledgebookTableName, pledgebookClosedBillTableName) => {
         let filterQueries = [];
         if(params.filters) {
             if(params.filters.billNo)
@@ -833,6 +945,21 @@ module.exports = function(Pledgebook) {
                     filterQueries.push(`(${temp.join(' OR ')})`);
                 }
             }
+            // Dont include archived bills
+            if(typeof params.filters.includeArchived !== 'undefined' && params.filters.includeArchived == false)
+                filterQueries.push(`${pledgebookTableName}.Archived=0`);
+
+            // Show only archived bills
+            if(params.filters.showOnlyArchived)
+                filterQueries.push(`${pledgebookTableName}.Archived=1`);
+
+            // Dont include Trashed bills
+            if(typeof params.filters.includeTrashed !== 'undefined' && params.filters.includeTrashed == false)
+                filterQueries.push(`${pledgebookTableName}.Trashed=0`);
+
+            // Show only Trashed bills
+            if(params.filters.showOnlyTrashed)
+                filterQueries.push(`${pledgebookTableName}.Trashed=1`);
             
             if(filterQueries.length != 0)
                 query += ' WHERE ' + filterQueries.join(' AND ');
@@ -1330,6 +1457,278 @@ module.exports = function(Pledgebook) {
 
             });
         });
-        
+    }
+
+    Pledgebook.archiveBillsApiHandler = async (params) => {
+        try {
+            if(!params.accessToken)
+                throw 'Access Token is missing';
+            if(params.uniqueIdentifiers.length > 0) {
+                params._userId = await utils.getStoreOwnerUserId(params.accessToken);
+                params._pledgebookTableName = await Pledgebook.getPledgebookTableName(params._userId);
+                await Pledgebook._archiveBills(params);
+            } else {
+                throw 'No bills selected for archiving';
+            }
+            return {STATUS: 'SUCCESS', STATUS_MSG: 'Successfully archived the bills'};
+        } catch(e) {
+            return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
+        }
+    }
+
+    Pledgebook._archiveBills = (data) => {
+        return new Promise((resolve, reject) => {
+            let sql = `UPDATE ${data._pledgebookTableName} SET Archived=1 WHERE UniqueIdentifier IN (${data.uniqueIdentifiers.join(',')});`;
+            Pledgebook.dataSource.connector.query(sql, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(true);
+                }
+            });
+        });
+    }
+
+    Pledgebook.unArchiveBillsApiHandler = async (params) => {
+        try {
+            if(!params.accessToken)
+                throw 'Access Token is missing';
+            if(params.uniqueIdentifiers.length > 0) {
+                params._userId = await utils.getStoreOwnerUserId(params.accessToken);
+                params._pledgebookTableName = await Pledgebook.getPledgebookTableName(params._userId);
+                await Pledgebook._unArchiveBills(params);
+            } else {
+                throw 'No bills selected for unaArchiving';
+            }
+            return {STATUS: 'SUCCESS', STATUS_MSG: 'Successfully unArchived the bills'};
+        } catch(e) {
+            return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
+        }
+    }
+
+    Pledgebook._unArchiveBills = (data) => {
+        return new Promise((resolve, reject) => {
+            let sql = `UPDATE ${data._pledgebookTableName} SET Archived=0 WHERE UniqueIdentifier IN (${data.uniqueIdentifiers.join(',')});`;
+            Pledgebook.dataSource.connector.query(sql, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(true);
+                }
+            });
+        });
+    }
+
+    Pledgebook.trashBillsApiHandler = async (params) => {
+        try {
+            if(!params.accessToken)
+                throw 'Access Token is missing';
+            if(params.uniqueIdentifiers.length > 0) {
+                params._userId = await utils.getStoreOwnerUserId(params.accessToken);
+                params._pledgebookTableName = await Pledgebook.getPledgebookTableName(params._userId);
+                await Pledgebook._trashBills(params);
+            } else {
+                throw 'No bills selected for Trash';
+            }
+            return {STATUS: 'SUCCESS', STATUS_MSG: 'Successfully Trashed the bills'};
+        } catch(e) {
+            return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
+        }
+    }
+
+    Pledgebook._trashBills = (data) => {
+        return new Promise((resolve, reject) => {
+            let sql = `UPDATE ${data._pledgebookTableName} SET Trashed=1 WHERE UniqueIdentifier IN (${data.uniqueIdentifiers.join(',')});`;
+            Pledgebook.dataSource.connector.query(sql, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(true);
+                }
+            });
+        });
+    }
+
+    Pledgebook.restoreTrashedBillsApiHandler = async (params) => {
+        try {
+            if(!params.accessToken)
+                throw 'Access Token is missing';
+            if(params.uniqueIdentifiers.length > 0) {
+                params._userId = await utils.getStoreOwnerUserId(params.accessToken);
+                params._pledgebookTableName = await Pledgebook.getPledgebookTableName(params._userId);
+                await Pledgebook._restoreBills(params);
+            } else {
+                throw 'No bills selected for Trash';
+            }
+            return {STATUS: 'SUCCESS', STATUS_MSG: 'Successfully Restored the already trashed bills'};
+        } catch(e) {
+            return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
+        }
+    }
+
+    Pledgebook._restoreBills = (data) => {
+        return new Promise((resolve, reject) => {
+            let sql = `UPDATE ${data._pledgebookTableName} SET Trashed=0 WHERE UniqueIdentifier IN (${data.uniqueIdentifiers.join(',')});`;
+            Pledgebook.dataSource.connector.query(sql, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(true);
+                }
+            });
+        });
+    }
+
+    Pledgebook.deleteBillApiHandler = async (params) => {
+        try {
+            if(!params.accessToken)
+                throw 'Access Token is missing';
+            if(params.uniqueIdentifiers.length > 0) {
+                params._userId = await utils.getStoreOwnerUserId(params.accessToken);
+                params._pledgebookTableName = await Pledgebook.getPledgebookTableName(params._userId);
+                params._pledgebookClosedBillTableName = await Pledgebook.getPledgebookClosedTableName(params._userId);
+
+                await Pledgebook._copyToRecycleBinTable(params);
+                await Pledgebook._copyClosedBillsToRecycleBinTable(params);
+                await Pledgebook._deleteBillsInPledgebook(params);
+                await Pledgebook._deleteBillsInClosedPledgebook(params);
+            } else {
+                throw 'No bills selected for deleting';
+            }
+            return {STATUS: 'SUCCESS', STATUS_MSG: 'Successfully deleted the bills'};
+        } catch(e) {
+            return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
+        }
+    }
+
+    Pledgebook._copyToRecycleBinTable = (params) => {
+        return new Promise( (resolve, reject) => {
+            let sql = SQL.MOVE_PLEDGEBOOK_BILLS_TO_BIN;
+            sql = sql.replace(/REPLACE_USER_ID/g, params._userId);
+            sql = sql.replace(/PLEDGEBOOK_TABLE_NAME/g, params._pledgebookTableName);
+            console.log('COPY TO PLEDGEBOOK RECYCLE BIN');
+            console.log(sql);
+            console.log(params.uniqueIdentifiers);
+            Pledgebook.dataSource.connector.query(sql, [params.uniqueIdentifiers], (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(true);
+                }
+            });
+        });
+    }
+
+    Pledgebook._copyClosedBillsToRecycleBinTable = (params) => {
+        return new Promise( (resolve, reject) => {
+            let sql = SQL.MOVE_CLOSED_BILLS_TO_BIN;
+            sql = sql.replace(/REPLACE_USER_ID/g, params._userId);
+            sql = sql.replace(/PLEDGEBOOK_CLOSED_TABLE_NAME/g, params._pledgebookClosedBillTableName);
+            console.log('COPY TO PLEDGEBOOK_CLOSED RECYCLE BIN');
+            console.log(sql);
+            console.log(params.uniqueIdentifiers);
+            Pledgebook.dataSource.connector.query(sql, [params.uniqueIdentifiers], (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(true);
+                }
+            });
+        });
+    }
+
+    Pledgebook._deleteBillsInPledgebook = (params) => {
+        return new Promise((resolve, reject) => {
+            let sql = `DELETE FROM ${params._pledgebookTableName} WHERE UniqueIdentifier IN (?)`;
+            Pledgebook.dataSource.connector.query(sql, [params.uniqueIdentifiers], (err, res) => {
+                if(err) {
+                    return resolve(true);
+                } else {
+                    return resolve(true);
+                }
+            });
+        });
+    }
+    
+    Pledgebook._deleteBillsInClosedPledgebook = (params) => {
+        return new Promise((resolve, reject) => {
+            let sql = `DELETE FROM ${params._pledgebookClosedBillTableName} WHERE pledgebook_uid IN (?)`;
+            Pledgebook.dataSource.connector.query(sql, [params.uniqueIdentifiers], (err, res) => {
+                if(err) {
+                    return resolve(true);
+                } else {
+                    return resolve(true);
+                }
+            });
+        });
     }
 };
+
+let SQL = {
+    MOVE_PLEDGEBOOK_BILLS_TO_BIN: `INSERT INTO pledgebook_recycle_bin (
+        UniqueIdentifier, BillNo, Amount, 
+        Date, CustomerId, Orn, OrnPictureId, 
+        OrnCategory, TotalWeight, IntPercent, 
+        IntVal, OtherCharges, LandedCost, 
+        Remarks, Status, closedBillReference, 
+        History, Alert, Archived, CreatedDate, 
+        ModifiedDate, UserId
+      ) 
+      SELECT 
+        UniqueIdentifier, 
+        BillNo, 
+        Amount, 
+        Date, 
+        CustomerId, 
+        Orn, 
+        OrnPictureId, 
+        OrnCategory, 
+        TotalWeight, 
+        IntPercent, 
+        IntVal, 
+        OtherCharges, 
+        LandedCost, 
+        Remarks, 
+        Status, 
+        closedBillReference, 
+        History, 
+        Alert, 
+        Archived, 
+        CreatedDate, 
+        ModifiedDate, 
+        REPLACE_USER_ID 
+      FROM 
+        PLEDGEBOOK_TABLE_NAME 
+      WHERE 
+        UniqueIdentifier IN (?)
+      `,
+    MOVE_CLOSED_BILLS_TO_BIN: `INSERT INTO pledgebook_closed_bills_recycle_bin (
+        uid, pledgebook_uid, bill_no, 
+        pledged_date, closed_date, principal_amt, 
+        no_of_month, rate_of_interest, 
+        int_rupee_per_month, interest_amt, 
+        actual_estimated_amt, discount_amt, 
+        paid_amt, handed_over_to_person, 
+        user_id
+      ) 
+      SELECT 
+        uid, 
+        pledgebook_uid, 
+        bill_no, 
+        pledged_date, 
+        closed_date, 
+        principal_amt, 
+        no_of_month, 
+        rate_of_interest, 
+        int_rupee_per_month, 
+        interest_amt, 
+        actual_estimated_amt, 
+        discount_amt, 
+        paid_amt, 
+        handed_over_to_person, 
+        REPLACE_USER_ID
+      FROM 
+        PLEDGEBOOK_CLOSED_TABLE_NAME 
+      WHERE 
+        pledgebook_uid IN (?)`
+}

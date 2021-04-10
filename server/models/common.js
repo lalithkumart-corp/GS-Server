@@ -230,6 +230,8 @@ let SQL = {
                             closedBillReference varchar(45) DEFAULT NULL,
                             History text,
                             Alert int(11) DEFAULT NULL,
+                            Archived int(11) DEFAULT 0,
+                            Trashed int(11) DEFAULT 0,
                             CreatedDate datetime DEFAULT NULL,
                             ModifiedDate datetime DEFAULT NULL,
                             PRIMARY KEY (UniqueIdentifier)
