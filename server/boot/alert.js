@@ -32,7 +32,7 @@ module.exports = (app) => {
         }
     }
 
-    setInterval(() => checkForNewNotifications(), 5000); //1min=60000, 5min=300000
+    setInterval(() => checkForNewNotifications(), 5400); //1min=60000, 5min=300000
 
     // sendTestMsg = () => {
     //     let skt = app.get('socket');
