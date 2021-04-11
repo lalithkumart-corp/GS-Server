@@ -142,7 +142,12 @@ module.exports = function(app) {
                         tokenVal = context.remotingContext.args.apiParams.accessToken;
                     else if(typeof context.remotingContext.args.apiParams.access_token !== 'undefined')
                         tokenVal = context.remotingContext.args.apiParams.access_token;
-                }    
+                } else if(context.remotingContext.args.data) {
+                    if(typeof context.remotingContext.args.data.accessToken !== 'undefined')
+                        tokenVal = context.remotingContext.args.data.accessToken;
+                    else if(typeof context.remotingContext.args.data.access_token !== 'undefined')
+                        tokenVal = context.remotingContext.args.data.access_token;
+                }
             }
             return tokenVal;
         } catch(e){

@@ -7,7 +7,7 @@ module.exports = function(GsRole) {
             let list = [];
             let userId = await GsRole._findUserIdByToken(accessToken);
             let allRolesListObj = await GsRole._fetchAllRoles();
-            let userRoleId = await GsRole._findUserRoleId(userId);
+            let userRoleId = await GsRole.prototype.findUserRoleId(userId);
             let userRank = GsRole._getUserRank(userRoleId, allRolesListObj);
             _.each(allRolesListObj, (aRoleObj, index) => {
                 if(aRoleObj.rank >  userRank)
@@ -74,7 +74,7 @@ module.exports = function(GsRole) {
         });
     }
 
-    GsRole._findUserRoleId = (userId) => {
+    GsRole.prototype.findUserRoleId = (userId) => {
         return new Promise( (resolve, reject) => {
             GsRole.app.models.RoleMapping.find({where: {principalId: userId}}, (error, roleMappingRec) => {
                 if(error) {

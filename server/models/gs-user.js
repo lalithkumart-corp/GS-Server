@@ -21,8 +21,9 @@ module.exports = function(Gsuser) {
                         res.username = ret.username;
                         res.email = ret.email;
                         let setupActionsStatus = await Gsuser.checkForAnyPendingActions(res.userId, res.ownerId);
-                        let userPreferences = await Gsuser._getUserPreferences(res.userId);
+                        let userPreferences = await Gsuser._getUserPreferences(res.ownerId);
                         let status = await app.models.AppManager.updateValidityTime(res.userId, res.ownerId);
+                        res.roleId = await app.models.GsRole.prototype.findUserRoleId(res.userId);
                         let response = {
                             session: res,
                             userPreferences: userPreferences,
