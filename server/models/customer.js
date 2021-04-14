@@ -544,7 +544,7 @@ module.exports = function(Customer) {
             if(!verification.STATUS) {
                 let msg = 'Verification of customer detail failed.';
                 if(verification.CODE == 'SIMILAR_ALREADY_EXISTS')
-                    msg = `Customer with same details already exists. CustId = "${verification.params._existingCustHashkey}"`;
+                    msg = `Customer with same details already exists. CustId = "${verification.params._existingCustHashkey}". Try merge option.`;
                 throw new Error(msg);
             }
             params = verification.params;
