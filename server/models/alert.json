@@ -68,7 +68,7 @@
         }
       },
       "message": {
-        "type": "any",
+        "type": "string",
         "mysql": {
           "columnName": "message",
           "dataType": "text",
