@@ -53,6 +53,28 @@
         "dataScale": null,
         "nullable": "Y"
       }
+    },
+    "gateWay": {
+      "type": "string",
+      "mysql": {
+        "columnName": "gateway",
+        "dataType": "varchar",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "ssoUserId": {
+      "type": "string",
+      "mysql": {
+        "columnName": "sso_userid",
+        "dataType": "varchar",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
     }
   },
   "validations": [],

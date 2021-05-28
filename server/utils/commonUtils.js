@@ -1,4 +1,5 @@
 let app = require('../server.js')
+let admin = require('../firebase-service');
 
 // Getting userId ie., Store owner's user id
 const getStoreOwnerUserId = (accessToken) => {
@@ -66,8 +67,23 @@ const getAppStatus = (ownerUserId) => {
     });
 }
 
+const validateSSOAuthToken = (token) => {
+    return new Promise(async (resolve, reject) => {
+        try {
+            let userInfo= await admin
+                                .auth()
+                                .verifyIdToken(token);
+            return resolve(userInfo);
+        } catch(e) {
+            console.log(e);
+            return resolve(null);
+        }
+    });
+}
+
 module.exports = {
     getStoreOwnerUserId,
     executeSqlQuery,
-    getAppStatus
+    getAppStatus,
+    validateSSOAuthToken
 }

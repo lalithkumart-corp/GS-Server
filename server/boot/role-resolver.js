@@ -132,21 +132,27 @@ module.exports = function(app) {
             // else if(typeof context.remotingContext.args.custom.auth_user_id !== 'undefined')
             //     tokenVal = context.remotingContext.args.custom.auth_user_id;
 
-            if(context.remotingContext.args) {
-                if(context.remotingContext.args.accessToken)
-                    tokenVal = context.remotingContext.args.accessToken;
-                else if(context.remotingContext.args.access_token)
-                    tokenVal = context.remotingContext.args.access_token;
-                else if(context.remotingContext.args.apiParams) {
-                    if(typeof context.remotingContext.args.apiParams.accessToken !== 'undefined')
-                        tokenVal = context.remotingContext.args.apiParams.accessToken;
-                    else if(typeof context.remotingContext.args.apiParams.access_token !== 'undefined')
-                        tokenVal = context.remotingContext.args.apiParams.access_token;
-                } else if(context.remotingContext.args.data) {
-                    if(typeof context.remotingContext.args.data.accessToken !== 'undefined')
-                        tokenVal = context.remotingContext.args.data.accessToken;
-                    else if(typeof context.remotingContext.args.data.access_token !== 'undefined')
-                        tokenVal = context.remotingContext.args.data.access_token;
+            let method = context.remotingContext.req.method;
+            if(method == 'GET') {
+                if(context.remotingContext.req.query && context.remotingContext.req.query.access_token)
+                    tokenVal = context.remotingContext.req.query.access_token;
+            } else {
+                if(context.remotingContext.args) {
+                    if(context.remotingContext.args.accessToken)
+                        tokenVal = context.remotingContext.args.accessToken;
+                    else if(context.remotingContext.args.access_token)
+                        tokenVal = context.remotingContext.args.access_token;
+                    else if(context.remotingContext.args.apiParams) {
+                        if(typeof context.remotingContext.args.apiParams.accessToken !== 'undefined')
+                            tokenVal = context.remotingContext.args.apiParams.accessToken;
+                        else if(typeof context.remotingContext.args.apiParams.access_token !== 'undefined')
+                            tokenVal = context.remotingContext.args.apiParams.access_token;
+                    } else if(context.remotingContext.args.data) {
+                        if(typeof context.remotingContext.args.data.accessToken !== 'undefined')
+                            tokenVal = context.remotingContext.args.data.accessToken;
+                        else if(typeof context.remotingContext.args.data.access_token !== 'undefined')
+                            tokenVal = context.remotingContext.args.data.access_token;
+                    }
                 }
             }
             return tokenVal;

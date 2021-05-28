@@ -6,36 +6,58 @@ let GsErrorCtrl = require('../components/logger/gsErrorCtrl');
 let logger = app.get('logger');
 let sha256 = require('sha256');
 
+const DUMMY_PWD = 'G1Rv1_S0fTwArE';
+
 module.exports = function(Gsuser) {
+    
+    Gsuser.on('dataSourceAttached', function() {
+        delete Gsuser.validations.username; //delete Gsuser.app.models.User.validations.username;
+    });
+
     Gsuser.loginUser = (custom, cb) => {
-        custom.ttl = 86400; // 1 DAY <------ 60 * 60 * 24
-        Gsuser.login(custom, (err, res) => {
-            if(err) {
-                cb(err, null);
-            } else {
-                Gsuser.findOne({where: {id: res.userId}}, async (err, ret) => {
-                    if(err) {
-                        cb(err, null);
-                    } else {
-                        res.ownerId = ret.ownerId;
-                        res.username = ret.username;
-                        res.email = ret.email;
-                        let setupActionsStatus = await Gsuser.checkForAnyPendingActions(res.userId, res.ownerId);
-                        let userPreferences = await Gsuser._getUserPreferences(res.ownerId);
-                        let status = await app.models.AppManager.updateValidityTime(res.userId, res.ownerId);
-                        res.roleId = await app.models.GsRole.prototype.findUserRoleId(res.userId);
-                        let response = {
-                            session: res,
-                            userPreferences: userPreferences,
-                            applicationStatus: status,
-                            setupActionsStatus: setupActionsStatus
-                        }
-                        cb(null, response);
-                    }
-                });                
-            }
+        Gsuser._loginUser(custom).then((resp) => {
+            return cb(null, {STATUS: 'SUCCESS', RESP: resp});
+        }).catch((err) => {
+            return cb(err);
         });
-    };
+    }
+
+    Gsuser._loginUser = async (apiParams) => {
+        try {
+            let session = await Gsuser._invokeBuiltInLogin({email: apiParams.email, password: apiParams.password||DUMMY_PWD});
+            let ret = await Gsuser._find(session.userId);
+
+            session.ownerId = ret.ownerId;
+            session.username = ret.username;
+            session.email = ret.email;
+            let setupActionsStatus = await Gsuser.checkForAnyPendingActions(ret.userId, ret.ownerId);
+            let userPreferences = await Gsuser._getUserPreferences(ret.ownerId);
+            let status = await app.models.AppManager.updateValidityTime(ret.userId, ret.ownerId);
+            session.roleId = await app.models.GsRole.prototype.findUserRoleId(ret.userId);
+            let response = {
+                session: session,
+                userPreferences: userPreferences,
+                applicationStatus: status,
+                setupActionsStatus: setupActionsStatus
+            }
+            return response;
+        } catch(e) {
+            console.log(e);
+            throw e;
+        }
+    }
+
+    Gsuser._invokeBuiltInLogin = (apiParams) => {
+        return new Promise((resolve, reject) => {
+            Gsuser.login(apiParams, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(res);
+                }
+            });
+        });
+    }
 
     Gsuser.remoteMethod(
         'loginUser',
@@ -63,6 +85,154 @@ module.exports = function(Gsuser) {
         }
     );
 
+    Gsuser.ssoLogin = (apiParams, cb) => {
+        Gsuser._ssoLogin(apiParams).then((resp) => {
+            return cb(null, {STATUS: 'SUCCESS', RESP: resp});
+        }).catch((err) => {
+            return cb(err);
+        });
+    }
+    Gsuser.remoteMethod('ssoLogin', {
+        description: 'User Login.',
+        accepts: {
+            arg: 'apiParams',
+            type: 'object',
+            default: {},
+            http: {
+                source: 'body'
+            }
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {verb: 'post', path: '/sso-login'}
+    });
+
+    Gsuser._ssoLogin = async (apiParams) => {
+        try {
+            let userObj = await utils.validateSSOAuthToken(apiParams.accessToken); // await Gsuser.isValidUser(apiParams);
+            if(!userObj)
+                throw 'Invalid Token passed from UI';
+            let resp = await Gsuser._loginUser({email: userObj.email});
+            await Gsuser._insertSsoToken(apiParams.accessToken, resp.session.id);
+            return resp;
+        } catch(e) {
+            console.log(e);
+            throw e;
+        }
+    }
+
+    Gsuser.logoutApi = (apiParams, cb) => {
+        Gsuser._logoutUser(apiParams.accessToken).then((resp) => {
+            return cb(null, {STATUS: 'SUCCESS', RESP: resp});
+        }).catch((err) => {
+            console.log(err);
+            return cb(null);
+        });
+    }
+
+    Gsuser.remoteMethod('logoutApi', {
+        description: 'User LogOut.',
+        accepts: {
+            arg: 'apiParams',
+            type: 'object',
+            default: {},
+            http: {
+                source: 'body'
+            }
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {verb: 'post', path: '/logout-user'}
+    });
+
+    Gsuser._logoutUser = (accessToken) => {
+        return new Promise((resolve, reject) => {
+            Gsuser.logout(accessToken, (err, res) => {
+                if(err) {
+                    console.log(err);
+                    return resolve(null);
+                } else {
+                    console.log(res);
+                    return resolve(true);
+                }
+            });
+        });
+    }
+
+    Gsuser._findBySsoUID = (ssoUID) => {
+        return new Promise((resolve, reject) => {
+            Gsuser.findOne({where: {ssoUserId: ssoUID}}, (err, res) => {
+                if(err)
+                    return reject(err);
+                else
+                    return resolve(res);
+            })
+        });
+    }
+
+    Gsuser._insertSsoToken = (ssoToken, accessToken) => {
+        return new Promise((resolve, reject) => {
+            let sql = `UPDATE AccessToken SET sso_token='${ssoToken}' WHERE id='${accessToken}'`;
+            Gsuser.dataSource.connector.query(sql, (err, res) => {
+                if(err) {
+                    console.log(err);
+                    return resolve(null);
+                } else {
+                    console.log(res);
+                    return resolve(true);
+                }
+            });
+        });
+    }
+
+    Gsuser.remoteMethod('checkEmailExistance', {
+        description: 'Validating user by email',
+        accepts: {
+            arg: 'apiParams',
+            type: 'object',
+            default: {},
+            http: {
+                source: 'body'
+            }
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {verb: 'post', path: '/check-email-existance'}
+    });
+
+    Gsuser.checkEmailExistance = (apiParams, cb) => {
+        try {
+            Gsuser.find({where:{ email: apiParams.email }}, (err, res)=> {
+                if(err) {
+                    cb(null, {STATUS: 'ERROR', ERR: err});
+                } else {
+                    if(res && res.length)
+                        cb(null, {STATUS: 'SUCCESS', USER_EXISTS: 1, USER_EMAIL: res[0].email});
+                    else
+                        cb(null, {STATUS: 'SUCCESS', USER_EXISTS: 0});
+                }
+            });
+        } catch(e) {
+            console.log(e);
+            cb(null, {STATUS: 'EXCEPTION', EXCEPTION: e});
+        }
+    }
+
     Gsuser.signupNewCustomer = async (custom, cb) => {     
 
         try{
@@ -71,7 +241,13 @@ module.exports = function(Gsuser) {
             // await Gsuser._createPledgebookTable(user);
             // await Gsuser._createPledgebookClosingBillTable(user);
             await Gsuser._insertNewApplication(user);
-            return {STATUS: 'SUCCESS', MSG: 'New User Created Successfully!'};
+
+            let resp = await Gsuser._loginUser(custom);
+            if(custom.isSsoUserSignup)
+                await Gsuser._insertSsoToken(custom.accessToken, resp.session.id);
+            return {STATUS: 'SUCCESS', RESP: resp};
+
+            // return {STATUS: 'SUCCESS', MSG: 'New User Created Successfully!'};
         } catch(e) {
             return {STATUS: 'ERROR', ERROR: e};
         }
@@ -260,10 +436,12 @@ module.exports = function(Gsuser) {
                 username: custom.userName,
                 ownerId: custom.ownerId || 0,
                 email: custom.email,
-                password: custom.password,
+                password: custom.password || DUMMY_PWD,
                 phone: custom.phone,
                 guardianName: custom.guardianName || '',
-                pwd: custom.password
+                pwd: custom.password || DUMMY_PWD,
+                gateWay: custom.gateWay || 'direct',
+                ssoUserId: custom.ssoUserId || '',
             }
             Gsuser.create(theParams, (err, user) => {
                 if(err) {
@@ -396,6 +574,17 @@ module.exports = function(Gsuser) {
                 billSeriesAndNumberUpdated: false
             }
         }
+    }
+
+    Gsuser._find = (userId) => {
+        return new Promise((resolve, reject) => {
+            Gsuser.findOne({where: {id: userId}}, async (err, ret) => {
+                if(err)
+                    return reject(err);
+                else
+                    return resolve(ret);
+            });
+        });
     }
 };
 

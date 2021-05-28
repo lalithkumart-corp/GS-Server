@@ -5,12 +5,14 @@ const addUserParamValidation = (params) => {
             throw 'FormData is Empty';
         if(!params.email)
             throw 'Email is Empty';
-        if(!params.password)
-            throw 'Password is Empty';
-        if(!params.confirmPassword)
-            throw 'confirmPassword is Empty';
-        if(params.password !== params.confirmPassword)
-            throw 'Passwords mismatch';
+        if(params.gateWay == 'direct') {
+            if(!params.password)
+                throw 'Password is Empty';
+            if(!params.confirmPassword)
+                throw 'confirmPassword is Empty';
+            if(params.password !== params.confirmPassword)
+                throw 'Passwords mismatch';
+        }
         if(!params.userName)
             throw 'Username is empty';
     } catch(e) {
