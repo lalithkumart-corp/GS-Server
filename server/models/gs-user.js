@@ -31,7 +31,7 @@ module.exports = function(Gsuser) {
             session.username = userTblRow.username;
             session.email = userTblRow.email;
             let setupActionsStatus = await Gsuser.checkForAnyPendingActions(userTblRow.id, userTblRow.ownerId);
-            let userPreferences = await Gsuser._getUserPreferences(userTblRow.ownerId || userTblRow.id);
+            let userPreferences = await Gsuser.app.models.UserPreference._fetchFromDB(userTblRow.ownerId || userTblRow.id);
             let status = await app.models.AppManager.updateValidityTime(userTblRow.id, userTblRow.ownerId);
             session.roleId = await app.models.GsRole.prototype.findUserRoleId(userTblRow.id);
             let response = {
@@ -544,27 +544,6 @@ module.exports = function(Gsuser) {
                     resolve(res);
                 }
             });
-        });
-    }
-
-    Gsuser._getUserPreferences = (userId) => {
-        return new Promise( (resolve, reject) => {
-            try {
-                Gsuser.app.models.UserPreference.find({where: {userId: userId}}, (err, res) => {
-                    if(err) {
-                        logger.error(GsErrorCtrl.create({className: 'Gsuser', methodName: '_getUserPreferences', cause: err, message: 'Exception in sql query execution'}));
-                        return resolve({});
-                    } else {
-                        if(res.length > 0)
-                            return resolve(res[0]);
-                        else
-                            return resolve({});
-                    }
-                });
-            } catch(e) {
-                logger.error(GsErrorCtrl.create({className: 'Gsuser', methodName: '_getUserPreferences', cause: e, message: 'Exception caught while fetching user preferences'}));
-                return {};
-            }
         });
     }
 
