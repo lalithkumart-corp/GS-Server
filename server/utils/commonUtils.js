@@ -14,7 +14,7 @@ const getStoreOwnerUserId = (accessToken) => {
                         if(error){
                             reject(err);
                         } else {
-                            if(result.ownerId != 0)
+                            if(result && result.ownerId != 0)
                                 resolve(result.ownerId);
                             else
                                 resolve(res.userId);

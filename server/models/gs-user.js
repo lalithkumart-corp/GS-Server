@@ -25,15 +25,15 @@ module.exports = function(Gsuser) {
     Gsuser._loginUser = async (apiParams) => {
         try {
             let session = await Gsuser._invokeBuiltInLogin({email: apiParams.email, password: apiParams.password||DUMMY_PWD});
-            let ret = await Gsuser._find(session.userId);
+            let userTblRow = await Gsuser._find(session.userId);
 
-            session.ownerId = ret.ownerId;
-            session.username = ret.username;
-            session.email = ret.email;
-            let setupActionsStatus = await Gsuser.checkForAnyPendingActions(ret.userId, ret.ownerId);
-            let userPreferences = await Gsuser._getUserPreferences(ret.ownerId);
-            let status = await app.models.AppManager.updateValidityTime(ret.userId, ret.ownerId);
-            session.roleId = await app.models.GsRole.prototype.findUserRoleId(ret.userId);
+            session.ownerId = userTblRow.ownerId;
+            session.username = userTblRow.username;
+            session.email = userTblRow.email;
+            let setupActionsStatus = await Gsuser.checkForAnyPendingActions(userTblRow.id, userTblRow.ownerId);
+            let userPreferences = await Gsuser._getUserPreferences(userTblRow.ownerId);
+            let status = await app.models.AppManager.updateValidityTime(userTblRow.id, userTblRow.ownerId);
+            session.roleId = await app.models.GsRole.prototype.findUserRoleId(userTblRow.id);
             let response = {
                 session: session,
                 userPreferences: userPreferences,
@@ -241,7 +241,7 @@ module.exports = function(Gsuser) {
             // await Gsuser._createPledgebookTable(user);
             // await Gsuser._createPledgebookClosingBillTable(user);
             await Gsuser._insertNewApplication(user);
-
+            await Gsuser._insertNewStore(custom, user);
             let resp = await Gsuser._loginUser(custom);
             if(custom.isSsoUserSignup)
                 await Gsuser._insertSsoToken(custom.accessToken, resp.session.id);
@@ -521,6 +521,15 @@ module.exports = function(Gsuser) {
                 }
             });
         });
+    }
+
+    Gsuser._insertNewStore = async (apiParams, user) => {
+        try {
+            await Gsuser.app.models.Store._insertNewStore({storeName: apiParams.storeName, email: apiParams.email, phone: apiParams.phone, userId: user.id});
+            return true;
+        } catch(e) {
+            return false;
+        }
     }
 
     Gsuser._fetchList = (ownerUserId) => {

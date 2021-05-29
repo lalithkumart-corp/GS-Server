@@ -188,26 +188,35 @@ module.exports = function(ApplicationManager) {
     }
     ApplicationManager.updateValidityTime = (userId, ownerId) => {
         return new Promise( (resolve, reject) => {
-            let id = ownerId || userId;
-            ApplicationManager.find({where: {userId: id}}, async (err, res) => {
-                if(err) {
-                    //TODO: IMPORTANT. Log this error and notice this error in case appearing in PROD. 
-                    console.log(err);
-                    return resolve(false);
-                } else {
-                    if(res && res.length>0) {
-                        let date = res[0].validTillDate;
-                        let validityLastDate = moment(new Date(date));
-                        let todayDate = moment();
-                        let diff = validityLastDate.diff(todayDate, 'days');
-                        if(diff == 0) {
-                            let res = await ApplicationManager.disableUserApplication(id);
-                            return resolve(false);
+            try {
+                let id = ownerId || userId;
+                ApplicationManager.find({where: {userId: id}}, async (err, res) => {
+                    if(err) {
+                        //TODO: IMPORTANT. Log this error and notice this error in case appearing in PROD. 
+                        console.log(err);
+                        return resolve(false);
+                    } else {
+                        if(res && res.length>0) {
+                            let date = res[0].validTillDate;
+                            let validityLastDate = moment(new Date(date));
+                            let todayDate = moment();
+                            let diff = validityLastDate.diff(todayDate, 'days');
+                            if(diff == 0) {
+                                let res = await ApplicationManager.disableUserApplication(id);
+                                return resolve(false);
+                            }
+                            return resolve(true);
+                        } else {
+                            logger.error(GsErrorCtrl.create({className: 'ApplicationManager', methodName: 'updateValidityTime', cause: 'App Not Found', message: 'No Appp found for this user.'}));
+                            return resolve(null);
                         }
-                        return resolve(true);
                     }
-                }
-            });
+                });
+            } catch(e) {
+                console.log(e);
+                logger.error(GsErrorCtrl.create({className: 'ApplicationManager', methodName: 'updateValidityTime', cause: e, message: 'Exception'}));
+                return resolve(false);
+            }
         });
     }
     ApplicationManager.disableUserApplication = (userId) => {

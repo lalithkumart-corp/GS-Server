@@ -49,6 +49,19 @@ module.exports = function(Store) {
         description: 'Update store info'
     });    
 
+    Store._insertNewStore = (params) => {
+        return new Promise((resolve, reject) => {
+            Store.create({userId: params.userId, storeName: params.storeName, email: params.email, mobile: params.phone}, (err, resp) => {
+                if(err) {
+                    logger.error(GsErrorCtrl.create({className: 'Store', className: '_insertNewStore', cause: err, message: 'Exception in sql callback'}));
+                    return reject(err);
+                } else {
+                    return resolve(resp);
+                }
+            });
+        });
+    }
+
     Store.getInfo = async (accessToken, cb) => {
         try {
             let userId = await utils.getStoreOwnerUserId(accessToken);
