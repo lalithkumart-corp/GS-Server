@@ -1,0 +1,61 @@
+-------- DEPLOYMENT of FRONTEND (as local app) and SERVER + MYSQL with Docker container
+
+= Frontend React APP
+
+        $ git clone https://github.com/lalithkumart-corp/GS-Client.git client
+        $ cd client
+        $ git checkout playground
+        $ npm install
+
+        Edit proxy_api_port
+        "proxy_api_port": 3102  (or)  REACT_APP_API_PORT=3102
+
+        OPTIONALLY Edit favicon , title.
+
+        $ npm run build:staging
+
+        Now, move the build folder alone to one level up (outside directory), since we are going to delete the both frontend and backend project code.
+        Also, move the "start.bat" file to one level up.
+
+        Update the "Start.bat" script to point "build" folder
+            @ECHO OFF
+            ECHO Starting the Application now...
+            cd D:/workspace-docker/v1
+            serve -s -l 3101 build
+            PAUSE
+
+
+= Steps for deploying backend server as docker container
+
+        $ git clone https://github.com/lalithkumart-corp/GS-Server.git server
+        $ cd server
+        $ git checkout playground
+
+        Edit datasources.json
+            "host": "host.docker.internal",
+            "port": "3307",
+
+        $ docker build -t gs-server:1 .
+
+        Updated docker-compose.yml
+            - to specify the image gs-server:1
+            - cross check port mapping of host:virtual
+
+        $ docker-compose up -d
+
+        Mysql
+        - Database
+            - populate Database
+            - Rename the base tables - AccessToken, Role, RoleMapping, User, Acl
+            
+                ALTER TABLE `gsprod`.`accesstoken` 
+                RENAME TO  `gsprod`.`AccessToken`;
+                ALTER TABLE `gsprod`.`acl` 
+                RENAME TO  `gsprod`.`ACL`;
+                ALTER TABLE `gsprod`.`role` 
+                RENAME TO  `gsprod`.`Role`;
+                ALTER TABLE `gsprod`.`rolemapping` 
+                RENAME TO  `gsprod`.`RoleMapping`;
+                ALTER TABLE `gsprod`.`user` 
+                RENAME TO  `gsprod`.`User`;
+
