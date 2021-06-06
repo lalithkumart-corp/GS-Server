@@ -9,6 +9,8 @@ let GsLogger = require('./components/logger/gsLogger');
 app.set('logger', new GsLogger());
 let logger = app.get('logger');
 let SocketClass = require('./socket');
+const cors = require('cors');
+let AwsManager = require('./helpers/cdnuploader');
 
 app.start = function() {
     // start the web server
@@ -29,6 +31,7 @@ app.start = function() {
         //init(app);
         //uploadOrnamentData(app);
     });
+    // testUpload();
     new SocketClass(server);
     return server;
 };
@@ -42,4 +45,17 @@ boot(app, __dirname, function(err) {
     if (require.main === module)
         app.start();
 });
+
+app.use(cors());
+
+
+// const testUpload = async () => {
+//     try {
+//         let inst = new AwsManager();
+//         let resp = await inst.uploadSampleFile();
+//         return true;
+//     } catch(e) {
+//         console.log(e);
+//     }
+// }
 

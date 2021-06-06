@@ -56,10 +56,8 @@ module.exports = function(Pledgebook) {
             .then(
                 (success) => {
                     _.each(success.results, (aRec, index) => {
-                        if(aRec.OrnImagePath)
-                            aRec.OrnImagePath = `http://${app.get('domain')}:${app.get('port')}${aRec.OrnImagePath.replace('client', '')}`;
-                        if(aRec.UserImagePath)
-                            aRec.UserImagePath = `http://${app.get('domain')}:${app.get('port')}${aRec.UserImagePath.replace('client', '')}`;
+                        aRec.OrnImagePath = utils.constructImageUrl(aRec.OrnImagePath); // aRec.OrnImagePath = `http://${app.get('domain')}:${app.get('port')}${aRec.OrnImagePath.replace('client', '')}`; 
+                        aRec.UserImagePath = utils.constructImageUrl(aRec.UserImagePath); // aRec.UserImagePath = `http://${app.get('domain')}:${app.get('port')}${aRec.UserImagePath.replace('client', '')}`;
                     });
                     cb(null, success);
                 },
@@ -1092,8 +1090,7 @@ module.exports = function(Pledgebook) {
                     reject(err);
                 } else {
                     _.each(result, (aRec, index) => {
-                        if(aRec.UserImagePath)
-                            aRec.UserImagePath = `http://${app.get('domain')}:${app.get('port')}${aRec.UserImagePath.replace('client', '')}`;
+                        aRec.UserImagePath = utils.constructImageUrl(aRec.UserImagePath); // aRec.UserImagePath = `http://${app.get('domain')}:${app.get('port')}${aRec.UserImagePath.replace('client', '')}`;
                     });                    
                     resolve(result);
                 }
@@ -1140,8 +1137,7 @@ module.exports = function(Pledgebook) {
                     reject(err);
                 } else {
                     _.each(result, (aRec, index) => {
-                        if(aRec.OrnImagePath)
-                            aRec.OrnImagePath = `http://${app.get('domain')}:${app.get('port')}${aRec.OrnImagePath.replace('client', '')}`;
+                        aRec.OrnImagePath = utils.constructImageUrl(aRec.OrnImagePath); // aRec.OrnImagePath = `http://${app.get('domain')}:${app.get('port')}${aRec.OrnImagePath.replace('client', '')}`;
                     })
                     resolve(result);
                 }

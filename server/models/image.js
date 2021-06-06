@@ -3,6 +3,7 @@ let app = require('../server.js');
 let sh = require('shorthash');
 var multer = require('multer');
 var fs = require('fs');
+let utils = require('../utils/commonUtils');
 
 module.exports = function(Image) {
 
@@ -213,7 +214,7 @@ module.exports = function(Image) {
             let serverFile = { localFile: '', originalName: '', mimeType: '' };
             let storage = multer.diskStorage({
                 destination: function (req, file, cb) {            
-                    var dirPath = Image.app.get('clientUploadsPath'); // checking and creating uploads folder where files will be uploaded
+                    var dirPath = __dirname + Image.app.get('clientUploadsPath'); // checking and creating uploads folder where files will be uploaded
                  if (!fs.existsSync(dirPath)) 
                         fs.mkdirSync(dirPath);
                     cb(null, dirPath + '/');
@@ -246,7 +247,9 @@ module.exports = function(Image) {
         return new Promise( (resolve, reject) => {
             let fileName = Date.now() + '.png';
             let dirPath = Image.app.get('clientUploadsPath');
-            let filePathAndName = dirPath + fileName;
+
+            let filePathAndName = __dirname + dirPath + fileName;
+
             fs.writeFile(filePathAndName, picData.pic, 'base64', function(err) {
                 if(err)
                     return reject(err);
@@ -316,7 +319,8 @@ module.exports = function(Image) {
                     error += err.message;
                     return reject(error);
                 } else {
-                    let url = `http://${app.get('domain')}:${app.get('port')}${result.path.replace('client', '')}`;
+                    // let url = `http://${app.get('domain')}:${app.get('port')}${result.path.replace('client', '')}`;
+                    let url = utils.constructImageUrl(result.path);
                     return resolve({id: result.id, url: url});
                 }
             });

@@ -81,9 +81,24 @@ const validateSSOAuthToken = (token) => {
     });
 }
 
+const constructImageUrl = (path) => {
+    console.log(process.env.NODE_ENV);
+    if(path) {
+        let url = `http://${app.get('domain')}:${app.get('port')}`;
+        if(process.env.NODE_ENV == 'development')
+            url += path.substring(path.indexOf('/uploads'), path.length);
+        else
+            url += path.substring(path.indexOf('/client'), path.length);
+        return url;
+    } else {
+        return null;
+    }
+}
+
 module.exports = {
     getStoreOwnerUserId,
     executeSqlQuery,
     getAppStatus,
-    validateSSOAuthToken
+    validateSSOAuthToken,
+    constructImageUrl
 }
