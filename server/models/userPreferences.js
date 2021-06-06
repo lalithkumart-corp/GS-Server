@@ -7,14 +7,16 @@ module.exports = function(UserPreference) {
 
     UserPreference.fetchUserPreferenceAPI = async (accessToken) => {
         try {
+            let userId = await utils.getStoreOwnerUserId(accessToken);
+            let res = await UserPreference._fetchFromDB(userId);
             return {
-                STATUS: 'success',
-                USER_PREFERENCES: {}
+                STATUS: 'SUCCESS',
+                USER_PREFERENCES: res
             }
         } catch(e) {
             logger.error(GsErrorCtrl.create({className: 'UserPreference', methodName: 'fetchUserPreferenceAPI', cause: e, message: 'Exception occured while fetching the user preferences'}));
             return {
-                STATUS: 'error',
+                STATUS: 'ERROR',
                 ERROR: e.message || '',
                 ERR: e
             }
@@ -41,6 +43,27 @@ module.exports = function(UserPreference) {
         http: {path: '/get-user-preferences', verb: 'get'},
         description: 'For fetching user preferences.',
     });
+
+    UserPreference._fetchFromDB = (userId) => {
+        return new Promise( (resolve, reject) => {
+            try {
+                UserPreference.find({where: {userId: userId}}, (err, res) => {
+                    if(err) {
+                        logger.error(GsErrorCtrl.create({className: 'UserPreference', methodName: '_fetchFromDB', cause: err, message: 'Exception in sql query execution'}));
+                        return resolve({});
+                    } else {
+                        if(res.length > 0)
+                            return resolve(res[0]);
+                        else
+                            return resolve({});
+                    }
+                });
+            } catch(e) {
+                logger.error(GsErrorCtrl.create({className: 'UserPreference', methodName: '_fetchFromDB', cause: e, message: 'Exception caught while fetching user preferences'}));
+                return {};
+            }
+        });
+    }
 
     UserPreference.updateAPI = async (params) => {
         try {

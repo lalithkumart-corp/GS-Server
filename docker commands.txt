@@ -1,11 +1,33 @@
+
+
+
+docker exec -it <container_name> bash
+
+docker logs <containerId>
+
 docker build -t <imagename>:<tag> .
 
 docker run -p 3005:3005 -d <imagename>:<tag>
 docker run --name <containerName> -e <env_variable_name>=<env_variable_value> -d <imagename>:<tag>
 
-docker logs <containerId>
+-------- DOCKER CONTAINER
+docker ps 
+docker ps -a
+docker stop <containerid>
+docker rm <conatinerid>
+
+-------- DOCKER IMAGES
+docker images
+docker images -a
+docker rmi <imageid>
 
 
+
+-------- DOCKER VOLUMES
+docker volume ls
+docker volume inspect <my-vol-name>
+
+-------- EXAMPLES
 EX: 0
 1. docker build -t gs-client:1 .
 2. docker run -d --name gs-client-contner --restart always -p 3000:3000 gs-client:1
@@ -34,7 +56,7 @@ docker run --name mysql-contr -e MYSQL_ROOT_PASSWORD=root -d --network my_networ
 docker run --name mysql-contr -p 3307:3306 -e MYSQL_ROOT_PASSWORD=root -d mysql:latest mysqld --default-authentication-plugin=mysql_native_password
 
 
-
+-------- MYSQL Useful Queries
 ALTER USER 'dockeruser'@'localhost' IDENTIFIED WITH mysql_native_password BY 'root'
 ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY 'root'
 
@@ -44,5 +66,4 @@ CREATE USER 'gsuser'@'localhost' IDENTIFIED WITH mysql_native_password BY 'gsuse
 GRANT ALL PRIVILEGES ON gsprod.* TO 'gsuser'@'%';
 GRANT ALL PRIVILEGES ON gsprod.* TO 'gsuser'@'localhost';
 flush privileges;
-
 
