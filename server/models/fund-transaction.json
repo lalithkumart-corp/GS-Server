@@ -1,0 +1,116 @@
+{
+    "name": "FundTransaction",
+    "base": "PersistedModel",
+    "idInjection": true,
+    "options": {
+      "validateUpsert": true,
+      "mysql": {
+        "schema": "developmentdb",
+        "table": "fund_transactions"
+      }
+    },
+    "properties": {
+      "id": {
+        "type": "number",
+        "id": true,
+        "mysql": {
+          "columnName": "Id",
+          "dataType": "int",
+          "dataLength": 22,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "transactionDate": {
+        "type": "date",
+        "mysql": {
+          "columnName": "transaction_date",
+          "dataType": "datetime",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "userId": {
+        "type": "number",
+        "required": true,
+        "mysql": {
+          "columnName": "user_id",
+          "dataType": "int",
+          "dataLength": 11,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "N"
+        }
+      },
+      "fundHouseId": {
+        "type": "number",
+        "mysql": {
+          "columnName": "fund_house_d",
+          "dataType": "int",    
+          "dataLength": 11,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "amount": {
+        "type": "number",
+        "mysql": {
+          "columnName": "amount",
+          "dataType": "int",    
+          "dataLength": 255,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "category": {
+        "type": "string",
+        "mysql": {
+          "columnName": "category",
+          "dataType": "varchar",
+          "dataLength": 255,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "remarks": {
+        "type": "string",
+        "mysql": {
+          "columnName": "remarks",
+          "dataType": "text",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "createdDate": {
+        "type": "date",
+        "mysql": {
+          "columnName": "created_date",
+          "dataType": "datetime",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "modifiedDate": {
+        "type": "date",
+        "mysql": {
+          "columnName": "modified_date",
+          "dataType": "datetime",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      }
+    },
+    "validations": [],
+    "relations": {},
+    "acls": [],
+    "methods": {}
+  }
+  

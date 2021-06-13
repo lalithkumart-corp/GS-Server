@@ -118,5 +118,9 @@
   "Alert": {
     "dataSource": "developmentdb",
     "public": true
+  },
+  "FundTransaction": {
+    "dataSource": "developmentdb",
+    "public": true
   }
 }
