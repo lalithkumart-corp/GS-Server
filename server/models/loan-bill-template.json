@@ -1,0 +1,52 @@
+{
+  "name": "LoanBillTemplate",
+  "plural": "LoanBillTemplates",
+  "base": "PersistedModel",
+  "idInjection": true,
+  "options": {
+    "validateUpsert": true,
+    "mysql": {
+      "schema": "developmentdb",
+      "table": "loan_bill_tempate_settings"
+    }
+  },
+  "properties": {
+    "templateId": {
+      "type": "number",
+      "id": true,
+      "mysql": {
+        "columnName": "template_id",
+        "dataType": "int",
+        "dataLength": 22,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "userId": {
+      "type": "number",
+      "mysql": {
+        "columnName": "user_id",
+        "dataType": "int",
+        "dataLength": 22,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "header": {
+      "type": "string",
+      "mysql": {
+        "columnName": "header",
+        "dataType": "text",
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    }
+  },
+  "validations": [],
+  "relations": {},
+  "acls": [],
+  "methods": {}
+}

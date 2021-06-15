@@ -34,11 +34,13 @@ module.exports = function(Gsuser) {
             let userPreferences = await Gsuser.app.models.UserPreference._fetchFromDB(userTblRow.ownerId || userTblRow.id);
             let status = await app.models.AppManager.updateValidityTime(userTblRow.id, userTblRow.ownerId);
             session.roleId = await app.models.GsRole.prototype.findUserRoleId(userTblRow.id);
+            let otherStuffs = await Gsuser.fetchOtherPromiseStuffs(userTblRow.ownerId || userTblRow.id);
             let response = {
                 session: session,
                 userPreferences: userPreferences,
                 applicationStatus: status,
-                setupActionsStatus: setupActionsStatus
+                setupActionsStatus: setupActionsStatus,
+                loanBillTemplateSettings: otherStuffs.loanBillTemplateSettings
             }
             return response;
         } catch(e) {
@@ -562,6 +564,33 @@ module.exports = function(Gsuser) {
                 billSeriesAndNumberUpdated: false
             }
         }
+    }
+
+    Gsuser.fetchOtherPromiseStuffs = (ownerUserId) => {
+        return new Promise((resolve, reject) => {
+
+            let fetchLoanBillTemplateSettings = new Promise(async (resolve, reject) => {
+                let row = await app.models.LoanBillTemplate.prototype._getSettingsApi({_userId: ownerUserId});
+                return resolve(row);
+            });
+    
+            Promise.all([fetchLoanBillTemplateSettings]).then(
+                (results) => {
+                    let obj = {
+                        loanBillTemplateSettings: results[0]
+                    }
+                    resolve(obj);
+                },
+                (error) => {
+                    reject(error);
+                }
+            )
+            .catch(
+                (exception) => {
+                    reject(exception);
+                }
+            );
+        });
     }
 
     Gsuser._find = (userId) => {

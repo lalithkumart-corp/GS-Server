@@ -122,5 +122,9 @@
   "FundTransaction": {
     "dataSource": "developmentdb",
     "public": true
+  },
+  "LoanBillTemplate": {
+    "dataSource": "developmentdb",
+    "public": true
   }
 }

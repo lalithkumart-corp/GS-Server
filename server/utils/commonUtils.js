@@ -82,7 +82,6 @@ const validateSSOAuthToken = (token) => {
 }
 
 const constructImageUrl = (path) => {
-    console.log(process.env.NODE_ENV);
     if(path) {
         let url = `http://${app.get('domain')}`;
         if(process.env.NODE_ENV == 'development')
