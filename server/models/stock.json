@@ -1,19 +1,16 @@
 {
-    "name": "Stock",
-    "base": "PersistedModel",
-    "options": {
-      "validateUpsert": true,
-      "mysql": {
-        "schema": "developmentdb",
-        "table": "stock"
-      }
-    },
-    "properties": {
-     
-    },
-    "validations": [],
-    "relations": {},
-    "acls": [],
-    "methods": {}
-  }
-  
+  "name": "Stock",
+  "base": "PersistedModel",
+  "options": {
+    "validateUpsert": true,
+    "mysql": {
+      "schema": "developmentdb",
+      "table": "stock"
+    }
+  },
+  "properties": {},
+  "validations": [],
+  "relations": {},
+  "acls": [],
+  "methods": {}
+}

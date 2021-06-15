@@ -1,96 +1,95 @@
 {
-    "name": "UserPreference",
-    "base": "PersistedModel",
-    "idInjection": false,
-    "options": {
-      "validateUpsert": true
-    },
-    "mysql": {
-      "schema": "developmentdb",
-      "table": "user_preferences"
-    },
-    "properties": {
-      "id": {
-        "type": "number",
-        "mysql": {
-          "columnName": "id",
-          "dataType": "int",
-          "dataLength": 11,
-          "dataPrecision": null,
-          "dataScale": null,
-          "nullable": "Y"
-        }
-      },
-      "userId": {
-        "type": "number",      
-        "mysql": {
-          "columnName": "user_id",
-          "dataType": "int",
-          "dataLength": "11",
-          "dataPrecision": null,
-          "dataScale": null,
-          "nullable": "N"
-        }
-      },
-      "bill_create_place_default": {
-        "type": "string",
-        "mysql": {
-          "columnName": "bill_create_place_default",
-          "dataType": "varchar",
-          "dataLength": 255,
-          "dataPrecision": null,
-          "dataScale": null,
-          "nullable": "Y"
-        }
-      },
-      "bill_create_city_default": {
-        "type": "string",
-        "mysql": {
-          "columnName": "bill_create_city_default",
-          "dataType": "varchar",
-          "dataLength": 255,
-          "dataPrecision": null,
-          "dataScale": null,
-          "nullable": "Y"
-        }
-      },
-      "bill_create_pincode_default": {
-        "type": "string",
-        "mysql": {
-          "columnName": "bill_create_pincode_default",
-          "dataType": "varchar",
-          "dataLength": 255,
-          "dataPrecision": null,
-          "dataScale": null,
-          "nullable": "Y"
-        }
-      },
-      "auto_print_receipt": {
-        "type": "string",
-        "mysql": {
-          "columnName": "auto_print_receipt",
-          "dataType": "varchar",
-          "dataLength": 255,
-          "dataPrecision": null,
-          "dataScale": null,
-          "nullable": "Y"
-        }
-      },
-      "loan_bill_print_model": {
-        "type": "string",
-        "mysql": {
-          "columnName": "loan_bill_print_model",
-          "dataType": "varchar",
-          "dataLength": 255,
-          "dataPrecision": null,
-          "dataScale": null,
-          "nullable": "Y"
-        }
+  "name": "UserPreference",
+  "base": "PersistedModel",
+  "idInjection": false,
+  "options": {
+    "validateUpsert": true
+  },
+  "mysql": {
+    "schema": "developmentdb",
+    "table": "user_preferences"
+  },
+  "properties": {
+    "id": {
+      "type": "number",
+      "mysql": {
+        "columnName": "id",
+        "dataType": "int",
+        "dataLength": 11,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
       }
     },
-    "validations": [],
-    "relations": {},
-    "acls": [],
-    "methods": {}
-  }
-  
+    "userId": {
+      "type": "number",
+      "mysql": {
+        "columnName": "user_id",
+        "dataType": "int",
+        "dataLength": "11",
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "N"
+      }
+    },
+    "bill_create_place_default": {
+      "type": "string",
+      "mysql": {
+        "columnName": "bill_create_place_default",
+        "dataType": "varchar",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "bill_create_city_default": {
+      "type": "string",
+      "mysql": {
+        "columnName": "bill_create_city_default",
+        "dataType": "varchar",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "bill_create_pincode_default": {
+      "type": "string",
+      "mysql": {
+        "columnName": "bill_create_pincode_default",
+        "dataType": "varchar",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "auto_print_receipt": {
+      "type": "string",
+      "mysql": {
+        "columnName": "auto_print_receipt",
+        "dataType": "varchar",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "loan_bill_print_model": {
+      "type": "string",
+      "mysql": {
+        "columnName": "loan_bill_print_model",
+        "dataType": "varchar",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    }
+  },
+  "validations": [],
+  "relations": {},
+  "acls": [],
+  "methods": {}
+}

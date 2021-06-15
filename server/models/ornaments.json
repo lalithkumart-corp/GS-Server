@@ -22,7 +22,7 @@
       }
     },
     "userId": {
-      "type": "number",      
+      "type": "number",
       "mysql": {
         "columnName": "user_id",
         "dataType": "int",

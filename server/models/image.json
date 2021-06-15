@@ -85,7 +85,7 @@
       "length": 500,
       "mysql": {
         "columnName": "Optional",
-        "dataType": "text",        
+        "dataType": "text",
         "dataPrecision": null,
         "dataScale": null,
         "nullable": "Y"

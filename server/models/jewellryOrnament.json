@@ -1,132 +1,131 @@
 {
-    "name": "JewellryOrnament",
-    "base": "PersistedModel",
-    "options": {
-      "validateUpsert": true,
+  "name": "JewellryOrnament",
+  "base": "PersistedModel",
+  "options": {
+    "validateUpsert": true,
+    "mysql": {
+      "schema": "developmentdb",
+      "table": "orn_list_jewellery"
+    }
+  },
+  "properties": {
+    "id": {
+      "type": "number",
       "mysql": {
-        "schema": "developmentdb",
-        "table": "orn_list_jewellery"
+        "columnName": "id",
+        "dataType": "int",
+        "dataLength": 11,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
       }
     },
-    "properties": {
-        "id": {
-            "type": "number",
-            "mysql": {
-              "columnName": "id",
-              "dataType": "int",
-              "dataLength": 11,
-              "dataPrecision": null,
-              "dataScale": null,
-              "nullable": "Y"
-            }
-        },
-        "userId": {
-            "type": "number",
-            "required": true,      
-            "mysql": {
-                "columnName": "user_id",
-                "dataType": "int",
-                "dataLength": "11",
-                "dataPrecision": null,
-                "dataScale": null,
-                "nullable": "N"
-            }
-        },
-        "metal": {
-            "type": "string",
-            "required": true,      
-            "mysql": {
-                "columnName": "metal",
-                "dataType": "varchar",
-                "dataLength": "11",
-                "dataPrecision": null,
-                "dataScale": null,
-                "nullable": "N"
-            }
-        },
-        "itemName": {
-            "type": "string",
-            "required": true, 
-            "mysql": {
-                "columnName": "item_name",
-                "dataType": "varchar",
-                "dataLength": "45",
-                "dataPrecision": null,
-                "dataScale": null,
-                "nullable": "N"
-            }
-        },
-        "itemCategory": {
-            "type": "string",
-            "required": false,
-            "mysql": {
-                "columnName": "item_category",
-                "dataType": "varchar",
-                "dataLength": "45",
-                "dataPrecision": null,
-                "dataScale": null
-            }
-        },
-        "itemSubCategory": {
-            "type": "string",
-            "required": false,      
-            "mysql": {
-                "columnName": "item_subcategory",
-                "dataType": "varchar",
-                "dataLength": "45",
-                "dataPrecision": null,
-                "dataScale": null
-            }
-        },
-        "dimension": {
-            "type": "string", 
-            "required": false,     
-            "mysql": {
-                "columnName": "dimension",
-                "dataType": "varchar",
-                "dataLength": "45",
-                "dataPrecision": null,
-                "dataScale": null
-            }
-        },
-        "hashKey": {
-            "type": "string", 
-            "required": true,     
-            "mysql": {
-                "columnName": "hashkey",
-                "dataType": "varchar",
-                "dataLength": "45",
-                "dataPrecision": null,
-                "dataScale": null,
-                "nullable": "N"
-            }
-        },
-        "code": {
-            "type": "string", 
-            "required": false,
-            "mysql": {
-                "columnName": "code",
-                "dataType": "varchar",
-                "dataLength": "45",
-                "dataPrecision": null,
-                "dataScale": null
-            }
-        },
-        "codeId": {
-            "type": "number", 
-            "required": false,
-            "mysql": {
-                "columnName": "code_id",
-                "dataType": "int",
-                "dataLength": "11",
-                "dataPrecision": null,
-                "dataScale": null
-            }
-        }
+    "userId": {
+      "type": "number",
+      "required": true,
+      "mysql": {
+        "columnName": "user_id",
+        "dataType": "int",
+        "dataLength": "11",
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "N"
+      }
     },
-    "validations": [],
-    "relations": {},
-    "acls": [],
-    "methods": {}
-  }
-  
+    "metal": {
+      "type": "string",
+      "required": true,
+      "mysql": {
+        "columnName": "metal",
+        "dataType": "varchar",
+        "dataLength": "11",
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "N"
+      }
+    },
+    "itemName": {
+      "type": "string",
+      "required": true,
+      "mysql": {
+        "columnName": "item_name",
+        "dataType": "varchar",
+        "dataLength": "45",
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "N"
+      }
+    },
+    "itemCategory": {
+      "type": "string",
+      "required": false,
+      "mysql": {
+        "columnName": "item_category",
+        "dataType": "varchar",
+        "dataLength": "45",
+        "dataPrecision": null,
+        "dataScale": null
+      }
+    },
+    "itemSubCategory": {
+      "type": "string",
+      "required": false,
+      "mysql": {
+        "columnName": "item_subcategory",
+        "dataType": "varchar",
+        "dataLength": "45",
+        "dataPrecision": null,
+        "dataScale": null
+      }
+    },
+    "dimension": {
+      "type": "string",
+      "required": false,
+      "mysql": {
+        "columnName": "dimension",
+        "dataType": "varchar",
+        "dataLength": "45",
+        "dataPrecision": null,
+        "dataScale": null
+      }
+    },
+    "hashKey": {
+      "type": "string",
+      "required": true,
+      "mysql": {
+        "columnName": "hashkey",
+        "dataType": "varchar",
+        "dataLength": "45",
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "N"
+      }
+    },
+    "code": {
+      "type": "string",
+      "required": false,
+      "mysql": {
+        "columnName": "code",
+        "dataType": "varchar",
+        "dataLength": "45",
+        "dataPrecision": null,
+        "dataScale": null
+      }
+    },
+    "codeId": {
+      "type": "number",
+      "required": false,
+      "mysql": {
+        "columnName": "code_id",
+        "dataType": "int",
+        "dataLength": "11",
+        "dataPrecision": null,
+        "dataScale": null
+      }
+    }
+  },
+  "validations": [],
+  "relations": {},
+  "acls": [],
+  "methods": {}
+}
