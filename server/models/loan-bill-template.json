@@ -15,7 +15,7 @@
       "type": "number",
       "id": true,
       "mysql": {
-        "columnName": "template_id",
+        "columnName": "id",
         "dataType": "int",
         "dataLength": 22,
         "dataPrecision": null,
