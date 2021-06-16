@@ -88,7 +88,7 @@ const constructImageUrl = (path) => {
             url += `:${app.get('externalPort')}${path.substring(path.indexOf('/uploads'), path.length)}`;
         else
             url += path.substring(path.indexOf('/client'), path.length);
-        console.log('ConstructUrl', url);
+        console.log('ConstructUrl', app.get('externalProtocol'), app.get('externalDomain'), url);
         return url;
     } else {
         return null;
