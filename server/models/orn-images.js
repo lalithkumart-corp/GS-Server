@@ -1,6 +1,7 @@
 'use strict';
 var fs = require('fs');
 let app = require('../server.js');
+let utils = require('../utils/commonUtils');
 
 module.exports = function(OrnImage) {
     OrnImage.saveImage = (picture) => {

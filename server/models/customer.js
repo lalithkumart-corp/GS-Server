@@ -359,7 +359,7 @@ module.exports = function(Customer) {
             obj.userImageStorageMode = aRes.userImageStorageMode;
             
             if(obj.userImagePath)
-                obj.userImagePath = `http://${app.get('domain')}:${app.get('port')}${aRes.userImagePath.replace('client', '')}`;
+                obj.userImagePath = utils.constructImageUrl(obj.userImagePath); //`http://${app.get('domain')}:${app.get('port')}${aRes.userImagePath.replace('client', '')}`;
 
             obj.mobile = ''+aRes.mobile;
             obj.pincode = ''+aRes.pincode;

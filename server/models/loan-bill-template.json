@@ -43,6 +43,16 @@
         "dataScale": null,
         "nullable": "Y"
       }
+    },
+    "bodyTemplate": {
+      "type": "number",
+      "mysql": {
+        "columnName": "body_template",
+        "dataType": "text",
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
     }
   },
   "validations": [],

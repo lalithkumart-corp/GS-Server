@@ -215,7 +215,7 @@ module.exports = function(Image) {
             let storage = multer.diskStorage({
                 destination: function (req, file, cb) {            
                     var dirPath = __dirname + Image.app.get('clientUploadsPath'); // checking and creating uploads folder where files will be uploaded
-                 if (!fs.existsSync(dirPath)) 
+                 if (!fs.existsSync(dirPath))
                         fs.mkdirSync(dirPath);
                     cb(null, dirPath + '/');
                 },
@@ -236,7 +236,7 @@ module.exports = function(Image) {
                     // An error occurred when uploading
                     reject(err);
                 } else {
-                    let path = Image.app.get('clientUploadsPath');
+                    let path = __dirname + Image.app.get('clientUploadsPath');
                     resolve({path: path, options: serverFile});
                 }
             });

@@ -22,7 +22,7 @@ module.exports = function(LoanBillTemplate) {
         http: {path: '/get-settings', verb: 'get'},
         description: 'Loan Bill Header Setting.',
     });
-    LoanBillTemplate.remoteMethod('updateHeaderSettingsApi', {
+    LoanBillTemplate.remoteMethod('updateSettingsApi', {
         accepts: {
             arg: 'apiParams',
             type: 'object',
@@ -40,8 +40,21 @@ module.exports = function(LoanBillTemplate) {
                 source: 'body'
             }
         },
-        http: {path: '/update-header-settings', verb: 'post'},
-        description: 'Loan Bill Header Setting.',
+        http: {path: '/update-settings', verb: 'post'},
+        description: 'Loan Bill Setting.',
+    });
+
+    LoanBillTemplate.remoteMethod('getAvlLoanBillTemplatesApi', {
+        accepts: [],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/fetch-avl-loan-bill-templates', verb: 'get'},
+        description: 'Get ALL avl Loan Bill Templates.',
     });
 
     LoanBillTemplate.getSettingsApi = (accessToken, cb) => {
@@ -74,8 +87,8 @@ module.exports = function(LoanBillTemplate) {
         }
     }
 
-    LoanBillTemplate.updateHeaderSettingsApi = (apiParams, cb) => {
-        LoanBillTemplate._updateHeaderSettingsApi(apiParams).then(
+    LoanBillTemplate.updateSettingsApi = (apiParams, cb) => {
+        LoanBillTemplate._updateSettingsApi(apiParams).then(
             (resp) => {
                 if(resp)
                     cb(null, {STATUS: 'SUCCESS', RESP: resp});
@@ -89,12 +102,12 @@ module.exports = function(LoanBillTemplate) {
         );
     };
 
-    LoanBillTemplate._updateHeaderSettingsApi = async (apiParams) => {
+    LoanBillTemplate._updateSettingsApi = async (apiParams) => {
         try {
             apiParams._userId = await utils.getStoreOwnerUserId(apiParams.accessToken);
             let records = await LoanBillTemplate.find({where: {userId: apiParams._userId}});
             if(records && records.length > 0)
-                await LoanBillTemplate.updateAll({userId: apiParams._userId}, {header: JSON.stringify(apiParams.headerSettings)});
+                await LoanBillTemplate.updateAll({userId: apiParams._userId}, {header: JSON.stringify(apiParams.headerSettings), bodyTemplate: apiParams.bodyTemplateId});
             else
                 await LoanBillTemplate.create({userId: apiParams._userId, header: JSON.stringify(apiParams.headerSettings)});
             return true;
@@ -103,4 +116,32 @@ module.exports = function(LoanBillTemplate) {
             throw e;
         }
     };
+
+    LoanBillTemplate.getAvlLoanBillTemplatesApi = (cb) => {
+        LoanBillTemplate._getAvlLoanBillTemplatesApi().then(
+            (resp) => {
+                if(resp)
+                    cb(null, {STATUS: 'SUCCESS', RESP: resp});
+                else
+                    cb(null, {STATUS: 'ERROR', RESP: resp});
+            }
+        ).catch(
+            (e)=> {
+                cb({STATUS: 'EXCEPTION', ERR: e}, null);
+            }
+        );
+    }
+
+    LoanBillTemplate._getAvlLoanBillTemplatesApi = () => {
+        return new Promise((resolve, reject) => {
+            let sql = 'SELECT * FROM loan_bill_avl_template_list';
+            LoanBillTemplate.dataSource.connector.query(sql, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(res);
+                }
+            });
+        });
+    }
 };
