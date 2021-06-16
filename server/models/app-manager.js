@@ -201,7 +201,7 @@ module.exports = function(ApplicationManager) {
                             let validityLastDate = moment(new Date(date));
                             let todayDate = moment();
                             let diff = validityLastDate.diff(todayDate, 'days');
-                            if(diff == 0) {
+                            if(diff <= 0) {
                                 let res = await ApplicationManager.disableUserApplication(id);
                                 return resolve(false);
                             }
