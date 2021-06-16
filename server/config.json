@@ -1,9 +1,12 @@
 {
   "restApiRoot": "/api",
   "domain": "localhost",
+  "externalDomain": "localhost",
   "host": "0.0.0.0",
   "protocol": "http",
+  "externalProtocol": "http",
   "port": 3003,
+  "externalPort": 3003,
   "remoting": {
     "context": false,
     "rest": {

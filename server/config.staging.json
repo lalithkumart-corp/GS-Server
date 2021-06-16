@@ -1,9 +1,12 @@
 {
     "restApiRoot": "/api",
-    "domain": "ec2-54-146-87-76.compute-1.amazonaws.com",
+    "domain": "localhost",
+    "externalDomain": "ec2-54-146-87-76.compute-1.amazonaws.com",
     "host": "0.0.0.0",
-    "protocol": "https",
-    "port": 443,
+    "protocol": "http",
+    "externalProtocol": "http",
+    "port": 3003,
+    "externalPort": 443,
     "remoting": {
       "context": false,
       "rest": {
