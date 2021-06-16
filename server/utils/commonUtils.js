@@ -83,7 +83,7 @@ const validateSSOAuthToken = (token) => {
 
 const constructImageUrl = (path) => {
     if(path) {
-        let url = `http://${app.get('domain')}`;
+        let url = `${app.get('protocol')}://${app.get('domain')}`;
         if(process.env.NODE_ENV == 'development')
             url += `:${app.get('port')}${path.substring(path.indexOf('/uploads'), path.length)}`;
         else

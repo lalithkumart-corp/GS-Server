@@ -1,8 +1,9 @@
 {
     "restApiRoot": "/api",
-    "domain": "trsoftware.in",
+    "domain": "ec2-54-146-87-76.compute-1.amazonaws.com",
     "host": "0.0.0.0",
-    "port": 3003,
+    "protocol": "https",
+    "port": 443,
     "remoting": {
       "context": false,
       "rest": {

@@ -2,6 +2,7 @@
   "restApiRoot": "/api",
   "domain": "localhost",
   "host": "0.0.0.0",
+  "protocol": "http",
   "port": 3003,
   "remoting": {
     "context": false,
