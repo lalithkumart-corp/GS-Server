@@ -83,11 +83,12 @@ const validateSSOAuthToken = (token) => {
 
 const constructImageUrl = (path) => {
     if(path) {
-        let url = `${app.get('protocol')}://${app.get('domain')}`;
+        let url = `${app.get('externalProtocol')}://${app.get('externalDomain')}`;
         if(process.env.NODE_ENV == 'development')
-            url += `:${app.get('port')}${path.substring(path.indexOf('/uploads'), path.length)}`;
+            url += `:${app.get('externalPort')}${path.substring(path.indexOf('/uploads'), path.length)}`;
         else
             url += path.substring(path.indexOf('/client'), path.length);
+        console.log('ConstructUrl', url);
         return url;
     } else {
         return null;
