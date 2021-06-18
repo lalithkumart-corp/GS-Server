@@ -5,7 +5,7 @@ let MG = require('../myGlobals');
 
 module.exports = (app) => {
     checkForNewNotifications = () => {
-        let sql = `SELECT * FROM Alerts WHERE archived=0 AND trigger_time BETWEEN (UTC_TIMESTAMP()- INTERVAL 5 SECOND) AND UTC_TIMESTAMP()`;
+        let sql = `SELECT * FROM alerts WHERE archived=0 AND trigger_time BETWEEN (UTC_TIMESTAMP()- INTERVAL 5 SECOND) AND UTC_TIMESTAMP()`;
         app.models.Alert.dataSource.connector.query(sql, (err, res) => {
             if(err) {
                 logger.error(GsErrorCtrl.create({className: 'Alert', methodName: 'checkForNewNotifications', cause: err, message: 'Exceptoin from query', appendChildMsg: true}));
