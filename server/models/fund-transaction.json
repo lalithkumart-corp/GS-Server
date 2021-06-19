@@ -55,10 +55,21 @@
           "nullable": "Y"
         }
       },
-      "amount": {
+      "cashIn": {
         "type": "number",
         "mysql": {
-          "columnName": "amount",
+          "columnName": "cash_in",
+          "dataType": "int",    
+          "dataLength": 255,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "cashOut": {
+        "type": "number",
+        "mysql": {
+          "columnName": "cash_out",
           "dataType": "int",    
           "dataLength": 255,
           "dataPrecision": null,

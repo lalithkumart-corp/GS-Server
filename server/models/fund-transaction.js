@@ -82,6 +82,35 @@ module.exports = function(FundTransaction) {
         description: 'For fetching fund transactions.',
     });
 
+    FundTransaction.remoteMethod('fetchCategorySuggestionsApi', {
+        accepts: [
+            {
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let accessToken = req && req.query.access_token;
+                    return accessToken;
+                },
+                description: 'Arguments goes here',
+            },
+            {
+                arg: 'mode', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let mode = req && req.query.mode;
+                    return mode;
+                },
+                description: 'Arguments goes here',
+            }],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            },
+        },
+        http: {path: '/fetch-category-suggestions', verb: 'get'},
+        description: 'For fetching fund transactions.',
+    });
+
     FundTransaction.cashInApi = (apiParams, cb) => {
         FundTransaction._cashInApi(apiParams).then((resp) => {
             if(resp)
@@ -96,7 +125,7 @@ module.exports = function(FundTransaction) {
     FundTransaction._cashInApi = (apiParams) => {
         return new Promise( async (resolve, reject) => {
             let userId =await  utils.getStoreOwnerUserId(apiParams.accessToken);
-            let queryValues = [userId, FUND_HOUSE_ID_MAP[apiParams.fundHouse], dateformat(apiParams.transactionDate, 'yyyy-mm-dd HH:MM:ss'), apiParams.amount, apiParams.category, apiParams.remarks];
+            let queryValues = [userId, FUND_HOUSE_ID_MAP[apiParams.fundHouse], dateformat(apiParams.transactionDate, 'yyyy-mm-dd HH:MM:ss'), apiParams.amount, 0, apiParams.category, apiParams.remarks];
             FundTransaction.dataSource.connector.query(SQL.CASH_TRANSACTION, queryValues, (err, res) => {
                 if(err){
                     reject(err);
@@ -121,7 +150,7 @@ module.exports = function(FundTransaction) {
     FundTransaction._cashOutApi = (apiParams) => {
         return new Promise( async (resolve, reject) => {
             let userId =await  utils.getStoreOwnerUserId(apiParams.accessToken);
-            let queryValues = [userId, FUND_HOUSE_ID_MAP[apiParams.fundHouse], dateformat(apiParams.transactionDate, 'yyyy-mm-dd HH:MM:ss'), (-apiParams.amount), apiParams.category, apiParams.remarks];
+            let queryValues = [userId, FUND_HOUSE_ID_MAP[apiParams.fundHouse], dateformat(apiParams.transactionDate, 'yyyy-mm-dd HH:MM:ss'), 0, apiParams.amount, apiParams.category, apiParams.remarks];
             FundTransaction.dataSource.connector.query(SQL.CASH_TRANSACTION, queryValues, (err, res) => {
                 if(err){
                     reject(err);
@@ -158,7 +187,7 @@ module.exports = function(FundTransaction) {
                 if(params.category)
                     filters.push(`category like '${params.category}%'`);
                 if(params.startDate && params.endDate)
-                    filters.push(`(created_date BETWEEN '${params.startDate}' AND '${params.endDate}')`);
+                    filters.push(`(transaction_date BETWEEN '${params.startDate}' AND '${params.endDate}')`);
                 
                 let orderPart = '';
                 if(params.orderCol && params.orderBy) {
@@ -182,7 +211,7 @@ module.exports = function(FundTransaction) {
                 if(params._userId)
                     filters.push(`user_id=${params._userId}`);
                 if(params.startDate && params.endDate)
-                    filters.push(`(created_date BETWEEN '${params.startDate}' AND '${params.endDate}')`);
+                    filters.push(`(transaction_date BETWEEN '${params.startDate}' AND '${params.endDate}')`);
                 if(filters.length > 0)
                     sql += ` WHERE ${filters.join(` AND `)}`;
                 break;
@@ -193,8 +222,8 @@ module.exports = function(FundTransaction) {
     FundTransaction._fetchTransactionsApi = (accessToken, params) => {
         return new Promise(async (resolve, reject) => {
             params._userId =await  utils.getStoreOwnerUserId(accessToken);
-            console.log(params.startDate); // 2021-05-14T18:30:00.000Z
-            console.log(dateformat(params.startDate, 'yyyy-mm-dd HH:MM:ss')); // 2021-05-15 00:00:00
+            // console.log(params.startDate); // 2021-05-14T18:30:00.000Z
+            // console.log(dateformat(params.startDate, 'yyyy-mm-dd HH:MM:ss')); // 2021-05-15 00:00:00
             
             
             let sql = SQL.TRANSACTION_LIST;
@@ -245,7 +274,9 @@ module.exports = function(FundTransaction) {
         let collections = {
             count: collRes.length,
             fundHouses: [],
-            categories: []
+            categories: [],
+            totalCashIn: 0,
+            totalCashOut: 0,
         };
         
         if(collections.count > 0) {
@@ -254,14 +285,56 @@ module.exports = function(FundTransaction) {
                     collections.fundHouses.push(aColl.name);
                 if(aColl.category && collections.categories.indexOf(aColl.category) == -1)
                     collections.categories.push(aColl.category);
+                if(aColl.cash_in)
+                    collections.totalCashIn += aColl.cash_in;
+                if(aColl.cash_out)
+                    collections.totalCashOut += aColl.cash_out;
             });
         }
         return collections;
     }
+
+    FundTransaction.fetchCategorySuggestionsApi = (accessToken, mode, cb) => {
+        FundTransaction._fetchCategorySuggestionsApi(accessToken, mode).then(
+            (resp) => {
+                if(resp)
+                    cb(null, {STATUS: 'SUCCESS', RESP: resp});
+                else
+                    cb(null, {STATUS: 'ERROR', RESP: resp});
+            }
+        ).catch(
+            (e)=> {
+                cb({STATUS: 'EXCEPTION', ERR: e}, null);
+            }
+        );
+    }
+
+    FundTransaction._fetchCategorySuggestionsApi = (accessToken, mode) => {
+        return new Promise(async (resolve, reject) => {
+            let userId = await utils.getStoreOwnerUserId(accessToken);
+            let amountCondition = 'cash_in > 0';
+            if(mode == 'cash-out')
+                amountCondition = 'cash_out > 0'
+            let sql = SQL.CATEGORY_LIST;
+            sql += ` WHERE user_id=${userId} AND ${amountCondition}`;
+            FundTransaction.dataSource.connector.query(sql, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    let arr = [];
+                    _.each(res, (anObj, index) => {
+                        if(anObj.category && arr.indexOf(anObj.category) == -1)
+                            arr.push(anObj.category);
+                    });
+                    return resolve(arr);
+                }
+            });
+        });
+    }
 }
 
 let SQL = {
-    CASH_TRANSACTION: `INSERT INTO fund_transactions (user_id, fund_house_id, transaction_date, amount, category, remarks) VALUES (?,?,?,?,?,?)`,
+    CASH_TRANSACTION: `INSERT INTO fund_transactions (user_id, fund_house_id, transaction_date, cash_in, cash_out, category, remarks) VALUES (?,?,?,?,?,?,?)`,
     TRANSACTION_LIST: `SELECT 
                             fund_houses.name AS fund_house_name,
                             fund_transactions.*
@@ -271,9 +344,12 @@ let SQL = {
                             fund_houses ON fund_transactions.fund_house_id = fund_houses.id`,
     TRANSACTION_LIST_COLLECTIONS: `SELECT
                                         category,
-                                        fund_houses.name
+                                        fund_houses.name,
+                                        cash_in,
+                                        cash_out
                                     FROM
                                         fund_transactions
                                             LEFT JOIN
                                         fund_houses ON fund_transactions.fund_house_id = fund_houses.id`,
+    CATEGORY_LIST: `SELECT DISTINCT category from fund_transactions`,
 }

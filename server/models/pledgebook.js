@@ -56,8 +56,10 @@ module.exports = function(Pledgebook) {
             .then(
                 (success) => {
                     _.each(success.results, (aRec, index) => {
-                        aRec.OrnImagePath = utils.constructImageUrl(aRec.OrnImagePath); // aRec.OrnImagePath = `http://${app.get('domain')}:${app.get('port')}${aRec.OrnImagePath.replace('client', '')}`; 
-                        aRec.UserImagePath = utils.constructImageUrl(aRec.UserImagePath); // aRec.UserImagePath = `http://${app.get('domain')}:${app.get('port')}${aRec.UserImagePath.replace('client', '')}`;
+                        if(aRec && typeof aRec == 'object') {
+                            aRec.OrnImagePath = utils.constructImageUrl(aRec.OrnImagePath); // aRec.OrnImagePath = `http://${app.get('domain')}:${app.get('port')}${aRec.OrnImagePath.replace('client', '')}`; 
+                            aRec.UserImagePath = utils.constructImageUrl(aRec.UserImagePath); // aRec.UserImagePath = `http://${app.get('domain')}:${app.get('port')}${aRec.UserImagePath.replace('client', '')}`;
+                        }
                     });
                     cb(null, success);
                 },
@@ -1137,7 +1139,8 @@ module.exports = function(Pledgebook) {
                     reject(err);
                 } else {
                     _.each(result, (aRec, index) => {
-                        aRec.OrnImagePath = utils.constructImageUrl(aRec.OrnImagePath); // aRec.OrnImagePath = `http://${app.get('domain')}:${app.get('port')}${aRec.OrnImagePath.replace('client', '')}`;
+                        if(aRec && typeof aRec == 'object')
+                            aRec.OrnImagePath = utils.constructImageUrl(aRec.OrnImagePath); // aRec.OrnImagePath = `http://${app.get('domain')}:${app.get('port')}${aRec.OrnImagePath.replace('client', '')}`;
                     })
                     resolve(result);
                 }
