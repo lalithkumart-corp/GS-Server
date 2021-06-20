@@ -44,10 +44,10 @@
           "nullable": "N"
         }
       },
-      "fundHouseId": {
+      "accountId": {
         "type": "number",
         "mysql": {
-          "columnName": "fund_house_d",
+          "columnName": "account_id",
           "dataType": "int",    
           "dataLength": 11,
           "dataPrecision": null,

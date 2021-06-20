@@ -443,6 +443,7 @@ module.exports = function(Pledgebook) {
 
                 await Pledgebook.saveBillDetails(parsedArg, pledgebookTableName); //Save ImageId, CustomerID, ORNAMENT and other Bill details in Pledgebook
                 await Pledgebook.app.models.PledgebookSettings.updateLastBillDetail(parsedArg);
+                Pledgebook.app.models.FundTransaction.prototype.add({parsedArg, pledgebookTableName}, 'pledgebook');
                 return {STATUS: 'SUCCESS', STATUS_MSG: 'Successfully inserted new bill'};
             } else {
                 throw validation.errors;
@@ -578,6 +579,7 @@ module.exports = function(Pledgebook) {
             params._pledgebookClosedBillTableName = await Pledgebook.getPledgebookClosedTableName(params._userId);
             params._status = 0;
             await Pledgebook.updatePledgebookBillStatus(params);
+            Pledgebook.app.models.FundTransaction.prototype.add(params, 'redeem');
             return {STATUS: 'success', RESPONSE: {}, STATUS_MSG: ''};
         } catch(e) {
             console.log(e);
@@ -639,6 +641,7 @@ module.exports = function(Pledgebook) {
                     return reject(err);
                 } else {
                     if(result.affectedRows > 0) {
+                        Pledgebook.app.models.FundTransaction.remove(params, 'redeem');
                         let query = Pledgebook.getQuery('reopen-bill', params, params._pledgebookClosedBillTableName);
                         Pledgebook.dataSource.connector.query(query, (err, result) => {
                             if(err) {
@@ -836,7 +839,7 @@ module.exports = function(Pledgebook) {
                                     interest_amt, actual_estimated_amt, 
                                     discount_amt, paid_amt, 
                                     handed_over_to_person) 
-                                VALUES (${(+new Date())}, '${aRowObj.pledgeBookUID}', '${aRowObj.billNo}', '${aRowObj.pledgedDate}', '${aRowObj.closedDate}',
+                                VALUES (${aRowObj.redeemUID}, '${aRowObj.pledgeBookUID}', '${aRowObj.billNo}', '${aRowObj.pledgedDate}', '${aRowObj.closedDate}',
                                     '${aRowObj.principalAmt}', '${aRowObj.noOfMonth}', '${aRowObj.roi}', '${aRowObj.interestPerMonth}',
                                     '${aRowObj.interestValue}', '${aRowObj.estimatedAmount}', '${aRowObj.discountValue}', '${aRowObj.paidAmount}',
                                     '${aRowObj.handedTo}');`;
@@ -1195,6 +1198,7 @@ module.exports = function(Pledgebook) {
             // };
 
             await Pledgebook.updateBillDetails(parsedArg, pledgebookTableName); //Save ImageId, CustomerID, ORNAMENT and other Bill details in Pledgebook                
+            Pledgebook.app.models.FundTransaction.prototype.add({parsedArg, pledgebookTableName}, 'pledgebook');
             return {STATUS: 'SUCCESS', STATUS_MSG: 'Successfully Updated the bill'};
         } catch(e) {
             return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
