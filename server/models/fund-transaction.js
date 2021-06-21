@@ -213,7 +213,7 @@ module.exports = function(FundTransaction) {
                 if(params._userId)
                     filters.push(`user_id=${params._userId}`);
                 if(params.fundHouse)
-                    filters.push(`fund_houses.name like '${params.fundHouse}%'`);
+                    filters.push(`fund_accounts.name like '${params.fundHouse}%'`);
                 if(params.category)
                     filters.push(`category like '${params.category}%'`);
                 if(params.startDate && params.endDate)
@@ -227,6 +227,8 @@ module.exports = function(FundTransaction) {
                         orderPart = ` ORDER BY created_date ${params.orderBy}`;
                     else if(params.orderCol == 'MODIFIED_DATE')
                         orderPart = ` ORDER BY modified_date ${params.orderBy}`;
+                } else {
+                    orderPart = ` ORDER BY transaction_date ASC`;
                 }
 
                 sql += ` WHERE ${filters.join(` AND `)}`;
@@ -546,21 +548,21 @@ let SQL = {
     INTERNAL_CASH_TRANSACTION: `INSERT INTO fund_transactions (user_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks) VALUES (?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE account_id=VALUES(account_id), transaction_date=VALUES(transaction_date), cash_in=VALUES(cash_in), cash_out=VALUES(cash_out)`,
     MARK_AS_DELETED: `UPDATE fund_transactions SET deleted=1 WHERE user_id=? AND gs_uid=?`,
     TRANSACTION_LIST: `SELECT 
-                            fund_houses.name AS fund_house_name,
+                            fund_accounts.name AS fund_house_name,
                             fund_transactions.*
                         FROM
                             fund_transactions
                                 LEFT JOIN
-                            fund_houses ON fund_transactions.account_id = fund_houses.id`,
+                            fund_accounts ON fund_transactions.account_id = fund_accounts.id`,
     TRANSACTION_LIST_COLLECTIONS: `SELECT
                                         category,
-                                        fund_houses.name,
+                                        fund_accounts.name,
                                         cash_in,
                                         cash_out
                                     FROM
                                         fund_transactions
                                             LEFT JOIN
-                                        fund_houses ON fund_transactions.account_id = fund_houses.id`,
+                                        fund_accounts ON fund_transactions.account_id = fund_accounts.id`,
     CATEGORY_LIST: `SELECT DISTINCT category from fund_transactions`,
     OPENING_BALANCE: `SELECT SUM(cash_in-cash_out) AS opening_balance from fund_transactions WHERE user_id = ? AND transaction_date < ? AND deleted = 0`,
     CLOSING_BALANCE: `SELECT SUM(cash_in-cash_out) AS closing_balance, SUM(cash_in) AS total_cash_in, SUM(cash_out) AS total_cash_out from fund_transactions WHERE user_id = ? AND transaction_date < ? AND deleted = 0`,
