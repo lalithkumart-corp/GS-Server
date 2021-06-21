@@ -467,10 +467,7 @@ module.exports = function(FundTransaction) {
     FundTransaction.getOpeningBalanceApi = (accessToken, dateVal, cb) => {
         FundTransaction._getOpeningBalanceApi(accessToken, dateVal).then(
             (resp) => {
-                if(resp)
-                    cb(null, {STATUS: 'SUCCESS', RESP: resp});
-                else
-                    cb(null, {STATUS: 'ERROR', RESP: resp});
+                cb(null, {STATUS: 'SUCCESS', RESP: resp});
             }
         ).catch(
             (e)=> {
