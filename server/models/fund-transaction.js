@@ -234,10 +234,16 @@ module.exports = function(FundTransaction) {
                 filters.push('deleted = 0');
                 if(params._userId)
                     filters.push(`user_id=${params._userId}`);
-                if(params.fundHouse)
-                    filters.push(`fund_accounts.name like '${params.fundHouse}%'`);
-                if(params.category)
-                    filters.push(`category like '${params.category}%'`);
+                if(params.accounts) {
+                    params.accounts = params.accounts.map((anAccount) => `'${anAccount}'`);
+                    let joinedAccounts = params.accounts.join(', ');
+                    filters.push(`fund_accounts.name in (${joinedAccounts})`);
+                }
+                if(params.category && params.category.length > 0) {
+                    params.category = params.category.map((aCategory) => `'${aCategory}'`);
+                    let joinedCategories = params.category.join(', ');
+                    filters.push(`category in (${joinedCategories})`);
+                }
                 if(params.startDate && params.endDate)
                     filters.push(`(transaction_date BETWEEN '${params.startDate}' AND '${params.endDate}')`);
                 
@@ -336,7 +342,7 @@ module.exports = function(FundTransaction) {
     FundTransaction._constructCollections = (collRes) => {
         let collections = {
             count: collRes.length,
-            fundHouses: [],
+            fundAccounts: [],
             categories: [],
             totalCashIn: 0,
             totalCashOut: 0,
@@ -344,8 +350,8 @@ module.exports = function(FundTransaction) {
         
         if(collections.count > 0) {
             _.each(collRes, (aColl, index) => {
-                if(aColl.name && collections.fundHouses.indexOf(aColl.name) == -1)
-                    collections.fundHouses.push(aColl.name);
+                if(aColl.name && collections.fundAccounts.indexOf(aColl.name) == -1)
+                    collections.fundAccounts.push(aColl.name);
                 if(aColl.category && collections.categories.indexOf(aColl.category) == -1)
                     collections.categories.push(aColl.category);
                 if(aColl.cash_in)
