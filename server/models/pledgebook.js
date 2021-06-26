@@ -641,7 +641,7 @@ module.exports = function(Pledgebook) {
                     return reject(err);
                 } else {
                     if(result.affectedRows > 0) {
-                        Pledgebook.app.models.FundTransaction.remove(params, 'redeem');
+                        Pledgebook.app.models.FundTransaction.prototype.removeEntry(params, 'redeem');
                         let query = Pledgebook.getQuery('reopen-bill', params, params._pledgebookClosedBillTableName);
                         Pledgebook.dataSource.connector.query(query, (err, result) => {
                             if(err) {

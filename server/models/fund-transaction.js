@@ -140,6 +140,28 @@ module.exports = function(FundTransaction) {
         description: 'For getting the Opening Balance by date.',
     });
 
+    FundTransaction.remoteMethod('deleteTransactionsApi', {
+        accepts: {
+            arg: 'data',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/delete-by-transactionid', verb: 'del'},
+        description: 'Delete transactions by ID'
+    });
+
     FundTransaction.cashInApi = (apiParams, cb) => {
         FundTransaction._cashInApi(apiParams).then((resp) => {
             if(resp)
@@ -435,7 +457,7 @@ module.exports = function(FundTransaction) {
         });
     }
 
-    FundTransaction.prototype.remove = (params, moduleIdentifier) => {
+    FundTransaction.prototype.removeEntry = (params, moduleIdentifier) => {
         return new Promise(async (resolve, reject) => {
             try {
                 switch(moduleIdentifier) {
@@ -452,7 +474,22 @@ module.exports = function(FundTransaction) {
     }
 
     FundTransaction.markRedeemEntryAsDeleted = (params) => {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
+            try {
+                for(let i=0; i<params.data.length; i++) {
+                    let datum = params.data[i];
+                    let params2 = {_userId: params._userId, closedBillReference: datum.closedBillReference};
+                    await FundTransaction._markRedeemEntryAsDeleted(params2);
+                }
+                return resolve(true);
+            } catch(e) {
+                return reject(e);
+            }
+        });
+    }
+
+    FundTransaction._markRedeemEntryAsDeleted = (params) => {
+        return new Promise( async (resolve, reject) => {
             let qv = [params._userId, params.closedBillReference];
             FundTransaction.dataSource.connector.query(SQL.MARK_AS_DELETED, qv, (err, res) => {
                 if(err) {
@@ -522,6 +559,32 @@ module.exports = function(FundTransaction) {
         });
     }
 
+    FundTransaction.deleteTransactionsApi = (params, cb) => {
+        FundTransaction._deleteTransactionsApi(params).then(
+            (resp) => {
+                cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            }
+        ).catch(
+            (e)=> {
+                cb({STATUS: 'EXCEPTION', ERR: e}, null);
+            }
+        );
+    }
+
+    FundTransaction._deleteTransactionsApi = (params) => {
+        return new Promise(async (resolve, reject) => {
+            let userId = await utils.getStoreOwnerUserId(params.accessToken);
+            FundTransaction.dataSource.connector.query(SQL.DELETE_TRANSACTIONS, [params.transactionIds, userId], (err, res) => {
+                if(err) {
+                    console.log(err);
+                    return reject(err);
+                } else {
+                    return resolve(true);
+                }
+            })
+        });
+    }
+
     // FundTransaction.fetchPageWiseOpeningBalanceFromDB = (userId, dateVal, limit, offset) => {
     //     return new Promise( async (resolve, reject) => {
     //         console.log(SQL.PAGE_WISE_OPENING_BALANCE);
@@ -563,5 +626,6 @@ let SQL = {
     CATEGORY_LIST: `SELECT DISTINCT category from fund_transactions`,
     OPENING_BALANCE: `SELECT SUM(cash_in-cash_out) AS opening_balance from fund_transactions WHERE user_id = ? AND transaction_date < ? AND deleted = 0`,
     CLOSING_BALANCE: `SELECT SUM(cash_in-cash_out) AS closing_balance, SUM(cash_in) AS total_cash_in, SUM(cash_out) AS total_cash_out from fund_transactions WHERE user_id = ? AND transaction_date < ? AND deleted = 0`,
-    PAGE_WISE_OPENING_BALANCE: `SELECT SUM(cash_in) AS opening_balance from fund_transactions WHERE user_id = ? AND transaction_date <= ? ORDER BY transaction_date ASC LIMIT ? OFFSET ?`
+    PAGE_WISE_OPENING_BALANCE: `SELECT SUM(cash_in) AS opening_balance from fund_transactions WHERE user_id = ? AND transaction_date <= ? ORDER BY transaction_date ASC LIMIT ? OFFSET ?`,
+    DELETE_TRANSACTIONS: `DELETE FROM fund_transactions WHERE id IN (?) AND user_id=?`
 }

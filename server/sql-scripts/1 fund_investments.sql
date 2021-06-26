@@ -1,5 +1,5 @@
-DROP TABLE IF EXISTS `fund_houses`;
-CREATE TABLE `fund_houses` (
+DROP TABLE IF EXISTS `fund_accounts`;
+CREATE TABLE `fund_accounts` (
   `id` int NOT NULL AUTO_INCREMENT,
   `name` varchar(45) NOT NULL,
   PRIMARY KEY (`id`),
