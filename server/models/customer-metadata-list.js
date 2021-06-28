@@ -4,7 +4,7 @@ let _ = require('lodash');
 module.exports = function(CustomerMetaDatalist) {
     CustomerMetaDatalist.getList = (userId, offset) => {
         return new Promise( (resolve, reject) => {
-            CustomerMetaDatalist.find({where: {userId: userId}}, (err, result) => {
+            CustomerMetaDatalist.find({where: {userId: 0}}, (err, result) => {
                 if(err) {
                     // TODO: Log error
                     return reject(err);
