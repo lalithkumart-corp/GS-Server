@@ -4,6 +4,7 @@ let app = require('../server.js');
 let _ = require('lodash');
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const createCsvStringifier = require('csv-writer').createObjectCsvStringifier;
+let path = require('path');
 
 module.exports = function(Pledgebook) {
 
@@ -1243,9 +1244,9 @@ module.exports = function(Pledgebook) {
             let pledgebook = await Pledgebook.getPledgebookData(accessToken, params);
             let exportDataJSON = Pledgebook._constructExportDataJSON(pledgebook);
             let csvStr = Pledgebook._convertToCsvString(exportDataJSON);
-            
-            let status = await Pledgebook._writeCSVfile(exportDataJSON);
-            res.download( 'client/csvfiles/file.csv', 'pledgebook.csv');
+            let fileLocation = path.join(__dirname, '../../client/csvfiles/file.csv');
+            let status = await Pledgebook._writeCSVfile(exportDataJSON, fileLocation);
+            res.download(fileLocation, 'pledgebook.csv');
 
             //let updatedResponse = Pledgebook._setResponseHeaders(res);
             //updatedResponse.download(csvStr);                                        
@@ -1366,10 +1367,10 @@ module.exports = function(Pledgebook) {
     }    
 
     
-    Pledgebook._writeCSVfile = (jsonData) => {
+    Pledgebook._writeCSVfile = (jsonData, fileLocation) => {
         return new Promise( (resolve, reject) => {
             const csvWriter = createCsvWriter({
-                path: 'client/csvfiles/file.csv',
+                path: fileLocation,
                 header: [
                     {id: 'Date', title: 'Date'},
                     {id: 'BillNo', title: 'BillNo'},
