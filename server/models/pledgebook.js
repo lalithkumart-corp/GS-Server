@@ -6,6 +6,12 @@ const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const createCsvStringifier = require('csv-writer').createObjectCsvStringifier;
 let path = require('path');
 
+const PAYMENT_MODE = {
+    'cash': 1,
+    'cheque': 2,
+    'online': 3
+}
+
 module.exports = function(Pledgebook) {
 
     Pledgebook.remoteMethod('insertNewBillAPIHandler', {
@@ -460,6 +466,7 @@ module.exports = function(Pledgebook) {
                 params.uniqueIdentifier,
                 params.billNoWithSeries,
                 params.amount,
+                params.presentValue,
                 params.date,
                 params.customerId,
                 params.orn,
@@ -471,6 +478,7 @@ module.exports = function(Pledgebook) {
                 params.interestValue,
                 params.otherCharges,
                 params.landedCost,
+                params.paymentMode,
                 1,
                 JSON.stringify({}), 
                 params.createdDate,
@@ -679,22 +687,23 @@ module.exports = function(Pledgebook) {
                 query = `INSERT INTO 
                             ${pledgebookTableName} 
                                 (UniqueIdentifier, BillNo, 
-                                Amount, Date, 
+                                Amount, PresentValue,
+                                Date, 
                                 CustomerId, 
                                 Orn, Remarks, 
                                 OrnPictureId,
                                 OrnCategory, TotalWeight,
-                                IntPercent, IntVal, OtherCharges, LandedCost,
+                                IntPercent, IntVal, OtherCharges, LandedCost, PaymentMode,
                                 Status, History,
                                 CreatedDate, ModifiedDate) 
                             VALUES
                                 (?, ?,
                                 ?, ?, 
-                                ?, 
+                                ?, ?,
                                 ?, ?, 
                                 ?,
                                 ?, ?,
-                                ?, ?, ?, ?,
+                                ?, ?, ?, ?, ?,
                                 ?, ?,
                                 ?, ?);`
                 break;
@@ -891,6 +900,7 @@ module.exports = function(Pledgebook) {
                                 SET
                             BillNo=?,
                             Amount=?,
+                            PresentValue=?,
                             Date=?,
                             CustomerId=?,
                             Orn=?,
@@ -902,6 +912,7 @@ module.exports = function(Pledgebook) {
                             IntVal=?,
                             OtherCharges=?,
                             LandedCost=?,
+                            PaymentMode=?
                             ModifiedDate=?
                                 WHERE
                             UniqueIdentifier=?`;
@@ -984,6 +995,7 @@ module.exports = function(Pledgebook) {
         parsedArg.modifiedDate= new Date().toISOString().replace('T', ' ').slice(0,23);
         if(parsedArg.mobile && parsedArg.mobile == 'null')
             parsedArg.mobile = null;
+        parsedArg.paymentMode = PAYMENT_MODE[parsedArg.paymentMode] || 1;
         return parsedArg;
     }
 
@@ -998,6 +1010,7 @@ module.exports = function(Pledgebook) {
         parsedArg.modifiedDate= new Date().toISOString().replace('T', ' ').slice(0,23);
         if(parsedArg.mobile && parsedArg.mobile == 'null')
             parsedArg.mobile = null;
+        parsedArg.paymentMode = PAYMENT_MODE[parsedArg.paymentMode] || 1;
         return parsedArg;
     }
 
@@ -1212,6 +1225,7 @@ module.exports = function(Pledgebook) {
             let values = [
                 parsedArg.billNoWithSeries,
                 parsedArg.amount,
+                parsedArg.presentValue,
                 parsedArg.date,
                 parsedArg.customerId,
                 parsedArg.orn,
@@ -1223,6 +1237,7 @@ module.exports = function(Pledgebook) {
                 parsedArg.interestValue,
                 parsedArg.otherCharges,
                 parsedArg.landedCost,
+                parsedArg.paymentMode,
                 parsedArg.modifiedDate,
                 parsedArg.uniqueIdentifier
             ]
