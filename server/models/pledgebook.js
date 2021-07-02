@@ -848,11 +848,12 @@ module.exports = function(Pledgebook) {
                                     rate_of_interest, int_rupee_per_month, 
                                     interest_amt, actual_estimated_amt, 
                                     discount_amt, paid_amt, 
-                                    handed_over_to_person) 
+                                    handed_over_to_person,
+                                    payment_mode, remarks) 
                                 VALUES (${aRowObj.redeemUID}, '${aRowObj.pledgeBookUID}', '${aRowObj.billNo}', '${aRowObj.pledgedDate}', '${aRowObj.closedDate}',
                                     '${aRowObj.principalAmt}', '${aRowObj.noOfMonth}', '${aRowObj.roi}', '${aRowObj.interestPerMonth}',
                                     '${aRowObj.interestValue}', '${aRowObj.estimatedAmount}', '${aRowObj.discountValue}', '${aRowObj.paidAmount}',
-                                    '${aRowObj.handedTo}');`;
+                                    '${aRowObj.handedTo}', ${aRowObj.paymentMode}, '${aRowObj.billRemarks}');`;
                 }
                 //query += `SET SQL_SAFE_UPDATES = 1;`;
                 break;
@@ -912,7 +913,7 @@ module.exports = function(Pledgebook) {
                             IntVal=?,
                             OtherCharges=?,
                             LandedCost=?,
-                            PaymentMode=?
+                            PaymentMode=?,
                             ModifiedDate=?
                                 WHERE
                             UniqueIdentifier=?`;

@@ -253,6 +253,8 @@ let SQL = {
                                         discount_amt varchar(45) DEFAULT NULL,
                                         paid_amt varchar(45) DEFAULT NULL,
                                         handed_over_to_person varchar(100) DEFAULT NULL,
+                                        payment_mode int(11) DEFAULT 1,
+                                        remarks text,
                                         PRIMARY KEY (pledgebook_uid),
                                         KEY UniqueIdentifier_idx (pledgebook_uid),
                                         CONSTRAINT pledgebook_closed_bills_ibfk_REPLACE_USERID FOREIGN KEY (pledgebook_uid) REFERENCES pledgebook_REPLACE_USERID (UniqueIdentifier)
