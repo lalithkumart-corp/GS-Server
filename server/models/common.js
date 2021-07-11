@@ -41,6 +41,19 @@ module.exports = function(Common) {
         description: 'For exporting the Full Database'
     });
 
+    Common.remoteMethod('fetchBankList', {
+        accepts: [],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            },
+        },
+        http: {path: '/fetch-bank-list', verb: 'get'},
+        description: 'For fetching all banks list.',
+    });
+
     Common.createNewTablesIfNotExist = async (userId) => {
         try {
             await Common._createPledgebookTable(userId);
@@ -49,6 +62,15 @@ module.exports = function(Common) {
             await Common._createStockSoldTable(userId);
             await Common._createOldItemStockTable(userId);
             await Common._createInvoiceDetailTable(userId);
+            return true;
+        } catch(e) {
+            throw e;
+        }
+    }
+
+    Common.setupNewUser = async (userId) => {
+        try {
+            await Common._createFundAccount(userId);
             return true;
         } catch(e) {
             throw e;
@@ -208,6 +230,45 @@ module.exports = function(Common) {
             });
         });
     }
+
+    Common._createFundAccount = (userId) => {
+        return new Promise((resolve, reject) => {
+            app.models.GsUser.dataSource.connector.query(NEW_FUND_ACCOUNT, [userId, 'Shop', 1], (err, resp) => {
+                if(err) {
+                    console.log(err);
+                    console.log(`Error occured while inserting new Fund_account for userId: ${userId}`);
+                    return reject(err);
+                } else {
+                    console.log('Fund Account inserted');
+                    return resolve(true);
+                }
+            });
+        });
+    }
+
+    Common.fetchBankList = (cb) => {
+        Common._fetchBankList().then((resp) => {
+            if(resp)
+                cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            else
+                cb(null, {STATUS: 'ERROR', RESP: resp});
+        }).catch((e)=>{
+            cb({STATUS: 'EXCEPTION', ERR: e}, null);
+        });
+    }
+
+    Common._fetchBankList = () => {
+        return new Promise( async (resolve, reject) => {
+            let query = `SELECT * FROM banks_list`;
+            app.models.GsUser.dataSource.connector.query(query, (err, res) => {
+                if(err){
+                    reject(err);
+                } else {
+                    resolve(res);
+                }
+            });
+        });
+    }
 };
 
 let SQL = {
@@ -358,5 +419,6 @@ let SQL = {
                         PRIMARY KEY (id),
                         UNIQUE KEY uid_UNIQUE (ukey),
                         KEY cust_id_idx (cust_id)
-                    )`
+                    )`,
+    NEW_FUND_ACCOUNT: `INSERT INTO fund_accounts (user_id, name, is_default) VALUES (?,?,?)`
 }

@@ -1,0 +1,96 @@
+{
+    "name": "FundAccount",
+    "base": "PersistedModel",
+    "idInjection": true,
+    "options": {
+      "validateUpsert": true,
+      "mysql": {
+        "schema": "developmentdb",
+        "table": "fund_accounts"
+      }
+    },
+    "properties": {
+      "id": {
+        "type": "number",
+        "id": true,
+        "mysql": {
+          "columnName": "id",
+          "dataType": "int",
+          "dataLength": 22,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "userId": {
+        "type": "number",
+        "required": true,
+        "mysql": {
+          "columnName": "user_id",
+          "dataType": "int",
+          "dataLength": 11,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "N"
+        }
+      },
+      "accountName": {
+        "type": "string",
+        "mysql": {
+          "columnName": "name",
+          "dataType": "varchar",    
+          "dataLength": 255,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "accountNo": {
+        "type": "string",
+        "mysql": {
+          "columnName": "account_no",
+          "dataType": "varchar",    
+          "dataLength": 255,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "branch": {
+        "type": "string",
+        "mysql": {
+          "columnName": "branch",
+          "dataType": "varchar",    
+          "dataLength": 255,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "createdDate": {
+        "type": "date",
+        "mysql": {
+          "columnName": "created_date",
+          "dataType": "datetime",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "modifiedDate": {
+        "type": "date",
+        "mysql": {
+          "columnName": "modified_date",
+          "dataType": "datetime",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      }
+    },
+    "validations": [],
+    "relations": {},
+    "acls": [],
+    "methods": {}
+  }
+  

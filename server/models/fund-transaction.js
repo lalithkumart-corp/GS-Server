@@ -176,7 +176,7 @@ module.exports = function(FundTransaction) {
     FundTransaction._cashInApi = (apiParams) => {
         return new Promise( async (resolve, reject) => {
             let userId = await  utils.getStoreOwnerUserId(apiParams.accessToken);
-            let queryValues = [userId, account_id_MAP[apiParams.fundHouse], dateformat(apiParams.transactionDate, 'yyyy-mm-dd HH:MM:ss', true), apiParams.amount, 0, apiParams.category, apiParams.remarks];
+            let queryValues = [userId, apiParams.fundHouse, dateformat(apiParams.transactionDate, 'yyyy-mm-dd HH:MM:ss', true), apiParams.amount, 0, apiParams.category, apiParams.remarks];
             FundTransaction.dataSource.connector.query(SQL.CASH_TRANSACTION, queryValues, (err, res) => {
                 if(err){
                     reject(err);
@@ -201,7 +201,7 @@ module.exports = function(FundTransaction) {
     FundTransaction._cashOutApi = (apiParams) => {
         return new Promise( async (resolve, reject) => {
             let userId =await  utils.getStoreOwnerUserId(apiParams.accessToken);
-            let queryValues = [userId, account_id_MAP[apiParams.fundHouse], dateformat(apiParams.transactionDate, 'yyyy-mm-dd HH:MM:ss', true), 0, apiParams.amount, apiParams.category, apiParams.remarks];
+            let queryValues = [userId, apiParams.fundHouse, dateformat(apiParams.transactionDate, 'yyyy-mm-dd HH:MM:ss', true), 0, apiParams.amount, apiParams.category, apiParams.remarks];
             FundTransaction.dataSource.connector.query(SQL.CASH_TRANSACTION, queryValues, (err, res) => {
                 if(err){
                     reject(err);
@@ -233,11 +233,11 @@ module.exports = function(FundTransaction) {
             case 'FETCH_TRANSACTION_LIST':
                 filters.push('deleted = 0');
                 if(params._userId)
-                    filters.push(`user_id=${params._userId}`);
+                    filters.push(`fund_transactions.user_id=${params._userId}`);
                 if(params.accounts) {
                     params.accounts = params.accounts.map((anAccount) => `'${anAccount}'`);
                     let joinedAccounts = params.accounts.join(', ');
-                    filters.push(`fund_accounts.name in (${joinedAccounts})`);
+                    filters.push(`fund_accounts.id in (${joinedAccounts})`);
                 }
                 if(params.category && params.category.length > 0) {
                     params.category = params.category.map((aCategory) => `'${aCategory}'`);
@@ -269,7 +269,7 @@ module.exports = function(FundTransaction) {
             case 'TRANSACTION_LIST_COLLECTIONS':
                 filters.push('deleted = 0');
                 if(params._userId)
-                    filters.push(`user_id=${params._userId}`);
+                    filters.push(`fund_transactions.user_id=${params._userId}`);
                 if(params.startDate && params.endDate)
                     filters.push(`(transaction_date BETWEEN '${params.startDate}' AND '${params.endDate}')`);
                 sql += ` WHERE ${filters.join(` AND `)}`;
@@ -347,18 +347,27 @@ module.exports = function(FundTransaction) {
             totalCashIn: 0,
             totalCashOut: 0,
         };
-        
-        if(collections.count > 0) {
-            _.each(collRes, (aColl, index) => {
-                if(aColl.name && collections.fundAccounts.indexOf(aColl.name) == -1)
-                    collections.fundAccounts.push(aColl.name);
-                if(aColl.category && collections.categories.indexOf(aColl.category) == -1)
-                    collections.categories.push(aColl.category);
-                if(aColl.cash_in)
-                    collections.totalCashIn += aColl.cash_in;
-                if(aColl.cash_out)
-                    collections.totalCashOut += aColl.cash_out;
-            });
+        try {
+            if(collections.count > 0) {
+                _.each(collRes, (aColl, index) => {
+                    if(aColl.fundAccountId) {
+                        let existsArr = collections.fundAccounts.filter((anObj, index) => {
+                            if(anObj.id == aColl.fundAccountId)
+                                return true;
+                        });
+                        if(existsArr.length == 0)
+                            collections.fundAccounts.push({id: aColl.fundAccountId, name: aColl.name});
+                    }
+                    if(aColl.category && collections.categories.indexOf(aColl.category) == -1)
+                        collections.categories.push(aColl.category);
+                    if(aColl.cash_in)
+                        collections.totalCashIn += aColl.cash_in;
+                    if(aColl.cash_out)
+                        collections.totalCashOut += aColl.cash_out;
+                });
+            }
+        } catch(e) {
+            console.error(e);
         }
         return collections;
     }
@@ -423,8 +432,31 @@ module.exports = function(FundTransaction) {
     FundTransaction.addGirviEntry = (params) => {
         return new Promise((resolve, reject) => {
             let parsedArg = params.parsedArg;
-            let qv = [parsedArg._userId, 1, parsedArg.uniqueIdentifier, parsedArg.date, parsedArg.interestValue, parsedArg.amount, 'Girvi', parsedArg.billNoWithSeries];
-            FundTransaction.dataSource.connector.query(SQL.INTERNAL_CASH_TRANSACTION, qv, (err, res) => {
+            let mode = null;
+            let fromAcc = null;
+            let toAcc = null;
+            let accountNo = null;
+            let upiId = null;
+            let ifscCode = null;
+            if(parsedArg.paymentDetails) {
+                let pd = parsedArg.paymentDetails;
+                mode = pd.mode;
+                if(pd.mode == 'cash') {
+                    fromAcc = pd.cash.fromAccountId;
+                } else if(pd.mode == 'cheque') {
+                    fromAcc = pd.cheque.fromAccountId;
+                } else if(pd.mode == 'online') {
+                    fromAcc = pd.online.fromAccountId;
+                    toAcc = pd.online.toAccount.toAccountId;
+                    accountNo = pd.online.toAccount.accNo;
+                    upiId = pd.online.toAccount.upiId;
+                    ifscCode = pd.online.toAccount.ifscCode;
+                }
+            }
+
+            let qv = [parsedArg._userId, fromAcc, parsedArg.uniqueIdentifier, parsedArg.date, parsedArg.interestValue, parsedArg.amount, 'Girvi', parsedArg.billNoWithSeries,
+            mode, toAcc, accountNo, ifscCode, upiId];
+            FundTransaction.dataSource.connector.query(SQL.INTERNAL_GIRVI_TRANSACTION, qv, (err, res) => {
                 if(err) {
                     return reject(err);
                 } else {
@@ -440,6 +472,16 @@ module.exports = function(FundTransaction) {
                 for(let i=0; i<params.data.length; i++) {
                     let datum = params.data[i];
                     let qv = [params._userId, 1, datum.redeemUID, datum.closedDate, datum.paidAmount, 0, 'Redeem', datum.billNo];
+
+                    let mode = null;
+                    let toAcc = null;
+                    if(datum.paymentDetails) {
+                        let pd = datum.paymentDetails;
+                        mode = pd.mode;
+                        toAcc = pd.cash.toAccountId;
+                    }
+                    let qv = [params._userId, toAcc, datum.redeemUID, datum.closedDate, datum.paidAmount, 0, 'Redeem', datum.billNo, mode];
+                    
                     await FundTransaction._addRedeemEntry(qv);
                 }
                 return resolve(true);
@@ -451,9 +493,7 @@ module.exports = function(FundTransaction) {
 
     FundTransaction._addRedeemEntry = (qv) => {
         return new Promise((resolve, reject) => {
-            console.log(SQL.INTERNAL_CASH_TRANSACTION);
-            console.log(qv);
-            FundTransaction.dataSource.connector.query(SQL.INTERNAL_CASH_TRANSACTION, qv, (err, res) => {
+            FundTransaction.dataSource.connector.query(SQL.INTERNAL_REDEEM_TRANSACTION, qv, (err, res) => {
                 if(err) {
                     return reject(err);
                 } else {
@@ -611,7 +651,8 @@ module.exports = function(FundTransaction) {
 
 let SQL = {
     CASH_TRANSACTION: `INSERT INTO fund_transactions (user_id, account_id, transaction_date, cash_in, cash_out, category, remarks) VALUES (?,?,?,?,?,?,?)`,
-    INTERNAL_CASH_TRANSACTION: `INSERT INTO fund_transactions (user_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks) VALUES (?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE account_id=VALUES(account_id), transaction_date=VALUES(transaction_date), cash_in=VALUES(cash_in), cash_out=VALUES(cash_out)`,
+    INTERNAL_GIRVI_TRANSACTION: `INSERT INTO fund_transactions (user_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE account_id=VALUES(account_id), transaction_date=VALUES(transaction_date), cash_in=VALUES(cash_in), cash_out=VALUES(cash_out), cash_out_mode=VALUES(cash_out_mode), cash_out_to_bank_id=VALUES(cash_out_to_bank_id), cash_out_to_bank_acc_no=VALUES(cash_out_to_bank_acc_no), cash_out_to_bank_ifsc=VALUES(cash_out_to_bank_ifsc), cash_out_to_upi=VALUES(cash_out_to_upi) `,
+    INTERNAL_REDEEM_TRANSACTION: `INSERT INTO fund_transactions (user_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks, cash_in_mode) VALUES (?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE account_id=VALUES(account_id), transaction_date=VALUES(transaction_date), cash_in=VALUES(cash_in), cash_out=VALUES(cash_out), cash_in_mode=VALUES(cash_in_mode)`,
     MARK_AS_DELETED: `UPDATE fund_transactions SET deleted=1 WHERE user_id=? AND gs_uid=?`,
     TRANSACTION_LIST: `SELECT 
                             fund_accounts.name AS fund_house_name,
@@ -623,6 +664,7 @@ let SQL = {
     TRANSACTION_LIST_COLLECTIONS: `SELECT
                                         category,
                                         fund_accounts.name,
+                                        fund_accounts.id AS fundAccountId,
                                         cash_in,
                                         cash_out
                                     FROM

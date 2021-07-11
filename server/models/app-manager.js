@@ -146,6 +146,7 @@ module.exports = function(ApplicationManager) {
                     });
                 }
                 let insertedNewTables = await app.models.Common.createNewTablesIfNotExist(apiParams._userId);
+                await app.models.Common.setupNewUser(apiParams._userId);
                 return resolve(true);
             } catch(e) {
                 console.log(e);

@@ -123,6 +123,10 @@
     "dataSource": "developmentdb",
     "public": true
   },
+  "FundAccount": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
   "LoanBillTemplate": {
     "dataSource": "developmentdb",
     "public": true
