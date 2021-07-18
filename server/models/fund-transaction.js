@@ -471,14 +471,14 @@ module.exports = function(FundTransaction) {
             try {
                 for(let i=0; i<params.data.length; i++) {
                     let datum = params.data[i];
-                    let qv = [params._userId, 1, datum.redeemUID, datum.closedDate, datum.paidAmount, 0, 'Redeem', datum.billNo];
+                    // let qv = [params._userId, 1, datum.redeemUID, datum.closedDate, datum.paidAmount, 0, 'Redeem', datum.billNo];
 
                     let mode = null;
                     let toAcc = null;
                     if(datum.paymentDetails) {
                         let pd = datum.paymentDetails;
                         mode = pd.mode;
-                        toAcc = pd.cash.toAccountId;
+                        toAcc = pd[mode].toAccountId;
                     }
                     let qv = [params._userId, toAcc, datum.redeemUID, datum.closedDate, datum.paidAmount, 0, 'Redeem', datum.billNo, mode];
                     

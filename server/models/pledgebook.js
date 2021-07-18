@@ -478,7 +478,7 @@ module.exports = function(Pledgebook) {
                 params.interestValue,
                 params.otherCharges,
                 params.landedCost,
-                params.paymentDetails.mode,
+                params.paymentMode,
                 1,
                 JSON.stringify({}), 
                 params.createdDate,
@@ -709,7 +709,9 @@ module.exports = function(Pledgebook) {
                 break;
             case 'normal':
                 query = `SELECT                         
-                                *,                        
+                                ${pledgebookTableName}.*,
+                                customer.*,
+                                ${pledgebookClosedBillTableName}.*,
                                 ${pledgebookTableName}.Date AS PledgedDate,
                                 ${pledgebookTableName}.Archived AS PledgebookBillArchived,
                                 ${pledgebookTableName}.Trashed AS PledgebookBillTrashed,
@@ -873,7 +875,7 @@ module.exports = function(Pledgebook) {
                                 VALUES (${aRowObj.redeemUID}, '${aRowObj.pledgeBookUID}', '${aRowObj.billNo}', '${aRowObj.pledgedDate}', '${aRowObj.closedDate}',
                                     '${aRowObj.principalAmt}', '${aRowObj.noOfMonth}', '${aRowObj.roi}', '${aRowObj.interestPerMonth}',
                                     '${aRowObj.interestValue}', '${aRowObj.estimatedAmount}', '${aRowObj.discountValue}', '${aRowObj.paidAmount}',
-                                    '${aRowObj.handedTo}', ${aRowObj.paymentMode}, '${aRowObj.billRemarks}');`;
+                                    '${aRowObj.handedTo}', ${PAYMENT_MODE[aRowObj.paymentMode]}, '${aRowObj.billRemarks}');`;
                 }
                 //query += `SET SQL_SAFE_UPDATES = 1;`;
                 break;
@@ -890,7 +892,8 @@ module.exports = function(Pledgebook) {
                 break;
             case 'billDetails':                
                 query = `SELECT                         
-                            *,
+                            ${pledgebookTableName}.*,
+                            customer.*,
                             image.Id AS ImageTableID,
                             image.Image AS UserImageBlob,
                             orn_images.Id AS OrnImageTableID,
@@ -898,8 +901,20 @@ module.exports = function(Pledgebook) {
                             image.Format AS UserImageFormat,
                             orn_images.Image AS OrnImageBlob,
                             orn_images.Path AS OrnImagePath,
-                            orn_images.Format AS OrnImageFormat
-
+                            orn_images.Format AS OrnImageFormat,
+                            fund_accounts.id AS fund_accounts_id,
+                            fund_accounts.name AS fundAccount_name,
+                            fund_transactions.id AS fundTransaction_id,
+                            fund_transactions.account_id AS fundTransaction_account_id,
+                            fund_transactions.transaction_date AS fundTransaction_transaction_date,
+                            fund_transactions.cash_out AS fundTransaction_cash_out,
+                            fund_transactions.cash_out_mode AS fundTransaction_cash_out_mode,
+                            fund_transactions.cash_out_to_bank_id AS fundTransaction_cash_out_to_bank_id,
+                            fund_transactions.cash_out_to_bank_acc_no AS fundTransaction_cash_out_to_bank_acc_no,
+                            fund_transactions.cash_out_to_bank_ifsc AS fundTransaction_cash_out_to_bank_ifsc,
+                            fund_transactions.cash_out_to_upi AS fundTransaction_cash_out_to_upi,
+                            fund_transactions.id AS fundTransaction_Id,
+                            banks_list.name AS cashOutToBankName
                         FROM
                             ${pledgebookTableName}
                                 LEFT JOIN
@@ -908,6 +923,12 @@ module.exports = function(Pledgebook) {
                             image ON customer.ImageId = image.Id
                                 LEFT JOIN
                             orn_images ON ${pledgebookTableName}.OrnPictureId = orn_images.Id
+                                LEFT JOIN
+                            fund_transactions ON ${pledgebookTableName}.UniqueIdentifier = fund_transactions.gs_uid
+                                LEFT JOIN
+                            fund_accounts ON fund_transactions.account_id = fund_accounts.id
+                                LEFT JOIN
+                            banks_list ON fund_transactions.cash_out_to_bank_id = banks_list.id
                         WHERE `;
                 let filterPart = [];
                 for(let i=0; i<params.length; i++) {
