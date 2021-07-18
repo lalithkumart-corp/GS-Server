@@ -233,7 +233,7 @@ module.exports = function(Common) {
 
     Common._createFundAccount = (userId) => {
         return new Promise((resolve, reject) => {
-            app.models.GsUser.dataSource.connector.query(NEW_FUND_ACCOUNT, [userId, 'Shop', 1], (err, resp) => {
+            app.models.GsUser.dataSource.connector.query(SQL.NEW_FUND_ACCOUNT, [userId, 'Shop', 1], (err, resp) => {
                 if(err) {
                     console.log(err);
                     console.log(`Error occured while inserting new Fund_account for userId: ${userId}`);
