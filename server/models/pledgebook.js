@@ -974,20 +974,20 @@ module.exports = function(Pledgebook) {
             // if(params.filters.amount && params.filters.amount > 0)
             //     filterQueries.push(`amount >= ${params.filters.amount}`);
             if(params.filters.cName)
-                filterQueries.push(`Name like '${params.filters.cName}%'`);
+                filterQueries.push(`customer.Name like '${params.filters.cName}%'`);
             if(params.filters.gName)
-                filterQueries.push(`GaurdianName like '${params.filters.gName}%'`);
+                filterQueries.push(`customer.GaurdianName like '${params.filters.gName}%'`);
             if(params.filters.address)
-                filterQueries.push(`Address like '%${params.filters.address}%'`);
+                filterQueries.push(`customer.Address like '%${params.filters.address}%'`);
             if(params.filters.include && params.filters.include == 'pending')
-                filterQueries.push(`Status=1`);
+                filterQueries.push(`${pledgebookTableName}.Status=1`);
             else if(params.filters.include && params.filters.include == 'closed')
-                filterQueries.push(`Status=0`);
+                filterQueries.push(`${pledgebookTableName}.Status=0`);
             if(params.filters.date) {
                 if(params.filters.include == "closed")
-                    filterQueries.push(`(closed_date BETWEEN '${params.filters.date.startDate}' AND '${params.filters.date.endDate}')`);
+                    filterQueries.push(`(${pledgebookClosedBillTableName}.closed_date BETWEEN '${params.filters.date.startDate}' AND '${params.filters.date.endDate}')`);
                 else
-                    filterQueries.push(`(Date BETWEEN '${params.filters.date.startDate}' AND '${params.filters.date.endDate}')`);
+                    filterQueries.push(`(${pledgebookTableName}.Date BETWEEN '${params.filters.date.startDate}' AND '${params.filters.date.endDate}')`);
             }
             if(params.filters.custom && params.filters.custom.pledgeAmt && (params.filters.custom.pledgeAmt.grt < params.filters.custom.pledgeAmt.lsr))
                 filterQueries.push(`Amount BETWEEN ${params.filters.custom.pledgeAmt.grt} AND ${params.filters.custom.pledgeAmt.lsr}`);
