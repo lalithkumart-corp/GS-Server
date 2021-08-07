@@ -82,6 +82,36 @@ module.exports = function(FundTransaction) {
         description: 'For fetching fund transactions.',
     });
 
+    FundTransaction.remoteMethod('fetchTransactionsByBillIdApi', {
+        accepts: [
+            {
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let accessToken = req && req.query.access_token;
+                    return accessToken;
+                },
+                description: 'Arguments goes here',
+            },
+            {
+                arg: 'params', type: 'object', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let loan_uid = req && req.query.loan_uid;
+                    let closed_uid = req && req.query.closed_uid;
+                    return {loan_uid, closed_uid};
+                },
+                description: 'Arguments goes here',
+            }],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            },
+        },
+        http: {path: '/fetch-transactions-by-bill', verb: 'get'},
+        description: 'For fetching fund transactions.',
+    });
+
     FundTransaction.remoteMethod('fetchCategorySuggestionsApi', {
         accepts: [
             {
@@ -160,6 +190,27 @@ module.exports = function(FundTransaction) {
         },
         http: {path: '/delete-by-transactionid', verb: 'del'},
         description: 'Delete transactions by ID'
+    });
+    FundTransaction.remoteMethod('addCashInForBill', {
+        accepts: {
+            arg: 'apiParams',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/cash-in-for-bill', verb: 'post'},
+        description: 'Transaction - CashIn.',
     });
 
     FundTransaction.cashInApi = (apiParams, cb) => {
@@ -272,6 +323,17 @@ module.exports = function(FundTransaction) {
                     filters.push(`fund_transactions.user_id=${params._userId}`);
                 if(params.startDate && params.endDate)
                     filters.push(`(transaction_date BETWEEN '${params.startDate}' AND '${params.endDate}')`);
+                sql += ` WHERE ${filters.join(` AND `)}`;
+                break;
+            case 'FETCH_TRANSACTION_LIST_BY_BILL':
+                if(params._userId)
+                    filters.push(`fund_transactions.user_id=${params._userId}`);
+                if(params.loan_uid) {
+                    if(params.closed_uid)
+                        filters.push(`(fund_transactions.gs_uid=${params.loan_uid} OR fund_transactions.gs_uid=${params.closed_uid})`);
+                    else
+                        filters.push(`fund_transactions.gs_uid=${params.loan_uid}`);
+                }
                 sql += ` WHERE ${filters.join(` AND `)}`;
                 break;
         }
@@ -630,6 +692,70 @@ module.exports = function(FundTransaction) {
             })
         });
     }
+
+    FundTransaction.addCashInForBill = (params, cb) => {
+        FundTransaction._addCashInForBill(params).then(
+            (resp) => {
+                cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            }
+        ).catch(
+            (e)=> {
+                cb({STATUS: 'EXCEPTION', ERR: e}, null);
+            }
+        );
+    }
+
+    FundTransaction._addCashInForBill = (params) => {
+        return new Promise(async (resolve, reject) => {
+            let userId = await utils.getStoreOwnerUserId(params.accessToken);
+            let mode = null;
+            let toAcc = null;
+            if(params.paymentDetails) {
+                let pd = params.paymentDetails;
+                mode = pd.mode;
+                toAcc = pd[mode].toAccountId;
+            }
+            let queryValues = [userId, toAcc, params.uniqueIdentifier, dateformat(params.dateVal, 'yyyy-mm-dd HH:MM:ss', true), params.paymentDetails.value, 0, 'Partial', params.remarks, mode];
+            FundTransaction.dataSource.connector.query(SQL.INTERNAL_REDEEM_TRANSACTION, queryValues, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(true);
+                }
+            });
+        });
+    }
+
+    FundTransaction.fetchTransactionsByBillIdApi = (accessToken, params, cb) => {
+        FundTransaction._fetchTransactionsByBillIdApi(accessToken, params).then(
+            (resp) => {
+                cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            }
+        ).catch(
+            (e)=> {
+                cb({STATUS: 'EXCEPTION', ERR: e}, null);
+            }
+        );
+    }
+
+    FundTransaction._fetchTransactionsByBillIdApi = (accessToken, params) => {
+        return new Promise(async (resolve, reject) => {
+            if(!params.loan_uid)
+                return reject('Bill ID is not passed.');
+            params._userId = await utils.getStoreOwnerUserId(accessToken);
+            let sql = SQL.TRANSACTION_LIST;
+            sql = FundTransaction._appendFilters(sql, params, 'FETCH_TRANSACTION_LIST_BY_BILL');
+            FundTransaction.dataSource.connector.query(sql, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(res);
+                }
+            });
+        });
+    }
+
+    
 
     // FundTransaction.fetchPageWiseOpeningBalanceFromDB = (userId, dateVal, limit, offset) => {
     //     return new Promise( async (resolve, reject) => {

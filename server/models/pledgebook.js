@@ -509,7 +509,7 @@ module.exports = function(Pledgebook) {
                 let pledgebookTableName = await Pledgebook.getPledgebookTableName(userId);
                 let pledgebookClosedBillTableName = await Pledgebook.getPledgebookClosedTableName(userId);
                 
-                let query = Pledgebook.getQuery('normal', {...params, getAlerts: true}, pledgebookTableName, pledgebookClosedBillTableName);             
+                let query = Pledgebook.getQuery('normal', {...params, getAlerts: true}, pledgebookTableName, pledgebookClosedBillTableName);   
                 let promise1 = new Promise((resolve, reject) => {
                     Pledgebook.dataSource.connector.query(query, queryValues, (err, result) => {
                         if(err) {
@@ -765,7 +765,7 @@ module.exports = function(Pledgebook) {
                                 banks_list ON fund_transactions.cash_out_to_bank_id = banks_list.id
                                 `;
                 
-                query = Pledgebook.appendFilters(params, query, pledgebookTableName, pledgebookClosedBillTableName);
+                query = Pledgebook.appendFilters(params, query, pledgebookTableName, pledgebookClosedBillTableName, queryIdentifier);
                 
                 // if(params.filters.include && params.filters.include == 'closed')
                 //     query += ` ORDER BY uid DESC`;
@@ -796,7 +796,7 @@ module.exports = function(Pledgebook) {
                             image ON customer.ImageId = image.Id
                                 LEFT JOIN
                             ${pledgebookClosedBillTableName} ON ${pledgebookClosedBillTableName}.pledgebook_uid = ${pledgebookTableName}.UniqueIdentifier`;
-                query = Pledgebook.appendFilters(params, query, pledgebookTableName, pledgebookClosedBillTableName);
+                query = Pledgebook.appendFilters(params, query, pledgebookTableName, pledgebookClosedBillTableName, queryIdentifier);
                 break;
             case 'byCustomerId':
                 query = `SELECT                         
@@ -966,7 +966,7 @@ module.exports = function(Pledgebook) {
         return query;
     }
 
-    Pledgebook.appendFilters = (params, query, pledgebookTableName, pledgebookClosedBillTableName) => {
+    Pledgebook.appendFilters = (params, query, pledgebookTableName, pledgebookClosedBillTableName, identifier) => {
         let filterQueries = [];
         if(params.filters) {
             if(params.filters.billNo)
@@ -1018,6 +1018,9 @@ module.exports = function(Pledgebook) {
             if(params.filters.showOnlyTrashed)
                 filterQueries.push(`${pledgebookTableName}.Trashed=1`);
             
+            // Left Join the fund_transaction rows which are related to "loan", and "Redeem"
+            if(identifier == 'normal') filterQueries.push(`fund_transactions.category IN ("girvi", "redeem")`)
+
             if(filterQueries.length != 0)
                 query += ' WHERE ' + filterQueries.join(' AND ');
         }
