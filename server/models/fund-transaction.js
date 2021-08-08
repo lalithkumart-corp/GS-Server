@@ -71,6 +71,28 @@ module.exports = function(FundTransaction) {
             }
         },
         http: {path: '/update-cash-in', verb: 'put'},
+        description: 'Transaction update - CashIn.',
+    });
+
+    FundTransaction.remoteMethod('updateCashOutDataApi', {
+        accepts: {
+            arg: 'apiParams',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/update-cash-out', verb: 'put'},
         description: 'Transaction update - CashOut.',
     });
 
@@ -274,7 +296,10 @@ module.exports = function(FundTransaction) {
     FundTransaction._cashOutApi = (apiParams) => {
         return new Promise( async (resolve, reject) => {
             let userId =await  utils.getStoreOwnerUserId(apiParams.accessToken);
-            let queryValues = [userId, apiParams.fundHouse, dateformat(apiParams.transactionDate, 'yyyy-mm-dd HH:MM:ss', true), 0, apiParams.amount, apiParams.category, apiParams.remarks, apiParams.paymentMode];
+
+            let destAccDetail = apiParams.destinationAccountDetail;
+            let queryValues = [userId, apiParams.myFundAccountId, dateformat(apiParams.transactionDate, 'yyyy-mm-dd HH:MM:ss', true), 0, apiParams.amount, apiParams.category, apiParams.remarks,
+                apiParams.paymentMode, destAccDetail.toAccountId, destAccDetail.accNo, destAccDetail.ifscCode, destAccDetail.upiId];
             FundTransaction.dataSource.connector.query(SQL.CASH_TRANSACTION_OUT, queryValues, (err, res) => {
                 if(err){
                     reject(err);
@@ -803,6 +828,34 @@ module.exports = function(FundTransaction) {
         });
     }
 
+    FundTransaction.updateCashOutDataApi = (params, cb) => {
+        FundTransaction._updateCashOutDataApi(params).then(
+            (resp) => {
+                cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            }
+        ).catch(
+            (e)=> {
+                cb({STATUS: 'EXCEPTION', ERR: e}, null);
+            }
+        );
+    }
+
+    FundTransaction._updateCashOutDataApi = (params) => {
+        return new Promise(async (resolve, reject) => {
+            let userId = await utils.getStoreOwnerUserId(params.accessToken);
+            let destAccDetail = params.destinationAccountDetail;
+            let queryValues = [params.accountId, dateformat(params.transactionDate, 'yyyy-mm-dd HH:MM:ss', true), params.amount, params.category, params.remarks, 
+                params.paymentMode, destAccDetail.toAccountId, destAccDetail.accNo, destAccDetail.ifscCode, destAccDetail.upiId, params.transactionId, userId];
+            FundTransaction.dataSource.connector.query(SQL.UPDATE_TRANSACTION_FOR_CASH_OUT, queryValues, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(true);
+                }
+            });
+        });
+    }
+
     // FundTransaction.fetchPageWiseOpeningBalanceFromDB = (userId, dateVal, limit, offset) => {
     //     return new Promise( async (resolve, reject) => {
     //         console.log(SQL.PAGE_WISE_OPENING_BALANCE);
@@ -823,11 +876,12 @@ module.exports = function(FundTransaction) {
 
 let SQL = {
     CASH_TRANSACTION_IN: `INSERT INTO fund_transactions (user_id, account_id, transaction_date, cash_in, cash_out, category, remarks, cash_in_mode) VALUES (?,?,?,?,?,?,?,?)`,
-    CASH_TRANSACTION_OUT: `INSERT INTO fund_transactions (user_id, account_id, transaction_date, cash_in, cash_out, category, remarks, cash_out_mode) VALUES (?,?,?,?,?,?,?,?)`,
+    CASH_TRANSACTION_OUT: `INSERT INTO fund_transactions (user_id, account_id, transaction_date, cash_in, cash_out, category, remarks, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
     INTERNAL_GIRVI_TRANSACTION: `INSERT INTO fund_transactions (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE account_id=VALUES(account_id), transaction_date=VALUES(transaction_date), cash_in=VALUES(cash_in), cash_out=VALUES(cash_out), cash_out_mode=VALUES(cash_out_mode), cash_out_to_bank_id=VALUES(cash_out_to_bank_id), cash_out_to_bank_acc_no=VALUES(cash_out_to_bank_acc_no), cash_out_to_bank_ifsc=VALUES(cash_out_to_bank_ifsc), cash_out_to_upi=VALUES(cash_out_to_upi) `,
     INTERNAL_REDEEM_TRANSACTION: `INSERT INTO fund_transactions (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks, cash_in_mode) VALUES (?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE account_id=VALUES(account_id), transaction_date=VALUES(transaction_date), cash_in=VALUES(cash_in), cash_out=VALUES(cash_out), cash_in_mode=VALUES(cash_in_mode)`,
     ADD_CASH_FOR_BILL: `INSERT INTO fund_transactions (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks, cash_in_mode) VALUES (?,?,?,?,?,?,?,?,?)`,
     UPDATE_TRANSACTION_FOR_CASH_IN: `UPDATE fund_transactions SET account_id=?, transaction_date=?, cash_in=?, category=?, remarks=?, cash_in_mode=? WHERE id=? AND user_id=?`,
+    UPDATE_TRANSACTION_FOR_CASH_OUT: `UPDATE fund_transactions SET account_id=?, transaction_date=?, cash_out=?, category=?, remarks=?, cash_out_mode=?, cash_out_to_bank_id=?, cash_out_to_bank_acc_no=?, cash_out_to_bank_ifsc=?, cash_out_to_upi=? WHERE id=? AND user_id=?`,
     MARK_AS_DELETED: `UPDATE fund_transactions SET deleted=1 WHERE user_id=? AND gs_uid=?`,
     TRANSACTION_LIST: `SELECT 
                             fund_accounts.name AS fund_house_name,
