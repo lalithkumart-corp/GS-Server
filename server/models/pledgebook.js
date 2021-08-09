@@ -1257,7 +1257,7 @@ module.exports = function(Pledgebook) {
             // };
 
             await Pledgebook.updateBillDetails(parsedArg, pledgebookTableName); //Save ImageId, CustomerID, ORNAMENT and other Bill details in Pledgebook                
-            Pledgebook.app.models.FundTransaction.prototype.add({parsedArg, pledgebookTableName}, 'pledgebook');
+            Pledgebook.app.models.FundTransaction.prototype.update({parsedArg, pledgebookTableName}, 'pledgebook');
             return {STATUS: 'SUCCESS', STATUS_MSG: 'Successfully Updated the bill'};
         } catch(e) {
             return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};

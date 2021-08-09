@@ -612,6 +612,99 @@ module.exports = function(FundTransaction) {
         });
     }
 
+    FundTransaction.prototype.update = (params, moduleIdentifier) => {
+        return new Promise(async (resolve, reject) => {
+            try {
+                switch(moduleIdentifier) {
+                    case 'pledgebook':
+                        await FundTransaction.updateGirviEntry(params);
+                        break;
+                    case 'redeem':
+                        await FundTransaction.updateRedeemEntry(params);
+                        break;
+                }
+                return resolve(true);
+            } catch(e) {
+                console.log(e);
+                return resolve(true); // this is backend job, so allways returning true.
+            }
+        });
+    }
+
+    FundTransaction.updateGirviEntry = (params) => {
+        return new Promise((resolve, reject) => {
+            let parsedArg = params.parsedArg;
+            let mode = null;
+            let fromAcc = null;
+            let toAcc = null;
+            let accountNo = null;
+            let upiId = null;
+            let ifscCode = null;
+            if(parsedArg.paymentDetails) {
+                let pd = parsedArg.paymentDetails;
+                mode = pd.mode;
+                if(pd.mode == 'cash') {
+                    fromAcc = pd.cash.fromAccountId;
+                } else if(pd.mode == 'cheque') {
+                    fromAcc = pd.cheque.fromAccountId;
+                } else if(pd.mode == 'online') {
+                    fromAcc = pd.online.fromAccountId;
+                    toAcc = pd.online.toAccount.toAccountId;
+                    accountNo = pd.online.toAccount.accNo;
+                    upiId = pd.online.toAccount.upiId;
+                    ifscCode = pd.online.toAccount.ifscCode;
+                }
+            };
+
+            let qv = [parsedArg.customerId, fromAcc, parsedArg.date, parsedArg.interestValue, parsedArg.amount, 'Girvi', mode, toAcc, accountNo, ifscCode, upiId, parsedArg.uniqueIdentifier, parsedArg._userId];
+
+            FundTransaction.dataSource.connector.query(SQL.INTERNAL_GIRVI_TRANSACTION_UPDATE, qv, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(true);
+                }
+            });
+        });
+    }
+
+    FundTransaction.updateRedeemEntry = (params) => {
+        return new Promise(async (resolve, reject) => {
+            try {
+                for(let i=0; i<params.data.length; i++) {
+                    let datum = params.data[i];
+                    // let qv = [params._userId, 1, datum.redeemUID, datum.closedDate, datum.paidAmount, 0, 'Redeem', datum.billNo];
+
+                    let mode = null;
+                    let toAcc = null;
+                    if(datum.paymentDetails) {
+                        let pd = datum.paymentDetails;
+                        mode = pd.mode;
+                        toAcc = pd[mode].toAccountId;
+                    }
+                    let qv = [ datum.customerId, toAcc, datum.closedDate, datum.paidAmount, datum.billNo,  mode,   datum.redeemUID, params._userId];
+                    await FundTransaction._updateRedeemEntry(qv);
+                }
+                return resolve(true);
+            } catch(e) {
+                return reject(e);
+            }
+        });
+    }
+
+    FundTransaction._updateRedeemEntry = (qv) => {
+        return new Promise((resolve, reject) => {
+            FundTransaction.dataSource.connector.query(SQL.INTERNAL_REDEEM_TRANSACTION_UPDATE, qv, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(true);
+                }
+            });
+        });
+    }
+
+
     FundTransaction.prototype.removeEntry = (params, moduleIdentifier) => {
         return new Promise(async (resolve, reject) => {
             try {
@@ -762,7 +855,7 @@ module.exports = function(FundTransaction) {
                 mode = pd.mode;
                 toAcc = pd[mode].toAccountId;
             }
-            let queryValues = [userId, customerId, toAcc, params.uniqueIdentifier, dateformat(params.dateVal, 'yyyy-mm-dd HH:MM:ss', true), params.paymentDetails.value, 0, params.category, params.remarks, mode];
+            let queryValues = [userId, params.customerId, toAcc, params.uniqueIdentifier, dateformat(params.dateVal, 'yyyy-mm-dd HH:MM:ss', true), params.paymentDetails.value, 0, params.category, params.remarks, mode];
             FundTransaction.dataSource.connector.query(SQL.ADD_CASH_FOR_BILL, queryValues, (err, res) => {
                 if(err) {
                     return reject(err);
@@ -879,7 +972,9 @@ let SQL = {
     CASH_TRANSACTION_OUT: `INSERT INTO fund_transactions (user_id, account_id, transaction_date, cash_in, cash_out, category, remarks, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
     INTERNAL_GIRVI_TRANSACTION: `INSERT INTO fund_transactions (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE account_id=VALUES(account_id), transaction_date=VALUES(transaction_date), cash_in=VALUES(cash_in), cash_out=VALUES(cash_out), cash_out_mode=VALUES(cash_out_mode), cash_out_to_bank_id=VALUES(cash_out_to_bank_id), cash_out_to_bank_acc_no=VALUES(cash_out_to_bank_acc_no), cash_out_to_bank_ifsc=VALUES(cash_out_to_bank_ifsc), cash_out_to_upi=VALUES(cash_out_to_upi) `,
     INTERNAL_REDEEM_TRANSACTION: `INSERT INTO fund_transactions (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks, cash_in_mode) VALUES (?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE account_id=VALUES(account_id), transaction_date=VALUES(transaction_date), cash_in=VALUES(cash_in), cash_out=VALUES(cash_out), cash_in_mode=VALUES(cash_in_mode)`,
-    ADD_CASH_FOR_BILL: `INSERT INTO fund_transactions (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks, cash_in_mode) VALUES (?,?,?,?,?,?,?,?,?)`,
+    INTERNAL_GIRVI_TRANSACTION_UPDATE: `UPDATE fund_transactions SET customer_id=?, account_id=?, transaction_date=?, cash_in=?, cash_out=?, remarks=?, cash_out_mode=?, cash_out_to_bank_id=?, cash_out_to_bank_acc_no=?, cash_out_to_bank_ifsc=?, cash_out_to_upi=? WHERE gs_uid=? AND user_id=?`,
+    INTERNAL_REDEEM_TRANSACTION_UPDATE: `UPDATE fund_transactions SET customer_id=?, account_id=?, transaction_date=?, cash_out=?, remarks=?, cash_in_mode=? WHERE gs_uid=? AND user_id=? `,
+    ADD_CASH_FOR_BILL: `INSERT INTO fund_transactions (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks, cash_in_mode) VALUES (?,?,?,?,?,?,?,?,?,?)`,
     UPDATE_TRANSACTION_FOR_CASH_IN: `UPDATE fund_transactions SET account_id=?, transaction_date=?, cash_in=?, category=?, remarks=?, cash_in_mode=? WHERE id=? AND user_id=?`,
     UPDATE_TRANSACTION_FOR_CASH_OUT: `UPDATE fund_transactions SET account_id=?, transaction_date=?, cash_out=?, category=?, remarks=?, cash_out_mode=?, cash_out_to_bank_id=?, cash_out_to_bank_acc_no=?, cash_out_to_bank_ifsc=?, cash_out_to_upi=? WHERE id=? AND user_id=?`,
     MARK_AS_DELETED: `UPDATE fund_transactions SET deleted=1 WHERE user_id=? AND gs_uid=?`,
