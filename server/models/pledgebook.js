@@ -758,7 +758,7 @@ module.exports = function(Pledgebook) {
                                     LEFT JOIN
                                 alerts ON (${pledgebookTableName}.alert = alerts.id AND alerts.archived=0)
                                     LEFT JOIN
-                                fund_transactions ON ${pledgebookTableName}.UniqueIdentifier = fund_transactions.gs_uid
+                                fund_transactions ON (${pledgebookTableName}.UniqueIdentifier = fund_transactions.gs_uid && fund_transactions.category IN ('girvi' , 'redeem'))
                                     LEFT JOIN
                                 fund_accounts ON fund_transactions.account_id = fund_accounts.id
                                     LEFT JOIN
@@ -1019,7 +1019,7 @@ module.exports = function(Pledgebook) {
                 filterQueries.push(`${pledgebookTableName}.Trashed=1`);
             
             // Left Join the fund_transaction rows which are related to "loan", and "Redeem"
-            if(identifier == 'normal') filterQueries.push(`fund_transactions.category IN ("girvi", "redeem")`)
+            // if(identifier == 'normal') filterQueries.push(`fund_transactions.category IN ("girvi", "redeem")`)
 
             if(filterQueries.length != 0)
                 query += ' WHERE ' + filterQueries.join(' AND ');
