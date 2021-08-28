@@ -1,7 +1,7 @@
 {
     "restApiRoot": "/api",
     "domain": "localhost",
-    "externalDomain": "ec2-54-146-87-76.compute-1.amazonaws.com",
+    "externalDomain": "trsoftware.in",
     "host": "0.0.0.0",
     "protocol": "http",
     "externalProtocol": "http",
