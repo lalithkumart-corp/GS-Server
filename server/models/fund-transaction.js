@@ -390,50 +390,25 @@ module.exports = function(FundTransaction) {
     FundTransaction._fetchTransactionsApi = (accessToken, params) => {
         return new Promise(async (resolve, reject) => {
             params._userId =await  utils.getStoreOwnerUserId(accessToken);
-            // console.log(params.startDate); // 2021-05-14T18:30:00.000Z
-            // console.log(dateformat(params.startDate, 'yyyy-mm-dd HH:MM:ss')); // 2021-05-15 00:00:00
-            
-            
-            let sql = SQL.TRANSACTION_LIST;
-            sql = FundTransaction._appendFilters(sql, params, 'FETCH_TRANSACTION_LIST');
-            let fetchPaginatedList = new Promise((resolve, reject) => {
-                FundTransaction.dataSource.connector.query(sql, (err, res) => {
-                    if(err) {
-                        return reject(err);
-                    } else {
-                        return resolve(res);
-                    }
-                });
-            });
 
-            let totalSql = SQL.TRANSACTION_LIST_COLLECTIONS;
-            totalSql = FundTransaction._appendFilters(totalSql, params, 'TRANSACTION_LIST_COLLECTIONS');
-            let fetchCollections = new Promise((resolve, reject) => {
-                FundTransaction.dataSource.connector.query(totalSql, (err, res) => {
-                    if(err) {
-                        return reject(err);
-                    } else {
-                        return resolve(res);
-                    }
-                });
-            });
+            let promiseTasks = [];
 
-            let limit = params.offsetEnd - params.offsetStart;
-            let offset = params.offsetStart;
-            let openingBal = FundTransaction.fetchOpeningBalanceFromDB(params._userId, params.startDate);
+            promiseTasks.push(FundTransaction.fetchPaginatedList(params));
+            
+            if(params.fetchCollectionsAndTotals) {
+                promiseTasks.push(FundTransaction.fetchListCollections(params));
+                promiseTasks.push(FundTransaction.fetchOpeningBalanceFromDB(params._userId, params.startDate));
+                promiseTasks.push(FundTransaction.fetchClosingBalanceFromDB(params._userId, params.endDate));
+                promiseTasks.push(FundTransaction.fetchCashInOutTotalsFromDB(params._userId, params.startDate, params.endDate));
+            }
+
+            // let limit = params.offsetEnd - params.offsetStart;
+            // let offset = params.offsetStart;
             // let pageWiseOpeningBalance = FundTransaction.fetchPageWiseOpeningBalanceFromDB(params._userId, params.startDate, limit, offset);
-            let closingBal = FundTransaction.fetchClosingBalanceFromDB(params._userId, params.endDate);
 
-            Promise.all([fetchPaginatedList, fetchCollections, openingBal, closingBal]).then(
+            Promise.all(promiseTasks).then(
                 (results) => {
-                    let obj = {
-                        results: results[0],
-                        collections: FundTransaction._constructCollections(results[1]),
-                        openingBalance: results[2] || 0,
-                        closingBalance: results[3].closing_balance || 0,
-                        totalCashIn: results[3].total_cash_in || 0,
-                        totalCashOut: results[3].total_cash_out || 0,
-                    }
+                    let obj = FundTransaction.constructTransactionListApiResponse(results, params);
                     resolve(obj);
                 },
                 (error) => {
@@ -796,7 +771,23 @@ module.exports = function(FundTransaction) {
                 } else {
                     if(res && res.length >0)
                         resolve({
-                            closing_balance: res[0].closing_balance,
+                            closing_balance: res[0].closing_balance
+                        });
+                    else
+                        resolve(0);
+                }
+            });
+        });
+    }
+
+    FundTransaction.fetchCashInOutTotalsFromDB = (userId, fromDate, toDate) => {
+        return new Promise( async (resolve, reject) => {
+            FundTransaction.dataSource.connector.query(SQL.CASH_IN_OUT_TOTALS, [userId, fromDate, toDate], (err, res) => {
+                if(err) {
+                    reject(err);
+                } else {
+                    if(res && res.length >0)
+                        resolve({
                             total_cash_in: res[0].total_cash_in,
                             total_cash_out: res[0].total_cash_out
                         });
@@ -949,6 +940,48 @@ module.exports = function(FundTransaction) {
         });
     }
 
+    FundTransaction.fetchPaginatedList = (params) => {
+        return new Promise((resolve, reject) => {
+            let sql = SQL.TRANSACTION_LIST;
+            sql = FundTransaction._appendFilters(sql, params, 'FETCH_TRANSACTION_LIST');
+            FundTransaction.dataSource.connector.query(sql, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(res);
+                }
+            });
+        })
+    }
+
+    FundTransaction.fetchListCollections = (params) => {
+        return new Promise((resolve, reject) => {
+            let totalSql = SQL.TRANSACTION_LIST_COLLECTIONS;
+            totalSql = FundTransaction._appendFilters(totalSql, params, 'TRANSACTION_LIST_COLLECTIONS');
+            FundTransaction.dataSource.connector.query(totalSql, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(res);
+                }
+            });
+        });
+    }
+
+    FundTransaction.constructTransactionListApiResponse = (results, reqParams) => {
+        let resp = {
+            results: results[0]
+        };
+        if(reqParams.fetchCollectionsAndTotals) {
+            resp.collections = FundTransaction._constructCollections(results[1]);
+            resp.openingBalance = results[2] || 0;
+            resp.closingBalance = results[3].closing_balance || 0;
+            resp.totalCashIn = results[4].total_cash_in || 0;
+            resp.totalCashOut = results[4].total_cash_out || 0;
+        }
+        return resp;
+    }
+
     // FundTransaction.fetchPageWiseOpeningBalanceFromDB = (userId, dateVal, limit, offset) => {
     //     return new Promise( async (resolve, reject) => {
     //         console.log(SQL.PAGE_WISE_OPENING_BALANCE);
@@ -997,7 +1030,8 @@ let SQL = {
                                         fund_accounts ON fund_transactions.account_id = fund_accounts.id`,
     CATEGORY_LIST: `SELECT DISTINCT category from fund_transactions`,
     OPENING_BALANCE: `SELECT SUM(cash_in-cash_out) AS opening_balance from fund_transactions WHERE user_id = ? AND transaction_date < ? AND deleted = 0`,
-    CLOSING_BALANCE: `SELECT SUM(cash_in-cash_out) AS closing_balance, SUM(cash_in) AS total_cash_in, SUM(cash_out) AS total_cash_out from fund_transactions WHERE user_id = ? AND transaction_date < ? AND deleted = 0`,
+    CLOSING_BALANCE: `SELECT SUM(cash_in-cash_out) AS closing_balance from fund_transactions WHERE user_id = ? AND transaction_date < ? AND deleted = 0`,
+    CASH_IN_OUT_TOTALS: `SELECT SUM(cash_in) AS total_cash_in, SUM(cash_out) AS total_cash_out from fund_transactions WHERE user_id = ? AND (transaction_date BETWEEN ? AND ?) AND deleted = 0`,
     PAGE_WISE_OPENING_BALANCE: `SELECT SUM(cash_in) AS opening_balance from fund_transactions WHERE user_id = ? AND transaction_date <= ? ORDER BY transaction_date ASC LIMIT ? OFFSET ?`,
     DELETE_TRANSACTIONS: `DELETE FROM fund_transactions WHERE id IN (?) AND user_id=?`
 }
