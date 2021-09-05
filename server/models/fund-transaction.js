@@ -424,7 +424,6 @@ module.exports = function(FundTransaction) {
     }
 
     FundTransaction._constructCollections = (collRes) => {
-        console.log('LIST LENGTH', collRes.length);
             let collections = {
             count: collRes.length,
             fundAccounts: [],
