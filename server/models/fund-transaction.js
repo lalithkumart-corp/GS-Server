@@ -395,16 +395,16 @@ module.exports = function(FundTransaction) {
 
             promiseTasks.push(FundTransaction.fetchPaginatedList(params));
             
-            if(params.fetchCollectionsAndTotals) {
+            if(params.fetchFundOverview) {
                 promiseTasks.push(FundTransaction.fetchListCollections(params));
                 promiseTasks.push(FundTransaction.fetchOpeningBalanceFromDB(params._userId, params.startDate));
                 promiseTasks.push(FundTransaction.fetchClosingBalanceFromDB(params._userId, params.endDate));
-                promiseTasks.push(FundTransaction.fetchCashInOutTotalsFromDB(params._userId, params.startDate, params.endDate));
+                promiseTasks.push(FundTransaction.fetchCashInOutTotalsFromDB(params));
+            } else {
+                let limit = params.offsetEnd - params.offsetStart;
+                let offset = params.offsetStart;
+                promiseTasks.push(FundTransaction.fetchPageWiseOpeningBalanceFromDB(params._userId, params.startDate, params.endDate, limit, offset));
             }
-
-            // let limit = params.offsetEnd - params.offsetStart;
-            // let offset = params.offsetStart;
-            // let pageWiseOpeningBalance = FundTransaction.fetchPageWiseOpeningBalanceFromDB(params._userId, params.startDate, limit, offset);
 
             Promise.all(promiseTasks).then(
                 (results) => {
@@ -424,7 +424,8 @@ module.exports = function(FundTransaction) {
     }
 
     FundTransaction._constructCollections = (collRes) => {
-        let collections = {
+        console.log('LIST LENGTH', collRes.length);
+            let collections = {
             count: collRes.length,
             fundAccounts: [],
             categories: [],
@@ -780,9 +781,9 @@ module.exports = function(FundTransaction) {
         });
     }
 
-    FundTransaction.fetchCashInOutTotalsFromDB = (userId, fromDate, toDate) => {
+    FundTransaction.fetchCashInOutTotalsFromDB = (params) => {
         return new Promise( async (resolve, reject) => {
-            FundTransaction.dataSource.connector.query(SQL.CASH_IN_OUT_TOTALS, [userId, fromDate, toDate], (err, res) => {
+            FundTransaction.dataSource.connector.query(SQL.CASH_IN_OUT_TOTALS, [params._userId, params.startDate, params.endDate], (err, res) => {
                 if(err) {
                     reject(err);
                 } else {
@@ -797,6 +798,7 @@ module.exports = function(FundTransaction) {
             });
         });
     }
+
 
     FundTransaction.deleteTransactionsApi = (params, cb) => {
         FundTransaction._deleteTransactionsApi(params).then(
@@ -972,32 +974,52 @@ module.exports = function(FundTransaction) {
         let resp = {
             results: results[0]
         };
-        if(reqParams.fetchCollectionsAndTotals) {
+        if(reqParams.fetchFundOverview) {
             resp.collections = FundTransaction._constructCollections(results[1]);
             resp.openingBalance = results[2] || 0;
             resp.closingBalance = results[3].closing_balance || 0;
             resp.totalCashIn = results[4].total_cash_in || 0;
             resp.totalCashOut = results[4].total_cash_out || 0;
+        } else {
+            resp.pageWiseOpeningBal = results[1] || 0;
         }
         return resp;
     }
 
-    // FundTransaction.fetchPageWiseOpeningBalanceFromDB = (userId, dateVal, limit, offset) => {
-    //     return new Promise( async (resolve, reject) => {
-    //         console.log(SQL.PAGE_WISE_OPENING_BALANCE);
-    //         console.log([userId, dateVal, limit, offset]);
-    //         FundTransaction.dataSource.connector.query(SQL.PAGE_WISE_OPENING_BALANCE, [userId, dateVal, limit, offset], (err, res) => {
-    //             if(err) {
-    //                 reject(err);
-    //             } else {
-    //                 if(res && res.length >0)
-    //                     resolve(res[0].opening_balance);
-    //                 else
-    //                     resolve(0);
-    //             }
-    //         });
-    //     });
-    // }
+    FundTransaction.fetchBalanceValByDateAndLimitRange = (userId, dateVal, endDate, limit, offset) => {
+        return new Promise((resolve, reject) => {
+            let sql = `SELECT
+                            SUM(cash_in - cash_out) AS FundBalance
+                        FROM (
+                            SELECT
+                                cash_in,
+                                cash_out
+                            FROM
+                                fund_transactions
+                            WHERE
+                                user_id = ${userId}
+                                AND transaction_date > '${dateVal}'
+                                AND deleted = 0
+                            ORDER BY transaction_date ASC
+                            LIMIT ${offset}) AS t`;
+            FundTransaction.dataSource.connector.query(sql, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    if(res && res.length >0)
+                        resolve(res[0].FundBalance);
+                    else
+                        resolve(0);
+                }
+            })
+        });
+    }
+
+    FundTransaction.fetchPageWiseOpeningBalanceFromDB = async (userId, startDate, endDate, limit, offset) => {
+        let bal1 = await FundTransaction.fetchOpeningBalanceFromDB(userId, startDate);
+        let bal2 = await FundTransaction.fetchBalanceValByDateAndLimitRange(userId, startDate, endDate, limit, offset);
+        return bal1+bal2;
+    }
 }
 
 let SQL = {
@@ -1032,6 +1054,5 @@ let SQL = {
     OPENING_BALANCE: `SELECT SUM(cash_in-cash_out) AS opening_balance from fund_transactions WHERE user_id = ? AND transaction_date < ? AND deleted = 0`,
     CLOSING_BALANCE: `SELECT SUM(cash_in-cash_out) AS closing_balance from fund_transactions WHERE user_id = ? AND transaction_date < ? AND deleted = 0`,
     CASH_IN_OUT_TOTALS: `SELECT SUM(cash_in) AS total_cash_in, SUM(cash_out) AS total_cash_out from fund_transactions WHERE user_id = ? AND (transaction_date BETWEEN ? AND ?) AND deleted = 0`,
-    PAGE_WISE_OPENING_BALANCE: `SELECT SUM(cash_in) AS opening_balance from fund_transactions WHERE user_id = ? AND transaction_date <= ? ORDER BY transaction_date ASC LIMIT ? OFFSET ?`,
     DELETE_TRANSACTIONS: `DELETE FROM fund_transactions WHERE id IN (?) AND user_id=?`
 }
