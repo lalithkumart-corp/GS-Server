@@ -126,6 +126,67 @@ module.exports = function(FundTransaction) {
         description: 'For fetching fund transactions.',
     });
 
+    FundTransaction.remoteMethod('fetchTransactionsApiV2', {
+        accepts: [
+            {
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let accessToken = req && req.query.access_token;
+                    return accessToken;
+                },
+                description: 'Arguments goes here',
+            },
+            {
+                arg: 'params', type: 'object', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let params = req && req.query.params;
+                    params = params ? JSON.parse(params) : {};
+                    return params;
+                },
+                description: 'Arguments goes here',
+            }],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            },
+        },
+        http: {path: '/fetch-transactions-v2', verb: 'get'},
+        description: 'For fetching fund transactions.',
+    });
+
+
+    FundTransaction.remoteMethod('fetchConsolidatedTransactionsApi', {
+        accepts: [
+            {
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let accessToken = req && req.query.access_token;
+                    return accessToken;
+                },
+                description: 'Arguments goes here',
+            },
+            {
+                arg: 'params', type: 'object', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let params = req && req.query.params;
+                    params = params ? JSON.parse(params) : {};
+                    return params;
+                },
+                description: 'Arguments goes here',
+            }],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            },
+        },
+        http: {path: '/fetch-consolidated-transactions', verb: 'get'},
+        description: 'For fetching fund transactions.',
+    });
+
     FundTransaction.remoteMethod('fetchTransactionsByBillIdApi', {
         accepts: [
             {
@@ -325,13 +386,32 @@ module.exports = function(FundTransaction) {
         );
     }
 
+    FundTransaction.fetchTransactionsApiV2 = (accessToken, params, cb) => {
+        FundTransaction._fetchTransactionsApiV2(accessToken, params).then(
+            (resp) => {
+                if(resp)
+                    cb(null, {STATUS: 'SUCCESS', RESP: resp});
+                else
+                    cb(null, {STATUS: 'ERROR', RESP: resp});
+            }
+        ).catch(
+            (e)=> {
+                cb({STATUS: 'EXCEPTION', ERR: e}, null);
+            }
+        );
+    }
+
     FundTransaction._appendFilters = (sql, params, identifier) => {
+        let filterPart = '';
+        let orderClause = '';
+        let limitOffsetClause = '';
         let filters = [];
         switch(identifier) {
             case 'FETCH_TRANSACTION_LIST':
+            case 'FETCH_TRANSACTION_LIST_V2':
                 filters.push('deleted = 0');
                 if(params._userId)
-                    filters.push(`fund_transactions.user_id=${params._userId}`);
+                    filters.push(`FUND_TRNS_TBL_NAME.user_id=${params._userId}`);
                 if(params.accounts) {
                     params.accounts = params.accounts.map((anAccount) => `'${anAccount}'`);
                     let joinedAccounts = params.accounts.join(', ');
@@ -345,24 +425,19 @@ module.exports = function(FundTransaction) {
                 if(params.startDate && params.endDate)
                     filters.push(`(transaction_date BETWEEN '${params.startDate}' AND '${params.endDate}')`);
                 
-                let orderPart = '';
                 if(params.orderCol && params.orderBy) {
                     if(params.orderCol == 'TRN_DATE')
-                        orderPart = ` ORDER BY transaction_date ${params.orderBy}`;
+                        orderClause = ` ORDER BY transaction_date ${params.orderBy}`;
                     else if(params.orderCol == 'CREATED_DATE')
-                        orderPart = ` ORDER BY created_date ${params.orderBy}`;
+                        orderClause = ` ORDER BY created_date ${params.orderBy}`;
                     else if(params.orderCol == 'MODIFIED_DATE')
-                        orderPart = ` ORDER BY modified_date ${params.orderBy}`;
+                        orderClause = ` ORDER BY modified_date ${params.orderBy}`;
                 } else {
-                    orderPart = ` ORDER BY transaction_date ASC`;
+                    orderClause = ` ORDER BY transaction_date ASC`;
                 }
 
-                sql += ` WHERE ${filters.join(` AND `)}`;
-
-                sql += orderPart;
-
                 let limit = params.offsetEnd - params.offsetStart;
-                sql += ` LIMIT ${limit} OFFSET ${params.offsetStart}`;
+                limitOffsetClause = ` LIMIT ${limit} OFFSET ${params.offsetStart}`;
                 break;
             case 'TRANSACTION_LIST_COLLECTIONS':
                 filters.push('deleted = 0');
@@ -370,7 +445,6 @@ module.exports = function(FundTransaction) {
                     filters.push(`fund_transactions.user_id=${params._userId}`);
                 if(params.startDate && params.endDate)
                     filters.push(`(transaction_date BETWEEN '${params.startDate}' AND '${params.endDate}')`);
-                sql += ` WHERE ${filters.join(` AND `)}`;
                 break;
             case 'FETCH_TRANSACTION_LIST_BY_BILL':
                 if(params._userId)
@@ -381,9 +455,22 @@ module.exports = function(FundTransaction) {
                     else
                         filters.push(`fund_transactions.gs_uid=${params.loan_uid}`);
                 }
-                sql += ` WHERE ${filters.join(` AND `)}`;
                 break;
         }
+
+        if(filters.length > 0)
+            filterPart = ` WHERE ${filters.join(' AND ')}`;
+
+        sql = sql.replace('WHERE_CLAUSE', filterPart);
+
+        sql = sql.replace('ORDER_CLAUSE', orderClause);
+
+        sql = sql.replace('LIMIT_OFFSET_CLAUSE', limitOffsetClause);
+
+        // TABLE NAME REPLACEMENT
+        if(identifier == 'FETCH_TRANSACTION_LIST') sql = sql.replace(/FUND_TRNS_TBL_NAME/g, 'fund_transactions');
+        else if(identifier == 'FETCH_TRANSACTION_LIST_V2') sql = sql.replace(/FUND_TRNS_TBL_NAME/g, 'gs_temp_table');
+
         return sql;
     }
 
@@ -400,11 +487,12 @@ module.exports = function(FundTransaction) {
                 promiseTasks.push(FundTransaction.fetchOpeningBalanceFromDB(params._userId, params.startDate));
                 promiseTasks.push(FundTransaction.fetchClosingBalanceFromDB(params._userId, params.endDate));
                 promiseTasks.push(FundTransaction.fetchCashInOutTotalsFromDB(params));
-            } else {
-                let limit = params.offsetEnd - params.offsetStart;
-                let offset = params.offsetStart;
-                promiseTasks.push(FundTransaction.fetchPageWiseOpeningBalanceFromDB(params._userId, params.startDate, params.endDate, limit, offset));
             }
+            //  else {
+            //     let limit = params.offsetEnd - params.offsetStart;
+            //     let offset = params.offsetStart;
+            //     promiseTasks.push(FundTransaction.fetchPageWiseOpeningBalanceFromDB(params._userId, params.startDate, params.endDate, limit, offset));
+            // }
 
             Promise.all(promiseTasks).then(
                 (results) => {
@@ -422,6 +510,45 @@ module.exports = function(FundTransaction) {
             );
         });
     }
+
+    FundTransaction._fetchTransactionsApiV2 = (accessToken, params) => {
+        return new Promise(async (resolve, reject) => {
+            params._userId = await utils.getStoreOwnerUserId(accessToken);
+            let res = await FundTransaction.fetchRecordsWithHelpOfProcedure(params);
+            
+            let promiseTasks = [];
+            if(params.fetchFundOverview) {
+                promiseTasks.push(FundTransaction.fetchListCollections(params));
+                promiseTasks.push(FundTransaction.fetchOpeningBalanceFromDB(params._userId, params.startDate));
+                promiseTasks.push(FundTransaction.fetchClosingBalanceFromDB(params._userId, params.endDate));
+                promiseTasks.push(FundTransaction.fetchCashInOutTotalsFromDB(params));
+            }
+
+            Promise.all(promiseTasks).then(
+                (results) => {
+                    let obj = {
+                        results: res
+                    }
+                    if(params.fetchFundOverview) {
+                        obj.collections = FundTransaction._constructCollections(results[0]);
+                        obj.openingBalance = results[1] || 0;
+                        obj.closingBalance = results[2].closing_balance || 0;
+                        obj.totalCashIn = results[3].total_cash_in || 0;
+                        obj.totalCashOut = results[3].total_cash_out || 0;
+                    }
+                    resolve(obj);
+                },
+                (error) => {
+                    reject(error);
+                }
+            )
+            .catch(
+                (exception) => {
+                    reject(exception);
+                }
+            );
+        });
+    };
 
     FundTransaction._constructCollections = (collRes) => {
             let collections = {
@@ -952,7 +1079,7 @@ module.exports = function(FundTransaction) {
                     return resolve(res);
                 }
             });
-        })
+        });
     }
 
     FundTransaction.fetchListCollections = (params) => {
@@ -979,8 +1106,6 @@ module.exports = function(FundTransaction) {
             resp.closingBalance = results[3].closing_balance || 0;
             resp.totalCashIn = results[4].total_cash_in || 0;
             resp.totalCashOut = results[4].total_cash_out || 0;
-        } else {
-            resp.pageWiseOpeningBal = results[1] || 0;
         }
         return resp;
     }
@@ -1019,6 +1144,81 @@ module.exports = function(FundTransaction) {
         let bal2 = await FundTransaction.fetchBalanceValByDateAndLimitRange(userId, startDate, endDate, limit, offset);
         return bal1+bal2;
     }
+
+    FundTransaction.checkTempTableLoclStatus = () => {
+        return new Promise((resolve, reject) => {
+            let sql = SQL.TEMP_TABLE_LOCK_STATUS;
+            sql = sql.replace(/WHERE_CLAUSE/g, `WHERE table_name="gs_temp_table"`);
+            FundTransaction.dataSource.connector.query(sql, (err, res) => {
+                if(err) return reject(err);
+                else return resolve(res[0].is_locked);
+            });
+        });
+    }
+
+    FundTransaction.setLockStatus = (status) => {
+        return new Promise((resolve, reject) => {
+            let sql = SQL.SET_TEMP_TABLE_LOCK_STATUS;
+            sql = sql.replace(/WHERE_CLAUSE/g, `WHERE table_name="gs_temp_table"`);
+            FundTransaction.dataSource.connector.query(sql, [status], (err, res) => {
+                if(err) console.log(err);
+                return resolve(true);
+            });
+        });
+    }
+
+    FundTransaction.invokeStoredProcedure = (params) => {
+        return new Promise((resolve, reject) => {
+            let stDate = params.startDate.replace(/Z/, '').replace(/T/, ' ');
+            let endDate = params.endDate.replace(/Z/, '').replace(/T/, ' ');
+            FundTransaction.dataSource.connector.query(`CALL my_proc_1('${stDate}', '${endDate}', ${params._userId})`, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(true);
+                }
+            });        
+        });
+    };
+
+    FundTransaction.fetchRecordsFromTempTable = (params) => {
+        return new Promise((resolve, reject) => {
+            let sql = SQL.TRANSACTION_LIST_V2;
+            sql = FundTransaction._appendFilters(sql, params, 'FETCH_TRANSACTION_LIST_V2');
+            FundTransaction.dataSource.connector.query(sql, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(res);
+                }
+            });
+        })
+    }
+
+    FundTransaction.fetchRecordsWithHelpOfProcedure = (params) => {
+        return new Promise(async (resolve, reject) => {
+
+            let isLocked = await FundTransaction.checkTempTableLoclStatus();
+            if(isLocked) {
+                params._retryAttemptForProcedureCall = params._retryAttemptForProcedureCall || 0;
+                params._retryAttemptForProcedureCall++;
+                if(params._retryAttemptForProcedureCall < 10) {
+                    setTimeout(() => {
+                        return FundTransaction.fetchRecordsWithHelpOfProcedure(params);
+                    }, 1000);
+                } else {
+                    await FundTransaction.setLockStatus(0);
+                    return FundTransaction.fetchRecordsWithHelpOfProcedure(params);
+                }
+            } else {
+                await FundTransaction.setLockStatus(1);
+                await FundTransaction.invokeStoredProcedure(params);
+                let res = await FundTransaction.fetchRecordsFromTempTable(params);
+                FundTransaction.setLockStatus(0);
+                return resolve(res);
+            } 
+        });
+    }
 }
 
 let SQL = {
@@ -1034,11 +1234,14 @@ let SQL = {
     MARK_AS_DELETED: `UPDATE fund_transactions SET deleted=1 WHERE user_id=? AND gs_uid=?`,
     TRANSACTION_LIST: `SELECT 
                             fund_accounts.name AS fund_house_name,
-                            fund_transactions.*
+                            FUND_TRNS_TBL_NAME.*
                         FROM
-                            fund_transactions
+                            FUND_TRNS_TBL_NAME
                                 LEFT JOIN
-                            fund_accounts ON fund_transactions.account_id = fund_accounts.id`,
+                            fund_accounts ON FUND_TRNS_TBL_NAME.account_id = fund_accounts.id
+                        WHERE_CLAUSE
+                        ORDER_CLAUSE
+                        LIMIT_OFFSET_CLAUSE`,
     TRANSACTION_LIST_COLLECTIONS: `SELECT
                                         category,
                                         fund_accounts.name,
@@ -1048,10 +1251,25 @@ let SQL = {
                                     FROM
                                         fund_transactions
                                             LEFT JOIN
-                                        fund_accounts ON fund_transactions.account_id = fund_accounts.id`,
+                                        fund_accounts ON fund_transactions.account_id = fund_accounts.id
+                                    WHERE_CLAUSE
+                                    ORDER_CLAUSE
+                                    LIMIT_OFFSET_CLAUSE`,
     CATEGORY_LIST: `SELECT DISTINCT category from fund_transactions`,
     OPENING_BALANCE: `SELECT SUM(cash_in-cash_out) AS opening_balance from fund_transactions WHERE user_id = ? AND transaction_date < ? AND deleted = 0`,
     CLOSING_BALANCE: `SELECT SUM(cash_in-cash_out) AS closing_balance from fund_transactions WHERE user_id = ? AND transaction_date < ? AND deleted = 0`,
     CASH_IN_OUT_TOTALS: `SELECT SUM(cash_in) AS total_cash_in, SUM(cash_out) AS total_cash_out from fund_transactions WHERE user_id = ? AND (transaction_date BETWEEN ? AND ?) AND deleted = 0`,
-    DELETE_TRANSACTIONS: `DELETE FROM fund_transactions WHERE id IN (?) AND user_id=?`
+    DELETE_TRANSACTIONS: `DELETE FROM fund_transactions WHERE id IN (?) AND user_id=?`,
+    TEMP_TABLE_LOCK_STATUS: `SELECT is_locked FROM temporary_table_manager WHERE_CLAUSE`,
+    SET_TEMP_TABLE_LOCK_STATUS: `UPDATE temporary_table_manager SET is_locked=? WHERE_CLAUSE`,
+    TRANSACTION_LIST_V2: `SELECT 
+                            fund_accounts.name AS fund_house_name,
+                            FUND_TRNS_TBL_NAME.*
+                        FROM
+                            FUND_TRNS_TBL_NAME
+                                LEFT JOIN
+                            fund_accounts ON FUND_TRNS_TBL_NAME.account_id = fund_accounts.id
+                        WHERE_CLAUSE
+                        ORDER_CLAUSE
+                        LIMIT_OFFSET_CLAUSE`,
 }
