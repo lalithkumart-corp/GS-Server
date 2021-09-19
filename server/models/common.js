@@ -62,6 +62,9 @@ module.exports = function(Common) {
             await Common._createStockSoldTable(userId);
             await Common._createOldItemStockTable(userId);
             await Common._createInvoiceDetailTable(userId);
+            await Common._createFundTrnsTable(userId);
+            // await Common._createFundTrnsTempTable(userId);
+            await Common._createFundTrnsProcedure(userId);
             return true;
         } catch(e) {
             throw e;
@@ -226,6 +229,74 @@ module.exports = function(Common) {
                 } else {
                     console.log(`"invoice_detail_${userId}" table for this user:${userId} exists already, So new table not created.`);
                     return resolve(false);
+                }
+            });
+        });
+    }
+    
+    Common._createFundTrnsTable = (userId) => {
+        return new Promise((resolve, reject) => {
+            let simpleSql = `SELECT * FROM fund_transactions_${userId} LIMIT 1`;
+            app.models.GsUser.dataSource.connector.query(simpleSql, (error, result) => {
+                if(error && error.code == "ER_NO_SUCH_TABLE") {
+                    let sql = SQL.FUND_TRANS.replace(/REPLACE_USERID/g, userId);
+                    app.models.GsUser.dataSource.connector.query(sql, (err, resp) => {
+                        if(err) {
+                            console.log(err);
+                            console.log(`Error occured while creating a new "fund_transactions_<id>" table for the user: ${userId}`);
+                            return reject(err);
+                        } else {
+                            console.log(`New "fund_transactions_${userId}" table created!`);
+                            return resolve(true);
+                        }
+                    });
+                } else if(error) {
+                    return reject(error);
+                } else {
+                    console.log(`"fund_transactions_${userId}" table for this user:${userId} exists already, So new table not created.`);
+                    return resolve(false);
+                }
+            });
+        });
+    }
+
+    /*Common._createFundTrnsTempTable = (userId) => {
+        return new Promise((resolve, reject) => {
+            let simpleSql = `SELECT * FROM fund_trns_tmp_${userId} LIMIT 1`;
+            app.models.GsUser.dataSource.connector.query(simpleSql, (error, result) => {
+                if(error && error.code == "ER_NO_SUCH_TABLE") {
+                    let sql = SQL.FUND_TRANS_TMP.replace(/REPLACE_USERID/g, userId);
+                    app.models.GsUser.dataSource.connector.query(sql, (err, resp) => {
+                        if(err) {
+                            console.log(err);
+                            console.log(`Error occured while creating a new "fund_trns_tmp_<id>" table for the user: ${userId}`);
+                            return reject(err);
+                        } else {
+                            console.log(`New "fund_trns_tmp_${userId}" table created!`);
+                            return resolve(true);
+                        }
+                    });
+                } else if(error) {
+                    return reject(error);
+                } else {
+                    console.log(`"fund_trns_tmp_${userId}" table for this user:${userId} exists already, So new table not created.`);
+                    return resolve(false);
+                }
+            });
+        });
+    }*/
+
+    Common._createFundTrnsProcedure = (userId) => {
+        return new Promise((resolve, reject) => {
+            let sql = SQL.FUND_TRNS_PROCEDURE.replace(/REPLACE_USERID/g, userId);
+            app.models.GsUser.dataSource.connector.query(sql, (err, resp) => {
+                if(err) {
+                    console.log(err);
+                    console.log(`Error occured while creating a new "fund_trns_procedure_<id>" table for the user: ${userId}`);
+                    return reject(err);
+                } else {
+                    console.log(`New "fund_trns_procedure_${userId}" table created!`);
+                    return resolve(true);
                 }
             });
         });
@@ -420,5 +491,127 @@ let SQL = {
                         UNIQUE KEY uid_UNIQUE (ukey),
                         KEY cust_id_idx (cust_id)
                     )`,
+    FUND_TRANS: `CREATE TABLE fund_transactions_REPLACE_USERID (
+                    id int NOT NULL AUTO_INCREMENT,
+                    user_id int NOT NULL,
+                    customer_id int DEFAULT NULL,
+                    account_id int DEFAULT NULL,
+                    transaction_date datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    gs_uid varchar(45) DEFAULT NULL,
+                    cash_in int NOT NULL DEFAULT '0',
+                    cash_out int DEFAULT '0',
+                    category varchar(45) DEFAULT NULL,
+                    remarks text,
+                    deleted tinyint DEFAULT '0',
+                    created_date datetime DEFAULT CURRENT_TIMESTAMP,
+                    modified_date datetime DEFAULT CURRENT_TIMESTAMP,
+                    cash_out_mode varchar(45) DEFAULT NULL,
+                    cash_out_to_bank_id int DEFAULT NULL,
+                    cash_out_to_bank_acc_no varchar(45) DEFAULT NULL,
+                    cash_out_to_bank_ifsc varchar(45) DEFAULT NULL,
+                    cash_out_to_upi varchar(45) DEFAULT NULL,
+                    cash_in_mode varchar(45) DEFAULT NULL,
+                    PRIMARY KEY (id),
+                    KEY category (category),
+                    KEY gs_uid_idx (gs_uid)
+                    )`,
+    FUND_TRANS_TMP: `CREATE TABLE fund_trns_tmp_REPLACE_USERID (
+                        id int NOT NULL,
+                        transaction_date datetime NOT NULL,
+                        user_id int NOT NULL,
+                        account_id int NOT NULL,
+                        gs_uid varchar(45) DEFAULT NULL,
+                        category varchar(200) NOT NULL,
+                        remarks text,
+                        deleted int DEFAULT NULL,
+                        cash_in decimal(10,0) DEFAULT NULL,
+                        cash_out decimal(10,0) DEFAULT NULL,
+                        created_date datetime DEFAULT NULL,
+                        modified_date datetime DEFAULT NULL,
+                        cash_out_mode varchar(45) DEFAULT NULL,
+                        cash_out_to_bank_id int DEFAULT NULL,
+                        cash_out_to_bank_acc_no varchar(45) DEFAULT NULL,
+                        cash_out_to_bank_ifsc varchar(45) DEFAULT NULL,
+                        cash_out_to_upi varchar(45) DEFAULT NULL,
+                        cash_in_mode varchar(45) DEFAULT NULL,
+                        beforeBal decimal(10,0) DEFAULT NULL,
+                        afterBal decimal(10,0) DEFAULT NULL
+                    )`,
+    FUND_TRNS_PROCEDURE: `CREATE PROCEDURE fund_trns_procedure_REPLACE_USERID(IN Date1 varchar(100), IN Date2 varchar(100), IN UserId int(20))
+            BEGIN
+            
+            
+            DROP TABLE IF EXISTS fund_trns_tmp_REPLACE_USERID;
+            
+            CREATE TABLE fund_trns_tmp_REPLACE_USERID (
+                id INT NOT NULL,
+                transaction_date DATETIME NOT NULL,
+                user_id INT NOT NULL,
+                account_id INT NOT NULL,
+                gs_uid VARCHAR(45) NULL,
+                category VARCHAR(200) NOT NULL,
+                remarks TEXT NULL,
+                deleted INT NULL,
+                cash_in DECIMAL NULL,
+                cash_out DECIMAL NULL,
+                created_date DATETIME NULL,
+                modified_date DATETIME NULL,
+                cash_out_mode VARCHAR(45) NULL,
+                cash_out_to_bank_id INT NULL,
+                cash_out_to_bank_acc_no VARCHAR(45) NULL,
+                cash_out_to_bank_ifsc VARCHAR(45) NULL,
+                cash_out_to_upi VARCHAR(45) NULL,
+                cash_in_mode VARCHAR(45) NULL,
+                beforeBal DECIMAL NULL,
+                afterBal DECIMAL NULL
+            );
+            
+            
+            INSERT INTO fund_trns_tmp_REPLACE_USERID (id, transaction_date, user_id, account_id, gs_uid, category, remarks, deleted, cash_in, cash_out, created_date, modified_date, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi, cash_in_mode)
+            SELECT
+                id,
+                transaction_date,
+                user_id,
+                account_id,
+                gs_uid,
+                category,
+                remarks,
+                deleted,
+                cash_in,
+                cash_out,
+                created_date,
+                modified_date,
+                cash_out_mode,
+                cash_out_to_bank_id,
+                cash_out_to_bank_acc_no,
+                cash_out_to_bank_ifsc,
+                cash_out_to_upi,
+                cash_in_mode
+            FROM
+                fund_transactions_REPLACE_USERID
+            WHERE
+                deleted = 0
+                AND(transaction_date BETWEEN Date1
+                    AND Date2)
+            ORDER BY
+                transaction_date ASC;
+            
+            
+            SET @bal = (
+            SELECT
+                IFNULL(SUM(cash_in - cash_out), 0) AS openingBalByPage
+                FROM
+                    fund_transactions_REPLACE_USERID
+                WHERE
+                    deleted = 0
+                    AND transaction_date < Date1);
+            
+            UPDATE
+                fund_trns_tmp_REPLACE_USERID
+            SET
+                beforeBal = @bal,
+                afterBal = (@bal:=@bal + (fund_trns_tmp_REPLACE_USERID.cash_in - fund_trns_tmp_REPLACE_USERID.cash_out));
+            
+            END`,
     NEW_FUND_ACCOUNT: `INSERT INTO fund_accounts (user_id, name, is_default) VALUES (?,?,?)`
 }

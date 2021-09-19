@@ -509,7 +509,8 @@ module.exports = function(Pledgebook) {
                 let pledgebookTableName = await Pledgebook.getPledgebookTableName(userId);
                 let pledgebookClosedBillTableName = await Pledgebook.getPledgebookClosedTableName(userId);
                 
-                let query = Pledgebook.getQuery('normal', {...params, getAlerts: true}, pledgebookTableName, pledgebookClosedBillTableName);   
+                let query = Pledgebook.getQuery('normal', {...params, getAlerts: true}, pledgebookTableName, pledgebookClosedBillTableName);  
+                query = query.replace(/REPLACE_USERID/g, userId);
                 let promise1 = new Promise((resolve, reject) => {
                     Pledgebook.dataSource.connector.query(query, queryValues, (err, result) => {
                         if(err) {
@@ -734,16 +735,16 @@ module.exports = function(Pledgebook) {
                                 alerts.created_date AS alertCreatedDate,
                                 fund_accounts.id AS fund_accounts_id,
                                 fund_accounts.name AS fundAccount_name,
-                                fund_transactions.id AS fundTransaction_id,
-                                fund_transactions.account_id AS fundTransaction_account_id,
-                                fund_transactions.transaction_date AS fundTransaction_transaction_date,
-                                fund_transactions.cash_out AS fundTransaction_cash_out,
-                                fund_transactions.cash_out_mode AS fundTransaction_cash_out_mode,
-                                fund_transactions.cash_out_to_bank_id AS fundTransaction_cash_out_to_bank_id,
-                                fund_transactions.cash_out_to_bank_acc_no AS fundTransaction_cash_out_to_bank_acc_no,
-                                fund_transactions.cash_out_to_bank_ifsc AS fundTransaction_cash_out_to_bank_ifsc,
-                                fund_transactions.cash_out_to_upi AS fundTransaction_cash_out_to_upi,
-                                fund_transactions.id AS fundTransaction_Id,
+                                fund_transactions_REPLACE_USERID.id AS fundTransaction_id,
+                                fund_transactions_REPLACE_USERID.account_id AS fundTransaction_account_id,
+                                fund_transactions_REPLACE_USERID.transaction_date AS fundTransaction_transaction_date,
+                                fund_transactions_REPLACE_USERID.cash_out AS fundTransaction_cash_out,
+                                fund_transactions_REPLACE_USERID.cash_out_mode AS fundTransaction_cash_out_mode,
+                                fund_transactions_REPLACE_USERID.cash_out_to_bank_id AS fundTransaction_cash_out_to_bank_id,
+                                fund_transactions_REPLACE_USERID.cash_out_to_bank_acc_no AS fundTransaction_cash_out_to_bank_acc_no,
+                                fund_transactions_REPLACE_USERID.cash_out_to_bank_ifsc AS fundTransaction_cash_out_to_bank_ifsc,
+                                fund_transactions_REPLACE_USERID.cash_out_to_upi AS fundTransaction_cash_out_to_upi,
+                                fund_transactions_REPLACE_USERID.id AS fundTransaction_Id,
                                 banks_list.name AS cashOutToBankName
                             FROM
                                 ${pledgebookTableName}
@@ -758,11 +759,11 @@ module.exports = function(Pledgebook) {
                                     LEFT JOIN
                                 alerts ON (${pledgebookTableName}.alert = alerts.id AND alerts.archived=0)
                                     LEFT JOIN
-                                fund_transactions ON (${pledgebookTableName}.UniqueIdentifier = fund_transactions.gs_uid && fund_transactions.category IN ('girvi' , 'redeem'))
+                                fund_transactions_REPLACE_USERID ON (${pledgebookTableName}.UniqueIdentifier = fund_transactions_REPLACE_USERID.gs_uid && fund_transactions_REPLACE_USERID.category IN ('girvi' , 'redeem'))
                                     LEFT JOIN
-                                fund_accounts ON fund_transactions.account_id = fund_accounts.id
+                                fund_accounts ON fund_transactions_REPLACE_USERID.account_id = fund_accounts.id
                                     LEFT JOIN
-                                banks_list ON fund_transactions.cash_out_to_bank_id = banks_list.id
+                                banks_list ON fund_transactions_REPLACE_USERID.cash_out_to_bank_id = banks_list.id
                                 `;
                 
                 query = Pledgebook.appendFilters(params, query, pledgebookTableName, pledgebookClosedBillTableName, queryIdentifier);
@@ -904,16 +905,16 @@ module.exports = function(Pledgebook) {
                             orn_images.Format AS OrnImageFormat,
                             fund_accounts.id AS fund_accounts_id,
                             fund_accounts.name AS fundAccount_name,
-                            fund_transactions.id AS fundTransaction_id,
-                            fund_transactions.account_id AS fundTransaction_account_id,
-                            fund_transactions.transaction_date AS fundTransaction_transaction_date,
-                            fund_transactions.cash_out AS fundTransaction_cash_out,
-                            fund_transactions.cash_out_mode AS fundTransaction_cash_out_mode,
-                            fund_transactions.cash_out_to_bank_id AS fundTransaction_cash_out_to_bank_id,
-                            fund_transactions.cash_out_to_bank_acc_no AS fundTransaction_cash_out_to_bank_acc_no,
-                            fund_transactions.cash_out_to_bank_ifsc AS fundTransaction_cash_out_to_bank_ifsc,
-                            fund_transactions.cash_out_to_upi AS fundTransaction_cash_out_to_upi,
-                            fund_transactions.id AS fundTransaction_Id,
+                            fund_transactions_REPLACE_USERID.id AS fundTransaction_id,
+                            fund_transactions_REPLACE_USERID.account_id AS fundTransaction_account_id,
+                            fund_transactions_REPLACE_USERID.transaction_date AS fundTransaction_transaction_date,
+                            fund_transactions_REPLACE_USERID.cash_out AS fundTransaction_cash_out,
+                            fund_transactions_REPLACE_USERID.cash_out_mode AS fundTransaction_cash_out_mode,
+                            fund_transactions_REPLACE_USERID.cash_out_to_bank_id AS fundTransaction_cash_out_to_bank_id,
+                            fund_transactions_REPLACE_USERID.cash_out_to_bank_acc_no AS fundTransaction_cash_out_to_bank_acc_no,
+                            fund_transactions_REPLACE_USERID.cash_out_to_bank_ifsc AS fundTransaction_cash_out_to_bank_ifsc,
+                            fund_transactions_REPLACE_USERID.cash_out_to_upi AS fundTransaction_cash_out_to_upi,
+                            fund_transactions_REPLACE_USERID.id AS fundTransaction_Id,
                             banks_list.name AS cashOutToBankName
                         FROM
                             ${pledgebookTableName}
@@ -924,11 +925,11 @@ module.exports = function(Pledgebook) {
                                 LEFT JOIN
                             orn_images ON ${pledgebookTableName}.OrnPictureId = orn_images.Id
                                 LEFT JOIN
-                            fund_transactions ON ${pledgebookTableName}.UniqueIdentifier = fund_transactions.gs_uid
+                            fund_transactions_REPLACE_USERID ON ${pledgebookTableName}.UniqueIdentifier = fund_transactions_REPLACE_USERID.gs_uid
                                 LEFT JOIN
-                            fund_accounts ON fund_transactions.account_id = fund_accounts.id
+                            fund_accounts ON fund_transactions_REPLACE_USERID.account_id = fund_accounts.id
                                 LEFT JOIN
-                            banks_list ON fund_transactions.cash_out_to_bank_id = banks_list.id
+                            banks_list ON fund_transactions_REPLACE_USERID.cash_out_to_bank_id = banks_list.id
                         WHERE `;
                 let filterPart = [];
                 for(let i=0; i<params.length; i++) {
@@ -1019,7 +1020,7 @@ module.exports = function(Pledgebook) {
                 filterQueries.push(`${pledgebookTableName}.Trashed=1`);
             
             // Left Join the fund_transaction rows which are related to "loan", and "Redeem"
-            // if(identifier == 'normal') filterQueries.push(`fund_transactions.category IN ("girvi", "redeem")`)
+            // if(identifier == 'normal') filterQueries.push(`fund_transactions_REPLACE_USERID.category IN ("girvi", "redeem")`)
 
             if(filterQueries.length != 0)
                 query += ' WHERE ' + filterQueries.join(' AND ');
@@ -1149,6 +1150,7 @@ module.exports = function(Pledgebook) {
             let query = Pledgebook.getQuery('billDetails', billNoArray, pledgebookTableName);
             if(fetchOnlyPending)
                 query +=` AND STATUS=1`;
+            query = query.replace(/REPLACE_USERID/g, _userId);
             Pledgebook.dataSource.connector.query(query, (err, result) => {
                 if(err) {
                     reject(err);
@@ -1358,7 +1360,8 @@ module.exports = function(Pledgebook) {
             let pledgebookTableName = await Pledgebook.getPledgebookTableName(userId);
             let pledgebookClosedBillTableName = await Pledgebook.getPledgebookClosedTableName(userId);
             
-            let query = Pledgebook.getQuery('normal', params, pledgebookTableName, pledgebookClosedBillTableName);            
+            let query = Pledgebook.getQuery('normal', params, pledgebookTableName, pledgebookClosedBillTableName);
+            query = query.replace(/REPLACE_USERID/g, userId);
             Pledgebook.dataSource.connector.query(query, queryValues, (err, result) => {
                 if(err) {
                     reject(err);

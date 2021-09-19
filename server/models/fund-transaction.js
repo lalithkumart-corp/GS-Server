@@ -156,8 +156,7 @@ module.exports = function(FundTransaction) {
         description: 'For fetching fund transactions.',
     });
 
-
-    FundTransaction.remoteMethod('fetchConsolidatedTransactionsApi', {
+    FundTransaction.remoteMethod('fetchTransactionsOverviewApi', {
         accepts: [
             {
                 arg: 'accessToken', type: 'string', http: (ctx) => {
@@ -183,8 +182,8 @@ module.exports = function(FundTransaction) {
                 source: 'body',
             },
         },
-        http: {path: '/fetch-consolidated-transactions', verb: 'get'},
-        description: 'For fetching fund transactions.',
+        http: {path: '/fetch-transactions-overview', verb: 'get'},
+        description: 'For fetching fund transactions overview.',
     });
 
     FundTransaction.remoteMethod('fetchTransactionsByBillIdApi', {
@@ -332,8 +331,9 @@ module.exports = function(FundTransaction) {
     FundTransaction._cashInApi = (apiParams) => {
         return new Promise( async (resolve, reject) => {
             let userId = await  utils.getStoreOwnerUserId(apiParams.accessToken);
+            let sql = SQL.CASH_TRANSACTION_IN.replace(/REPLACE_USERID/g, userId);
             let queryValues = [userId, apiParams.fundHouse, dateformat(apiParams.transactionDate, 'yyyy-mm-dd HH:MM:ss', true), apiParams.amount, 0, apiParams.category, apiParams.remarks, apiParams.paymentMode];
-            FundTransaction.dataSource.connector.query(SQL.CASH_TRANSACTION_IN, queryValues, (err, res) => {
+            FundTransaction.dataSource.connector.query(sql, queryValues, (err, res) => {
                 if(err){
                     reject(err);
                 } else {
@@ -361,7 +361,8 @@ module.exports = function(FundTransaction) {
             let destAccDetail = apiParams.destinationAccountDetail;
             let queryValues = [userId, apiParams.myFundAccountId, dateformat(apiParams.transactionDate, 'yyyy-mm-dd HH:MM:ss', true), 0, apiParams.amount, apiParams.category, apiParams.remarks,
                 apiParams.paymentMode, destAccDetail.toAccountId, destAccDetail.accNo, destAccDetail.ifscCode, destAccDetail.upiId];
-            FundTransaction.dataSource.connector.query(SQL.CASH_TRANSACTION_OUT, queryValues, (err, res) => {
+            let sql = SQL.CASH_TRANSACTION_OUT.replace(/REPLACE_USERID/g, userId);
+            FundTransaction.dataSource.connector.query(sql, queryValues, (err, res) => {
                 if(err){
                     reject(err);
                 } else {
@@ -401,6 +402,21 @@ module.exports = function(FundTransaction) {
         );
     }
 
+    FundTransaction.fetchTransactionsOverviewApi = (accessToken, params, cb) => {
+        FundTransaction._fetchTransactionsOverviewApi(accessToken, params).then(
+            (resp) => {
+                if(resp)
+                    cb(null, {STATUS: 'SUCCESS', RESP: resp});
+                else
+                    cb(null, {STATUS: 'ERROR', RESP: resp});
+            }
+        ).catch(
+            (e)=> {
+                cb({STATUS: 'EXCEPTION', ERR: e}, null);
+            }
+        );
+    }
+
     FundTransaction._appendFilters = (sql, params, identifier) => {
         let filterPart = '';
         let orderClause = '';
@@ -408,10 +424,9 @@ module.exports = function(FundTransaction) {
         let filters = [];
         switch(identifier) {
             case 'FETCH_TRANSACTION_LIST':
-            case 'FETCH_TRANSACTION_LIST_V2':
                 filters.push('deleted = 0');
                 if(params._userId)
-                    filters.push(`FUND_TRNS_TBL_NAME.user_id=${params._userId}`);
+                    filters.push(`fund_transactions_REPLACE_USERID.user_id=${params._userId}`);
                 if(params.accounts) {
                     params.accounts = params.accounts.map((anAccount) => `'${anAccount}'`);
                     let joinedAccounts = params.accounts.join(', ');
@@ -439,21 +454,55 @@ module.exports = function(FundTransaction) {
                 let limit = params.offsetEnd - params.offsetStart;
                 limitOffsetClause = ` LIMIT ${limit} OFFSET ${params.offsetStart}`;
                 break;
+            case 'FETCH_TRANSACTION_LIST_V2':
+            case 'FETCH_TRANSACTION_LIST_TOT_COUNT':
+                filters.push('deleted = 0');
+                if(params._userId)
+                    filters.push(`fund_trns_tmp_REPLACE_USERID.user_id=${params._userId}`);
+                if(params.accounts) {
+                    let accountVal = params.accounts.map((anAccount) => `'${anAccount}'`);
+                    let joinedAccounts = accountVal.join(', ');
+                    filters.push(`fund_accounts.id in (${joinedAccounts})`);
+                }
+                if(params.category && params.category.length > 0) {
+                    params.category = params.category.map((aCategory) => `'${aCategory}'`);
+                    let joinedCategories = params.category.join(', ');
+                    filters.push(`category in (${joinedCategories})`);
+                }
+                if(params.startDate && params.endDate)
+                    filters.push(`(transaction_date BETWEEN '${params.startDate}' AND '${params.endDate}')`);
+                
+                if(identifier !== 'FETCH_TRANSACTION_LIST_TOT_COUNT') {
+                    if(params.orderCol && params.orderBy) {
+                        if(params.orderCol == 'TRN_DATE')
+                            orderClause = ` ORDER BY transaction_date ${params.orderBy}`;
+                        else if(params.orderCol == 'CREATED_DATE')
+                            orderClause = ` ORDER BY created_date ${params.orderBy}`;
+                        else if(params.orderCol == 'MODIFIED_DATE')
+                            orderClause = ` ORDER BY modified_date ${params.orderBy}`;
+                    } else {
+                        orderClause = ` ORDER BY transaction_date ASC`;
+                    }
+
+                    let limit = params.offsetEnd - params.offsetStart;
+                    limitOffsetClause = ` LIMIT ${limit} OFFSET ${params.offsetStart}`;
+                }
+                break;
             case 'TRANSACTION_LIST_COLLECTIONS':
                 filters.push('deleted = 0');
                 if(params._userId)
-                    filters.push(`fund_transactions.user_id=${params._userId}`);
+                    filters.push(`fund_transactions_REPLACE_USERID.user_id=${params._userId}`);
                 if(params.startDate && params.endDate)
                     filters.push(`(transaction_date BETWEEN '${params.startDate}' AND '${params.endDate}')`);
                 break;
             case 'FETCH_TRANSACTION_LIST_BY_BILL':
                 if(params._userId)
-                    filters.push(`fund_transactions.user_id=${params._userId}`);
+                    filters.push(`fund_transactions_REPLACE_USERID.user_id=${params._userId}`);
                 if(params.loan_uid) {
                     if(params.closed_uid)
-                        filters.push(`(fund_transactions.gs_uid=${params.loan_uid} OR fund_transactions.gs_uid=${params.closed_uid})`);
+                        filters.push(`(fund_transactions_REPLACE_USERID.gs_uid=${params.loan_uid} OR fund_transactions_REPLACE_USERID.gs_uid=${params.closed_uid})`);
                     else
-                        filters.push(`fund_transactions.gs_uid=${params.loan_uid}`);
+                        filters.push(`fund_transactions_REPLACE_USERID.gs_uid=${params.loan_uid}`);
                 }
                 break;
         }
@@ -468,9 +517,10 @@ module.exports = function(FundTransaction) {
         sql = sql.replace('LIMIT_OFFSET_CLAUSE', limitOffsetClause);
 
         // TABLE NAME REPLACEMENT
-        if(identifier == 'FETCH_TRANSACTION_LIST') sql = sql.replace(/FUND_TRNS_TBL_NAME/g, 'fund_transactions');
-        else if(identifier == 'FETCH_TRANSACTION_LIST_V2') sql = sql.replace(/FUND_TRNS_TBL_NAME/g, 'gs_temp_table');
+        // if(identifier == 'FETCH_TRANSACTION_LIST') sql = sql.replace(/FUND_TRNS_TBL_NAME/g, 'fund_transactions_REPLACE_USERID');
+        // else if(identifier == 'FETCH_TRANSACTION_LIST_V2') sql = sql.replace(/FUND_TRNS_TBL_NAME/g, 'fund_trns_tmp_REPLACE_USERID');
 
+        sql = sql.replace(/REPLACE_USERID/g, params._userId);
         return sql;
     }
 
@@ -483,7 +533,7 @@ module.exports = function(FundTransaction) {
             promiseTasks.push(FundTransaction.fetchPaginatedList(params));
             
             if(params.fetchFundOverview) {
-                promiseTasks.push(FundTransaction.fetchListCollections(params));
+                promiseTasks.push(FundTransaction.fetchFilterSuggestions(params));
                 promiseTasks.push(FundTransaction.fetchOpeningBalanceFromDB(params._userId, params.startDate));
                 promiseTasks.push(FundTransaction.fetchClosingBalanceFromDB(params._userId, params.endDate));
                 promiseTasks.push(FundTransaction.fetchCashInOutTotalsFromDB(params));
@@ -514,28 +564,24 @@ module.exports = function(FundTransaction) {
     FundTransaction._fetchTransactionsApiV2 = (accessToken, params) => {
         return new Promise(async (resolve, reject) => {
             params._userId = await utils.getStoreOwnerUserId(accessToken);
-            let res = await FundTransaction.fetchRecordsWithHelpOfProcedure(params);
-            
             let promiseTasks = [];
-            if(params.fetchFundOverview) {
-                promiseTasks.push(FundTransaction.fetchListCollections(params));
-                promiseTasks.push(FundTransaction.fetchOpeningBalanceFromDB(params._userId, params.startDate));
-                promiseTasks.push(FundTransaction.fetchClosingBalanceFromDB(params._userId, params.endDate));
-                promiseTasks.push(FundTransaction.fetchCashInOutTotalsFromDB(params));
-            }
+            promiseTasks.push(FundTransaction.fetchRecordsWithHelpOfProcedure(params));
+
+            if(params.fetchFilterCollections) 
+                promiseTasks.push(FundTransaction.fetchFilterSuggestions(params));
+
+            // if(params.consolidateCategories && params.consolidateCategories.length > 0)
+            //     res = FundTransaction.consolidate(res, params.consolidateCategories);
 
             Promise.all(promiseTasks).then(
                 (results) => {
                     let obj = {
-                        results: res
+                        results: results[0].rows,
+                        count: results[0].count
                     }
-                    if(params.fetchFundOverview) {
-                        obj.collections = FundTransaction._constructCollections(results[0]);
-                        obj.openingBalance = results[1] || 0;
-                        obj.closingBalance = results[2].closing_balance || 0;
-                        obj.totalCashIn = results[3].total_cash_in || 0;
-                        obj.totalCashOut = results[3].total_cash_out || 0;
-                    }
+                    if(params.fetchFilterCollections)
+                        obj.collections = FundTransaction._constructCollections(results[1]);
+                    
                     resolve(obj);
                 },
                 (error) => {
@@ -583,6 +629,36 @@ module.exports = function(FundTransaction) {
         return collections;
     }
 
+    FundTransaction._fetchTransactionsOverviewApi = (accessToken, params) => {
+        return new Promise(async (resolve, reject) => {
+            params._userId = await utils.getStoreOwnerUserId(accessToken);
+            
+            let promiseTasks = [];
+            promiseTasks.push(FundTransaction.fetchOpeningBalanceFromDB(params._userId, params.startDate));
+            promiseTasks.push(FundTransaction.fetchClosingBalanceFromDB(params._userId, params.endDate));
+            promiseTasks.push(FundTransaction.fetchCashInOutTotalsFromDB(params));
+
+            Promise.all(promiseTasks).then(
+                (results) => {
+                    let obj = {};
+                        obj.openingBalance = results[0] || 0;
+                        obj.closingBalance = results[1].closing_balance || 0;
+                        obj.totalCashIn = results[2].total_cash_in || 0;
+                        obj.totalCashOut = results[2].total_cash_out || 0;
+                    resolve(obj);
+                },
+                (error) => {
+                    reject(error);
+                }
+            )
+            .catch(
+                (exception) => {
+                    reject(exception);
+                }
+            );
+        });
+    }
+
     FundTransaction.fetchCategorySuggestionsApi = (accessToken, mode, cb) => {
         FundTransaction._fetchCategorySuggestionsApi(accessToken, mode).then(
             (resp) => {
@@ -606,6 +682,7 @@ module.exports = function(FundTransaction) {
                 amountCondition = 'cash_out > 0'
             let sql = SQL.CATEGORY_LIST;
             sql += ` WHERE user_id=${userId} AND ${amountCondition}`;
+            sql = sql.replace(/REPLACE_USERID/g, userId);
             FundTransaction.dataSource.connector.query(sql, (err, res) => {
                 if(err) {
                     return reject(err);
@@ -667,7 +744,10 @@ module.exports = function(FundTransaction) {
 
             let qv = [parsedArg._userId, parsedArg.customerId, fromAcc, parsedArg.uniqueIdentifier, parsedArg.date, parsedArg.interestValue, parsedArg.amount, 'Girvi', parsedArg.billNoWithSeries,
             mode, toAcc, accountNo, ifscCode, upiId];
-            FundTransaction.dataSource.connector.query(SQL.INTERNAL_GIRVI_TRANSACTION, qv, (err, res) => {
+
+            let sql = SQL.INTERNAL_GIRVI_TRANSACTION;
+            sql = sql.replace(/REPLACE_USERID/g, parsedArg._userId);
+            FundTransaction.dataSource.connector.query(sql, qv, (err, res) => {
                 if(err) {
                     return reject(err);
                 } else {
@@ -691,7 +771,7 @@ module.exports = function(FundTransaction) {
                         mode = pd.mode;
                         toAcc = pd[mode].toAccountId;
                     }
-                    let qv = [params._userId, toAcc, datum.redeemUID, datum.customerId, datum.closedDate, datum.paidAmount, 0, 'Redeem', datum.billNo, mode];
+                    let qv = [params._userId, datum.customerId, toAcc, datum.redeemUID, datum.closedDate, datum.paidAmount, 0, 'Redeem', datum.billNo, mode];
                     
                     await FundTransaction._addRedeemEntry(qv);
                 }
@@ -704,7 +784,9 @@ module.exports = function(FundTransaction) {
 
     FundTransaction._addRedeemEntry = (qv) => {
         return new Promise((resolve, reject) => {
-            FundTransaction.dataSource.connector.query(SQL.INTERNAL_REDEEM_TRANSACTION, qv, (err, res) => {
+            let sql = SQL.INTERNAL_REDEEM_TRANSACTION;
+            sql = sql.replace(/REPLACE_USERID/g, qv[0]);
+            FundTransaction.dataSource.connector.query(sql, qv, (err, res) => {
                 if(err) {
                     return reject(err);
                 } else {
@@ -760,7 +842,9 @@ module.exports = function(FundTransaction) {
 
             let qv = [parsedArg.customerId, fromAcc, parsedArg.date, parsedArg.interestValue, parsedArg.amount, 'Girvi', mode, toAcc, accountNo, ifscCode, upiId, parsedArg.uniqueIdentifier, parsedArg._userId];
 
-            FundTransaction.dataSource.connector.query(SQL.INTERNAL_GIRVI_TRANSACTION_UPDATE, qv, (err, res) => {
+            let sql = SQL.INTERNAL_GIRVI_TRANSACTION_UPDATE;
+            sql = sql.replace(/REPLACE_USERID/g, parsedArg._userId);
+            FundTransaction.dataSource.connector.query(sql, qv, (err, res) => {
                 if(err) {
                     return reject(err);
                 } else {
@@ -785,7 +869,7 @@ module.exports = function(FundTransaction) {
                         toAcc = pd[mode].toAccountId;
                     }
                     let qv = [ datum.customerId, toAcc, datum.closedDate, datum.paidAmount, datum.billNo,  mode,   datum.redeemUID, params._userId];
-                    await FundTransaction._updateRedeemEntry(qv);
+                    await FundTransaction._updateRedeemEntry(qv, params);
                 }
                 return resolve(true);
             } catch(e) {
@@ -794,9 +878,11 @@ module.exports = function(FundTransaction) {
         });
     }
 
-    FundTransaction._updateRedeemEntry = (qv) => {
+    FundTransaction._updateRedeemEntry = (qv, options) => {
         return new Promise((resolve, reject) => {
-            FundTransaction.dataSource.connector.query(SQL.INTERNAL_REDEEM_TRANSACTION_UPDATE, qv, (err, res) => {
+            let sql = SQL.INTERNAL_REDEEM_TRANSACTION_UPDATE;
+            sql = sql.replace(/REPLACE_USERID/g, options._userId);
+            FundTransaction.dataSource.connector.query(sql, qv, (err, res) => {
                 if(err) {
                     return reject(err);
                 } else {
@@ -841,7 +927,9 @@ module.exports = function(FundTransaction) {
     FundTransaction._markRedeemEntryAsDeleted = (params) => {
         return new Promise( async (resolve, reject) => {
             let qv = [params._userId, params.closedBillReference];
-            FundTransaction.dataSource.connector.query(SQL.MARK_AS_DELETED, qv, (err, res) => {
+            let sql = SQL.MARK_AS_DELETED;
+            sql = sql.replace(/REPLACE_USERID/g, params._userId);
+            FundTransaction.dataSource.connector.query(sql, qv, (err, res) => {
                 if(err) {
                     return reject(err);
                 } else {
@@ -877,7 +965,9 @@ module.exports = function(FundTransaction) {
 
     FundTransaction.fetchOpeningBalanceFromDB = (userId, dateVal) => {
         return new Promise( async (resolve, reject) => {
-            FundTransaction.dataSource.connector.query(SQL.OPENING_BALANCE, [userId, dateVal], (err, res) => {
+            let sql = SQL.OPENING_BALANCE;
+            sql = sql.replace(/REPLACE_USERID/g, userId);
+            FundTransaction.dataSource.connector.query(sql, [userId, dateVal], (err, res) => {
                 if(err) {
                     reject(err);
                 } else {
@@ -892,7 +982,9 @@ module.exports = function(FundTransaction) {
 
     FundTransaction.fetchClosingBalanceFromDB = (userId, dateVal) => {
         return new Promise( async (resolve, reject) => {
-            FundTransaction.dataSource.connector.query(SQL.CLOSING_BALANCE, [userId, dateVal], (err, res) => {
+            let sql = SQL.CLOSING_BALANCE;
+            sql = sql.replace(/REPLACE_USERID/g, userId);
+            FundTransaction.dataSource.connector.query(sql, [userId, dateVal], (err, res) => {
                 if(err) {
                     reject(err);
                 } else {
@@ -909,7 +1001,9 @@ module.exports = function(FundTransaction) {
 
     FundTransaction.fetchCashInOutTotalsFromDB = (params) => {
         return new Promise( async (resolve, reject) => {
-            FundTransaction.dataSource.connector.query(SQL.CASH_IN_OUT_TOTALS, [params._userId, params.startDate, params.endDate], (err, res) => {
+            let sql = SQL.CASH_IN_OUT_TOTALS;
+            sql = sql.replace(/REPLACE_USERID/g, params._userId);
+            FundTransaction.dataSource.connector.query(sql, [params._userId, params.startDate, params.endDate], (err, res) => {
                 if(err) {
                     reject(err);
                 } else {
@@ -941,7 +1035,9 @@ module.exports = function(FundTransaction) {
     FundTransaction._deleteTransactionsApi = (params) => {
         return new Promise(async (resolve, reject) => {
             let userId = await utils.getStoreOwnerUserId(params.accessToken);
-            FundTransaction.dataSource.connector.query(SQL.DELETE_TRANSACTIONS, [params.transactionIds, userId], (err, res) => {
+            let sql = SQL.DELETE_TRANSACTIONS;
+            sql = sql.replace(/REPLACE_USERID/g, userId);
+            FundTransaction.dataSource.connector.query(sql, [params.transactionIds, userId], (err, res) => {
                 if(err) {
                     console.log(err);
                     return reject(err);
@@ -975,7 +1071,11 @@ module.exports = function(FundTransaction) {
                 toAcc = pd[mode].toAccountId;
             }
             let queryValues = [userId, params.customerId, toAcc, params.uniqueIdentifier, dateformat(params.dateVal, 'yyyy-mm-dd HH:MM:ss', true), params.paymentDetails.value, 0, params.category, params.remarks, mode];
-            FundTransaction.dataSource.connector.query(SQL.ADD_CASH_FOR_BILL, queryValues, (err, res) => {
+            
+            let sql = SQL.ADD_CASH_FOR_BILL;
+            sql = sql.replace(/REPLACE_USERID/g, userId);
+
+            FundTransaction.dataSource.connector.query(sql, queryValues, (err, res) => {
                 if(err) {
                     return reject(err);
                 } else {
@@ -1004,6 +1104,7 @@ module.exports = function(FundTransaction) {
             params._userId = await utils.getStoreOwnerUserId(accessToken);
             let sql = SQL.TRANSACTION_LIST;
             sql = FundTransaction._appendFilters(sql, params, 'FETCH_TRANSACTION_LIST_BY_BILL');
+            sql = sql.replace(/REPLACE_USERID/g, params._userId);
             FundTransaction.dataSource.connector.query(sql, (err, res) => {
                 if(err) {
                     return reject(err);
@@ -1030,7 +1131,10 @@ module.exports = function(FundTransaction) {
         return new Promise(async (resolve, reject) => {
             let userId = await utils.getStoreOwnerUserId(params.accessToken);
             let queryValues = [params.accountId, dateformat(params.transactionDate, 'yyyy-mm-dd HH:MM:ss', true), params.amount, params.category, params.remarks, params.paymentMode, params.transactionId, userId];
-            FundTransaction.dataSource.connector.query(SQL.UPDATE_TRANSACTION_FOR_CASH_IN, queryValues, (err, res) => {
+
+            let sql = SQL.UPDATE_TRANSACTION_FOR_CASH_IN;
+            sql = sql.replace(/REPLACE_USERID/g, userId);
+            FundTransaction.dataSource.connector.query(sql, queryValues, (err, res) => {
                 if(err) {
                     return reject(err);
                 } else {
@@ -1058,7 +1162,10 @@ module.exports = function(FundTransaction) {
             let destAccDetail = params.destinationAccountDetail;
             let queryValues = [params.accountId, dateformat(params.transactionDate, 'yyyy-mm-dd HH:MM:ss', true), params.amount, params.category, params.remarks, 
                 params.paymentMode, destAccDetail.toAccountId, destAccDetail.accNo, destAccDetail.ifscCode, destAccDetail.upiId, params.transactionId, userId];
-            FundTransaction.dataSource.connector.query(SQL.UPDATE_TRANSACTION_FOR_CASH_OUT, queryValues, (err, res) => {
+            
+            let sql = SQL.UPDATE_TRANSACTION_FOR_CASH_OUT;
+            sql = sql.replace(/REPLACE_USERID/g, userId);
+            FundTransaction.dataSource.connector.query(sql, queryValues, (err, res) => {
                 if(err) {
                     return reject(err);
                 } else {
@@ -1072,6 +1179,7 @@ module.exports = function(FundTransaction) {
         return new Promise((resolve, reject) => {
             let sql = SQL.TRANSACTION_LIST;
             sql = FundTransaction._appendFilters(sql, params, 'FETCH_TRANSACTION_LIST');
+            sql = sql.replace(/REPLACE_USERID/g, params._userId);
             FundTransaction.dataSource.connector.query(sql, (err, res) => {
                 if(err) {
                     return reject(err);
@@ -1082,10 +1190,11 @@ module.exports = function(FundTransaction) {
         });
     }
 
-    FundTransaction.fetchListCollections = (params) => {
+    FundTransaction.fetchFilterSuggestions = (params) => {
         return new Promise((resolve, reject) => {
             let totalSql = SQL.TRANSACTION_LIST_COLLECTIONS;
             totalSql = FundTransaction._appendFilters(totalSql, params, 'TRANSACTION_LIST_COLLECTIONS');
+            totalSql = totalSql.replace(/REPLACE_USERID/g, params._userId);
             FundTransaction.dataSource.connector.query(totalSql, (err, res) => {
                 if(err) {
                     return reject(err);
@@ -1110,6 +1219,7 @@ module.exports = function(FundTransaction) {
         return resp;
     }
 
+    /*
     FundTransaction.fetchBalanceValByDateAndLimitRange = (userId, dateVal, endDate, limit, offset) => {
         return new Promise((resolve, reject) => {
             let sql = `SELECT
@@ -1119,13 +1229,14 @@ module.exports = function(FundTransaction) {
                                 cash_in,
                                 cash_out
                             FROM
-                                fund_transactions
+                                fund_transactions_REPLACE_USERID
                             WHERE
                                 user_id = ${userId}
                                 AND transaction_date > '${dateVal}'
                                 AND deleted = 0
                             ORDER BY transaction_date ASC
                             LIMIT ${offset}) AS t`;
+            sql = sql.replace(/REPLACE_USERID/g, userId);
             FundTransaction.dataSource.connector.query(sql, (err, res) => {
                 if(err) {
                     return reject(err);
@@ -1138,17 +1249,19 @@ module.exports = function(FundTransaction) {
             })
         });
     }
+    */
 
-    FundTransaction.fetchPageWiseOpeningBalanceFromDB = async (userId, startDate, endDate, limit, offset) => {
-        let bal1 = await FundTransaction.fetchOpeningBalanceFromDB(userId, startDate);
-        let bal2 = await FundTransaction.fetchBalanceValByDateAndLimitRange(userId, startDate, endDate, limit, offset);
-        return bal1+bal2;
-    }
+    // FundTransaction.fetchPageWiseOpeningBalanceFromDB = async (userId, startDate, endDate, limit, offset) => {
+    //     let bal1 = await FundTransaction.fetchOpeningBalanceFromDB(userId, startDate);
+    //     let bal2 = await FundTransaction.fetchBalanceValByDateAndLimitRange(userId, startDate, endDate, limit, offset);
+    //     return bal1+bal2;
+    // }
 
     FundTransaction.checkTempTableLoclStatus = () => {
         return new Promise((resolve, reject) => {
             let sql = SQL.TEMP_TABLE_LOCK_STATUS;
-            sql = sql.replace(/WHERE_CLAUSE/g, `WHERE table_name="gs_temp_table"`);
+            sql = sql.replace(/WHERE_CLAUSE/g, `WHERE table_name="fund_trns_tmp_REPLACE_USERID"`);
+            sql = sql.replace(/REPLACE_USERID/g, params._userId);
             FundTransaction.dataSource.connector.query(sql, (err, res) => {
                 if(err) return reject(err);
                 else return resolve(res[0].is_locked);
@@ -1159,7 +1272,8 @@ module.exports = function(FundTransaction) {
     FundTransaction.setLockStatus = (status) => {
         return new Promise((resolve, reject) => {
             let sql = SQL.SET_TEMP_TABLE_LOCK_STATUS;
-            sql = sql.replace(/WHERE_CLAUSE/g, `WHERE table_name="gs_temp_table"`);
+            sql = sql.replace(/WHERE_CLAUSE/g, `WHERE table_name="fund_trns_tmp_REPLACE_USERID"`);
+            sql = sql.replace(/REPLACE_USERID/g, params._userId);
             FundTransaction.dataSource.connector.query(sql, [status], (err, res) => {
                 if(err) console.log(err);
                 return resolve(true);
@@ -1171,7 +1285,9 @@ module.exports = function(FundTransaction) {
         return new Promise((resolve, reject) => {
             let stDate = params.startDate.replace(/Z/, '').replace(/T/, ' ');
             let endDate = params.endDate.replace(/Z/, '').replace(/T/, ' ');
-            FundTransaction.dataSource.connector.query(`CALL my_proc_1('${stDate}', '${endDate}', ${params._userId})`, (err, res) => {
+            let sql = `CALL fund_trns_procedure_REPLACE_USERID('${stDate}', '${endDate}', ${params._userId})`;
+            sql = sql.replace(/REPLACE_USERID/g, params._userId);
+            FundTransaction.dataSource.connector.query(sql, (err, res) => {
                 if(err) {
                     return reject(err);
                 } else {
@@ -1185,6 +1301,7 @@ module.exports = function(FundTransaction) {
         return new Promise((resolve, reject) => {
             let sql = SQL.TRANSACTION_LIST_V2;
             sql = FundTransaction._appendFilters(sql, params, 'FETCH_TRANSACTION_LIST_V2');
+            sql = sql.replace(/REPLACE_USERID/g, params._userId);
             FundTransaction.dataSource.connector.query(sql, (err, res) => {
                 if(err) {
                     return reject(err);
@@ -1192,13 +1309,28 @@ module.exports = function(FundTransaction) {
                     return resolve(res);
                 }
             });
-        })
+        });
+    }
+
+    FundTransaction.fetchTotCountFromTempTable = (params) => {
+        return new Promise((resolve, reject) => {
+            let sql = SQL.TRANSACTION_LIST_TOT_COUNT;
+            sql = FundTransaction._appendFilters(sql, params, 'FETCH_TRANSACTION_LIST_TOT_COUNT');
+            sql = sql.replace(/REPLACE_USERID/g, params._userId);
+            FundTransaction.dataSource.connector.query(sql, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(res[0].count);
+                }
+            });
+        });
     }
 
     FundTransaction.fetchRecordsWithHelpOfProcedure = (params) => {
         return new Promise(async (resolve, reject) => {
 
-            let isLocked = await FundTransaction.checkTempTableLoclStatus();
+            let isLocked = 0;// await FundTransaction.checkTempTableLoclStatus();
             if(isLocked) {
                 params._retryAttemptForProcedureCall = params._retryAttemptForProcedureCall || 0;
                 params._retryAttemptForProcedureCall++;
@@ -1207,38 +1339,63 @@ module.exports = function(FundTransaction) {
                         return FundTransaction.fetchRecordsWithHelpOfProcedure(params);
                     }, 1000);
                 } else {
-                    await FundTransaction.setLockStatus(0);
+                    // await FundTransaction.setLockStatus(0);
                     return FundTransaction.fetchRecordsWithHelpOfProcedure(params);
                 }
             } else {
-                await FundTransaction.setLockStatus(1);
+                // await FundTransaction.setLockStatus(1);
                 await FundTransaction.invokeStoredProcedure(params);
-                let res = await FundTransaction.fetchRecordsFromTempTable(params);
-                FundTransaction.setLockStatus(0);
+                let res = await FundTransaction.fetchRecordsWithTotCountFromTempTbl(params);
+                // FundTransaction.setLockStatus(0);
                 return resolve(res);
             } 
+        });
+    }
+
+    FundTransaction.fetchRecordsWithTotCountFromTempTbl = (params) => {
+        return new Promise((resolve, reject) => {
+            let promiseTasks = [];
+            promiseTasks.push(FundTransaction.fetchRecordsFromTempTable(params));
+            promiseTasks.push(FundTransaction.fetchTotCountFromTempTable(params));
+            Promise.all(promiseTasks).then(
+                (results) => {
+                    let obj = {
+                        rows: results[0],
+                        count: results[1]
+                    }
+                    resolve(obj);
+                },
+                (error) => {
+                    reject(error);
+                }
+            )
+            .catch(
+                (exception) => {
+                    reject(exception);
+                }
+            );
         });
     }
 }
 
 let SQL = {
-    CASH_TRANSACTION_IN: `INSERT INTO fund_transactions (user_id, account_id, transaction_date, cash_in, cash_out, category, remarks, cash_in_mode) VALUES (?,?,?,?,?,?,?,?)`,
-    CASH_TRANSACTION_OUT: `INSERT INTO fund_transactions (user_id, account_id, transaction_date, cash_in, cash_out, category, remarks, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-    INTERNAL_GIRVI_TRANSACTION: `INSERT INTO fund_transactions (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE account_id=VALUES(account_id), transaction_date=VALUES(transaction_date), cash_in=VALUES(cash_in), cash_out=VALUES(cash_out), cash_out_mode=VALUES(cash_out_mode), cash_out_to_bank_id=VALUES(cash_out_to_bank_id), cash_out_to_bank_acc_no=VALUES(cash_out_to_bank_acc_no), cash_out_to_bank_ifsc=VALUES(cash_out_to_bank_ifsc), cash_out_to_upi=VALUES(cash_out_to_upi) `,
-    INTERNAL_REDEEM_TRANSACTION: `INSERT INTO fund_transactions (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks, cash_in_mode) VALUES (?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE account_id=VALUES(account_id), transaction_date=VALUES(transaction_date), cash_in=VALUES(cash_in), cash_out=VALUES(cash_out), cash_in_mode=VALUES(cash_in_mode)`,
-    INTERNAL_GIRVI_TRANSACTION_UPDATE: `UPDATE fund_transactions SET customer_id=?, account_id=?, transaction_date=?, cash_in=?, cash_out=?, remarks=?, cash_out_mode=?, cash_out_to_bank_id=?, cash_out_to_bank_acc_no=?, cash_out_to_bank_ifsc=?, cash_out_to_upi=? WHERE gs_uid=? AND user_id=?`,
-    INTERNAL_REDEEM_TRANSACTION_UPDATE: `UPDATE fund_transactions SET customer_id=?, account_id=?, transaction_date=?, cash_out=?, remarks=?, cash_in_mode=? WHERE gs_uid=? AND user_id=? `,
-    ADD_CASH_FOR_BILL: `INSERT INTO fund_transactions (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks, cash_in_mode) VALUES (?,?,?,?,?,?,?,?,?,?)`,
-    UPDATE_TRANSACTION_FOR_CASH_IN: `UPDATE fund_transactions SET account_id=?, transaction_date=?, cash_in=?, category=?, remarks=?, cash_in_mode=? WHERE id=? AND user_id=?`,
-    UPDATE_TRANSACTION_FOR_CASH_OUT: `UPDATE fund_transactions SET account_id=?, transaction_date=?, cash_out=?, category=?, remarks=?, cash_out_mode=?, cash_out_to_bank_id=?, cash_out_to_bank_acc_no=?, cash_out_to_bank_ifsc=?, cash_out_to_upi=? WHERE id=? AND user_id=?`,
-    MARK_AS_DELETED: `UPDATE fund_transactions SET deleted=1 WHERE user_id=? AND gs_uid=?`,
+    CASH_TRANSACTION_IN: `INSERT INTO fund_transactions_REPLACE_USERID (user_id, account_id, transaction_date, cash_in, cash_out, category, remarks, cash_in_mode) VALUES (?,?,?,?,?,?,?,?)`,
+    CASH_TRANSACTION_OUT: `INSERT INTO fund_transactions_REPLACE_USERID (user_id, account_id, transaction_date, cash_in, cash_out, category, remarks, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+    INTERNAL_GIRVI_TRANSACTION: `INSERT INTO fund_transactions_REPLACE_USERID (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE account_id=VALUES(account_id), transaction_date=VALUES(transaction_date), cash_in=VALUES(cash_in), cash_out=VALUES(cash_out), cash_out_mode=VALUES(cash_out_mode), cash_out_to_bank_id=VALUES(cash_out_to_bank_id), cash_out_to_bank_acc_no=VALUES(cash_out_to_bank_acc_no), cash_out_to_bank_ifsc=VALUES(cash_out_to_bank_ifsc), cash_out_to_upi=VALUES(cash_out_to_upi) `,
+    INTERNAL_REDEEM_TRANSACTION: `INSERT INTO fund_transactions_REPLACE_USERID (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks, cash_in_mode) VALUES (?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE account_id=VALUES(account_id), transaction_date=VALUES(transaction_date), cash_in=VALUES(cash_in), cash_out=VALUES(cash_out), cash_in_mode=VALUES(cash_in_mode)`,
+    INTERNAL_GIRVI_TRANSACTION_UPDATE: `UPDATE fund_transactions_REPLACE_USERID SET customer_id=?, account_id=?, transaction_date=?, cash_in=?, cash_out=?, remarks=?, cash_out_mode=?, cash_out_to_bank_id=?, cash_out_to_bank_acc_no=?, cash_out_to_bank_ifsc=?, cash_out_to_upi=? WHERE gs_uid=? AND user_id=?`,
+    INTERNAL_REDEEM_TRANSACTION_UPDATE: `UPDATE fund_transactions_REPLACE_USERID SET customer_id=?, account_id=?, transaction_date=?, cash_out=?, remarks=?, cash_in_mode=? WHERE gs_uid=? AND user_id=? `,
+    ADD_CASH_FOR_BILL: `INSERT INTO fund_transactions_REPLACE_USERID (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks, cash_in_mode) VALUES (?,?,?,?,?,?,?,?,?,?)`,
+    UPDATE_TRANSACTION_FOR_CASH_IN: `UPDATE fund_transactions_REPLACE_USERID SET account_id=?, transaction_date=?, cash_in=?, category=?, remarks=?, cash_in_mode=? WHERE id=? AND user_id=?`,
+    UPDATE_TRANSACTION_FOR_CASH_OUT: `UPDATE fund_transactions_REPLACE_USERID SET account_id=?, transaction_date=?, cash_out=?, category=?, remarks=?, cash_out_mode=?, cash_out_to_bank_id=?, cash_out_to_bank_acc_no=?, cash_out_to_bank_ifsc=?, cash_out_to_upi=? WHERE id=? AND user_id=?`,
+    MARK_AS_DELETED: `UPDATE fund_transactions_REPLACE_USERID SET deleted=1 WHERE user_id=? AND gs_uid=?`,
     TRANSACTION_LIST: `SELECT 
                             fund_accounts.name AS fund_house_name,
-                            FUND_TRNS_TBL_NAME.*
+                            fund_transactions_REPLACE_USERID.*
                         FROM
-                            FUND_TRNS_TBL_NAME
+                            fund_transactions_REPLACE_USERID
                                 LEFT JOIN
-                            fund_accounts ON FUND_TRNS_TBL_NAME.account_id = fund_accounts.id
+                            fund_accounts ON fund_transactions_REPLACE_USERID.account_id = fund_accounts.id
                         WHERE_CLAUSE
                         ORDER_CLAUSE
                         LIMIT_OFFSET_CLAUSE`,
@@ -1249,27 +1406,34 @@ let SQL = {
                                         cash_in,
                                         cash_out
                                     FROM
-                                        fund_transactions
+                                        fund_transactions_REPLACE_USERID
                                             LEFT JOIN
-                                        fund_accounts ON fund_transactions.account_id = fund_accounts.id
+                                        fund_accounts ON fund_transactions_REPLACE_USERID.account_id = fund_accounts.id
                                     WHERE_CLAUSE
                                     ORDER_CLAUSE
                                     LIMIT_OFFSET_CLAUSE`,
-    CATEGORY_LIST: `SELECT DISTINCT category from fund_transactions`,
-    OPENING_BALANCE: `SELECT SUM(cash_in-cash_out) AS opening_balance from fund_transactions WHERE user_id = ? AND transaction_date < ? AND deleted = 0`,
-    CLOSING_BALANCE: `SELECT SUM(cash_in-cash_out) AS closing_balance from fund_transactions WHERE user_id = ? AND transaction_date < ? AND deleted = 0`,
-    CASH_IN_OUT_TOTALS: `SELECT SUM(cash_in) AS total_cash_in, SUM(cash_out) AS total_cash_out from fund_transactions WHERE user_id = ? AND (transaction_date BETWEEN ? AND ?) AND deleted = 0`,
-    DELETE_TRANSACTIONS: `DELETE FROM fund_transactions WHERE id IN (?) AND user_id=?`,
+    CATEGORY_LIST: `SELECT DISTINCT category from fund_transactions_REPLACE_USERID`,
+    OPENING_BALANCE: `SELECT SUM(cash_in-cash_out) AS opening_balance from fund_transactions_REPLACE_USERID WHERE user_id = ? AND transaction_date < ? AND deleted = 0`,
+    CLOSING_BALANCE: `SELECT SUM(cash_in-cash_out) AS closing_balance from fund_transactions_REPLACE_USERID WHERE user_id = ? AND transaction_date < ? AND deleted = 0`,
+    CASH_IN_OUT_TOTALS: `SELECT SUM(cash_in) AS total_cash_in, SUM(cash_out) AS total_cash_out from fund_transactions_REPLACE_USERID WHERE user_id = ? AND (transaction_date BETWEEN ? AND ?) AND deleted = 0`,
+    DELETE_TRANSACTIONS: `DELETE FROM fund_transactions_REPLACE_USERID WHERE id IN (?) AND user_id=?`,
     TEMP_TABLE_LOCK_STATUS: `SELECT is_locked FROM temporary_table_manager WHERE_CLAUSE`,
     SET_TEMP_TABLE_LOCK_STATUS: `UPDATE temporary_table_manager SET is_locked=? WHERE_CLAUSE`,
     TRANSACTION_LIST_V2: `SELECT 
                             fund_accounts.name AS fund_house_name,
-                            FUND_TRNS_TBL_NAME.*
+                            fund_trns_tmp_REPLACE_USERID.*
                         FROM
-                            FUND_TRNS_TBL_NAME
+                            fund_trns_tmp_REPLACE_USERID
                                 LEFT JOIN
-                            fund_accounts ON FUND_TRNS_TBL_NAME.account_id = fund_accounts.id
+                            fund_accounts ON fund_trns_tmp_REPLACE_USERID.account_id = fund_accounts.id
                         WHERE_CLAUSE
                         ORDER_CLAUSE
                         LIMIT_OFFSET_CLAUSE`,
+    TRANSACTION_LIST_TOT_COUNT: `SELECT 
+                                    Count(*) AS count
+                                FROM
+                                    fund_trns_tmp_REPLACE_USERID
+                                        LEFT JOIN
+                                    fund_accounts ON fund_trns_tmp_REPLACE_USERID.account_id = fund_accounts.id
+                                WHERE_CLAUSE`
 }
