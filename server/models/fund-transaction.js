@@ -1421,11 +1421,14 @@ let SQL = {
     SET_TEMP_TABLE_LOCK_STATUS: `UPDATE temporary_table_manager SET is_locked=? WHERE_CLAUSE`,
     TRANSACTION_LIST_V2: `SELECT 
                             fund_accounts.name AS fund_house_name,
-                            fund_trns_tmp_REPLACE_USERID.*
+                            fund_trns_tmp_REPLACE_USERID.*,
+                            customer.Name AS CustomerName
                         FROM
                             fund_trns_tmp_REPLACE_USERID
                                 LEFT JOIN
                             fund_accounts ON fund_trns_tmp_REPLACE_USERID.account_id = fund_accounts.id
+                                LEFT JOIN
+                            customer ON customer.CustomerId = fund_trns_tmp_REPLACE_USERID.customer_id
                         WHERE_CLAUSE
                         ORDER_CLAUSE
                         LIMIT_OFFSET_CLAUSE`,
