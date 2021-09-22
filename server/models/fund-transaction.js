@@ -465,8 +465,8 @@ module.exports = function(FundTransaction) {
                     filters.push(`fund_accounts.id in (${joinedAccounts})`);
                 }
                 if(params.category && params.category.length > 0) {
-                    params.category = params.category.map((aCategory) => `'${aCategory}'`);
-                    let joinedCategories = params.category.join(', ');
+                    let categ = params.category.map((aCategory) => `'${aCategory}'`);
+                    let joinedCategories = categ.join(', ');
                     filters.push(`category in (${joinedCategories})`);
                 }
                 if(params.startDate && params.endDate)
