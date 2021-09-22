@@ -677,7 +677,7 @@ module.exports = function(Customer) {
     Customer.getIdByHashKey = (hashKey) => {
         return new Promise( (resolve, reject ) => {
             try {
-                Customer.dataSource.connector.query(`SELECT * FROM Customer WHERE HashKey='${hashKey}'`, (err, res) => {
+                Customer.dataSource.connector.query(`SELECT * FROM customer WHERE HashKey='${hashKey}'`, (err, res) => {
                     if(err) {
                         return reject(err);
                     } else {
