@@ -132,6 +132,8 @@ module.exports = function(Alert) {
                 if(params.link.to == 'pledgebook') {
                     let pledgebookTableName = await Alert.app.models.Pledgebook.getPledgebookTableName(params._userId);
                     await Alert._linkToPledgebookBill(pledgebookTableName, params.link.uniqueIdentifier, alertRes.id);
+                } else if(params.link.to == 'fund_transaction') {
+                    await Alert._linkToFundTransaction({userId: params._userId, transactionId: params.link.id, alertId: alertRes.id});
                 }
             }
             return {STATUS: 'SUCCESS'};
@@ -155,6 +157,20 @@ module.exports = function(Alert) {
     Alert._linkToPledgebookBill = (pledgebookTableName, uniqueIdentifier, alertId) => {
         return new Promise((resolve, reject) => {
             let query = `UPDATE ${pledgebookTableName} SET Alert=${alertId} WHERE UniqueIdentifier=${uniqueIdentifier}`;
+            Alert.dataSource.connector.query(query, (err, result) => {
+                if(err) {
+                    reject ( err );
+                } else {
+                    resolve( result );
+                }
+            });
+        })
+    }
+
+    Alert._linkToFundTransaction = (params) => {
+        return new Promise((resolve, reject) => {
+            let query = `UPDATE fund_transactions_REPLACE_USERID SET alert=${params.alertId} WHERE id=${params.transactionId}`;
+            query = query.replace(/REPLACE_USERID/g, params.userId);
             Alert.dataSource.connector.query(query, (err, result) => {
                 if(err) {
                     reject ( err );
@@ -193,7 +209,10 @@ module.exports = function(Alert) {
             if(!params.accessToken)
                 throw 'Access Token is missing';
             await Alert._deleteAlert(params);
-            await Alert._unLinkFromPledgebook(params);
+            if(params.link.to == 'pledgebook')
+                await Alert._unLinkFromPledgebook(params);
+            else if(params.link.to == 'fund_transaction')
+                await Alert._unLinkFromFundTransaction(params);
             return {STATUS: 'SUCCESS'};
         } catch(e) {
             return {STATUS: 'ERROR', ERROR: e, MESSAGE: (e?e.message:'')};
@@ -217,6 +236,21 @@ module.exports = function(Alert) {
             params._userId = userId;
             let pledgebookTableName = await Alert.app.models.Pledgebook.getPledgebookTableName(params._userId);
             let query = `UPDATE ${pledgebookTableName} SET Alert=NULL WHERE UniqueIdentifier=${params.link.uniqueIdentifier}`;
+            Alert.dataSource.connector.query(query, (err, result) => {
+                if(err) {
+                    reject(err);
+                } else {
+                    resolve(result);
+                }
+            });
+        });
+    }
+
+    Alert._unLinkFromFundTransaction = (params) => {
+        return new Promise(async (resolve, reject) => {
+            let userId = await utils.getStoreOwnerUserId(params.accessToken);
+            let query = `UPDATE fund_transactions_REPLACE_USERID SET alert=NULL WHERE id=${params.link.id}`;
+            query = query.replace(/REPLACE_USERID/g, userId);
             Alert.dataSource.connector.query(query, (err, result) => {
                 if(err) {
                     reject(err);

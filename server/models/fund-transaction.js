@@ -317,6 +317,36 @@ module.exports = function(FundTransaction) {
         description: 'Transaction - CashIn.',
     });
 
+    FundTransaction.remoteMethod('getUdhaarListApi', {
+        accepts: [
+            {
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let accessToken = req && req.query.access_token;
+                    return accessToken;
+                },
+                description: 'Arguments goes here',
+            },
+            {
+                arg: 'params', type: 'object', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let params = req && req.query.params;
+                    params = params ? JSON.parse(params) : {};
+                    return params;
+                },
+                description: 'Arguments goes here',
+            }],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            },
+        },
+        http: {path: '/fetch-udhaar-list', verb: 'get'},
+        description: 'For getting the udhaar list by date.',
+    });
+
     FundTransaction.cashInApi = (apiParams, cb) => {
         FundTransaction._cashInApi(apiParams).then((resp) => {
             if(resp)
@@ -471,7 +501,13 @@ module.exports = function(FundTransaction) {
                 }
                 if(params.startDate && params.endDate)
                     filters.push(`(transaction_date BETWEEN '${params.startDate}' AND '${params.endDate}')`);
-                
+
+                if(params.customerVal)
+                    filters.push(`customer.Name like '${params.customerVal}%'`);
+
+                if(params.remarks)
+                    filters.push(`fund_trns_tmp_REPLACE_USERID.remarks like '%${params.remarks}%'`);
+
                 if(identifier !== 'FETCH_TRANSACTION_LIST_TOT_COUNT') {
                     if(params.orderCol && params.orderBy) {
                         if(params.orderCol == 'TRN_DATE')
@@ -605,6 +641,7 @@ module.exports = function(FundTransaction) {
             totalCashOut: 0,
         };
         try {
+            let categorySet = new Set();
             if(collections.count > 0) {
                 _.each(collRes, (aColl, index) => {
                     if(aColl.fundAccountId) {
@@ -616,12 +653,13 @@ module.exports = function(FundTransaction) {
                             collections.fundAccounts.push({id: aColl.fundAccountId, name: aColl.name});
                     }
                     if(aColl.category && collections.categories.indexOf(aColl.category) == -1)
-                        collections.categories.push(aColl.category);
+                        categorySet.add(aColl.category);  //collections.categories.push(aColl.category);
                     if(aColl.cash_in)
                         collections.totalCashIn += aColl.cash_in;
                     if(aColl.cash_out)
                         collections.totalCashOut += aColl.cash_out;
                 });
+                collections.categories = Array.from(categorySet);
             }
         } catch(e) {
             console.error(e);
@@ -1199,6 +1237,7 @@ module.exports = function(FundTransaction) {
                 if(err) {
                     return reject(err);
                 } else {
+                    // _.each()
                     return resolve(res);
                 }
             });
@@ -1376,6 +1415,28 @@ module.exports = function(FundTransaction) {
             );
         });
     }
+
+    FundTransaction.getUdhaarListApi = (params, cb) => {
+        FundTransaction._getUdhaarListApi(params).then(
+            (resp) => {
+                cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            }
+        ).catch(
+            (e)=> {
+                cb({STATUS: 'EXCEPTION', ERR: e}, null);
+            }
+        );
+    }
+
+    FundTransaction._getUdhaarListApi = (params) => {
+        return new Promise(async (resolve, reject) => {
+            let userId = await utils.getStoreOwnerUserId(params.accessToken);
+            
+            let promise1 = new Promise((resolve, reject) => {
+                FundTransaction.dataSource.connector.query()
+            });
+        });
+    }
 }
 
 let SQL = {
@@ -1422,13 +1483,24 @@ let SQL = {
     TRANSACTION_LIST_V2: `SELECT 
                             fund_accounts.name AS fund_house_name,
                             fund_trns_tmp_REPLACE_USERID.*,
-                            customer.Name AS CustomerName
+                            customer.Name AS CustomerName,
+                            alerts.id AS alertId,
+                            alerts.title AS alertTitle,
+                            alerts.message AS alertMsg,
+                            alerts.extra_ctx AS alertExtraCtx,
+                            alerts.has_read AS alertReadFlag,
+                            alerts.archived AS alertArchivedFlag,
+                            alerts.module AS alertModule,
+                            alerts.trigger_time AS alertTriggerTime,
+                            alerts.created_date AS alertCreatedDate
                         FROM
                             fund_trns_tmp_REPLACE_USERID
                                 LEFT JOIN
                             fund_accounts ON fund_trns_tmp_REPLACE_USERID.account_id = fund_accounts.id
                                 LEFT JOIN
                             customer ON customer.CustomerId = fund_trns_tmp_REPLACE_USERID.customer_id
+                                LEFT JOIN
+                            alerts ON (fund_trns_tmp_REPLACE_USERID.alert = alerts.id AND alerts.archived=0)
                         WHERE_CLAUSE
                         ORDER_CLAUSE
                         LIMIT_OFFSET_CLAUSE`,
@@ -1438,5 +1510,7 @@ let SQL = {
                                     fund_trns_tmp_REPLACE_USERID
                                         LEFT JOIN
                                     fund_accounts ON fund_trns_tmp_REPLACE_USERID.account_id = fund_accounts.id
+                                        LEFT JOIN
+                                    customer ON customer.CustomerId = fund_trns_tmp_REPLACE_USERID.customer_id
                                 WHERE_CLAUSE`
 }
