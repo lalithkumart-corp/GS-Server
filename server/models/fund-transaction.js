@@ -317,7 +317,7 @@ module.exports = function(FundTransaction) {
         description: 'Transaction - CashIn.',
     });
 
-    FundTransaction.remoteMethod('getUdhaarListApi', {
+    /*FundTransaction.remoteMethod('getUdhaarListApi', {
         accepts: [
             {
                 arg: 'accessToken', type: 'string', http: (ctx) => {
@@ -345,7 +345,7 @@ module.exports = function(FundTransaction) {
         },
         http: {path: '/fetch-udhaar-list', verb: 'get'},
         description: 'For getting the udhaar list by date.',
-    });
+    });*/
 
     FundTransaction.cashInApi = (apiParams, cb) => {
         FundTransaction._cashInApi(apiParams).then((resp) => {
@@ -746,6 +746,9 @@ module.exports = function(FundTransaction) {
                     case 'redeem':
                         await FundTransaction.addRedeemEntry(params);
                         break;
+                    case 'udhaar':
+                        await FundTransaction.addUdhaarEntry(params);
+                        break;
                 }
                 return resolve(true);
             } catch(e) {
@@ -824,6 +827,25 @@ module.exports = function(FundTransaction) {
         return new Promise((resolve, reject) => {
             let sql = SQL.INTERNAL_REDEEM_TRANSACTION;
             sql = sql.replace(/REPLACE_USERID/g, qv[0]);
+            FundTransaction.dataSource.connector.query(sql, qv, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(true);
+                }
+            });
+        });
+    }
+
+    FundTransaction.addUdhaarEntry = (params) => {
+        return new Promise((resolve, reject) => {
+            let destAccDetail = params.destinationAccountDetail;
+
+            let qv = [params._userId, params.customerId, params.accountId, params._uniqId, dateformat(params.udhaarCreationDate, 'yyyy-mm-dd HH:MM:ss', true), 0, params.amount, 'Udhaar', params.notes,
+            apiParams.paymentMode, destAccDetail.toAccountId, destAccDetail.accNo, destAccDetail.ifscCode, destAccDetail.upiId];
+
+            let sql = SQL.INTERNAL_UDHAAR_TRANSACTION;
+            sql = sql.replace(/REPLACE_USERID/g, parsedArg._userId);
             FundTransaction.dataSource.connector.query(sql, qv, (err, res) => {
                 if(err) {
                     return reject(err);
@@ -1416,7 +1438,7 @@ module.exports = function(FundTransaction) {
         });
     }
 
-    FundTransaction.getUdhaarListApi = (params, cb) => {
+    /*FundTransaction.getUdhaarListApi = (params, cb) => {
         FundTransaction._getUdhaarListApi(params).then(
             (resp) => {
                 cb(null, {STATUS: 'SUCCESS', RESP: resp});
@@ -1436,7 +1458,7 @@ module.exports = function(FundTransaction) {
                 FundTransaction.dataSource.connector.query()
             });
         });
-    }
+    }*/
 }
 
 let SQL = {
@@ -1444,6 +1466,7 @@ let SQL = {
     CASH_TRANSACTION_OUT: `INSERT INTO fund_transactions_REPLACE_USERID (user_id, customer_id, account_id, transaction_date, cash_in, cash_out, category, remarks, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     INTERNAL_GIRVI_TRANSACTION: `INSERT INTO fund_transactions_REPLACE_USERID (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE account_id=VALUES(account_id), transaction_date=VALUES(transaction_date), cash_in=VALUES(cash_in), cash_out=VALUES(cash_out), cash_out_mode=VALUES(cash_out_mode), cash_out_to_bank_id=VALUES(cash_out_to_bank_id), cash_out_to_bank_acc_no=VALUES(cash_out_to_bank_acc_no), cash_out_to_bank_ifsc=VALUES(cash_out_to_bank_ifsc), cash_out_to_upi=VALUES(cash_out_to_upi) `,
     INTERNAL_REDEEM_TRANSACTION: `INSERT INTO fund_transactions_REPLACE_USERID (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks, cash_in_mode) VALUES (?,?,?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE account_id=VALUES(account_id), transaction_date=VALUES(transaction_date), cash_in=VALUES(cash_in), cash_out=VALUES(cash_out), cash_in_mode=VALUES(cash_in_mode)`,
+    INTERNAL_UDHAAR_TRANSACTION: `INSERT INTO fund_transactions_REPLACE_USERID (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     INTERNAL_GIRVI_TRANSACTION_UPDATE: `UPDATE fund_transactions_REPLACE_USERID SET customer_id=?, account_id=?, transaction_date=?, cash_in=?, cash_out=?, remarks=?, cash_out_mode=?, cash_out_to_bank_id=?, cash_out_to_bank_acc_no=?, cash_out_to_bank_ifsc=?, cash_out_to_upi=? WHERE gs_uid=? AND user_id=?`,
     INTERNAL_REDEEM_TRANSACTION_UPDATE: `UPDATE fund_transactions_REPLACE_USERID SET customer_id=?, account_id=?, transaction_date=?, cash_out=?, remarks=?, cash_in_mode=? WHERE gs_uid=? AND user_id=? `,
     ADD_CASH_FOR_BILL: `INSERT INTO fund_transactions_REPLACE_USERID (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks, cash_in_mode) VALUES (?,?,?,?,?,?,?,?,?,?)`,

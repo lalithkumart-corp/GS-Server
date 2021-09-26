@@ -65,6 +65,7 @@ module.exports = function(Common) {
             await Common._createFundTrnsTable(userId);
             // await Common._createFundTrnsTempTable(userId);
             await Common._createFundTrnsProcedure(userId);
+            await Common._createUdhaarTable(userId);
             return true;
         } catch(e) {
             throw e;
@@ -312,6 +313,32 @@ module.exports = function(Common) {
                 } else {
                     console.log('Fund Account inserted');
                     return resolve(true);
+                }
+            });
+        });
+    }
+
+    Common._createUdhaarTable = (userId) => {
+        return new Promise((resolve, reject) => {
+            let simpleSql = `SELECT * FROM udhaar_${userId} LIMIT 1`;
+            app.models.GsUser.dataSource.connector.query(simpleSql, (error, result) => {
+                if(error && error.code == "ER_NO_SUCH_TABLE") {
+                    let sql = SQL.UDHAAR.replace(/REPLACE_USERID/g, userId);
+                    app.models.GsUser.dataSource.connector.query(sql, (err, resp) => {
+                        if(err) {
+                            console.log(err);
+                            console.log(`Error occured while creating a new "udhaar_<id>" table for the user: ${userId}`);
+                            return reject(err);
+                        } else {
+                            console.log(`New "udhaar_${userId}" table created!`);
+                            return resolve(true);
+                        }
+                    });
+                } else if(error) {
+                    return reject(error);
+                } else {
+                    console.log(`"udhaar_${userId}" table for this user:${userId} exists already, So new table not created.`);
+                    return resolve(false);
                 }
             });
         });
@@ -617,5 +644,21 @@ let SQL = {
                 afterBal = (@bal:=@bal + (fund_trns_tmp_REPLACE_USERID.cash_in - fund_trns_tmp_REPLACE_USERID.cash_out));
             
             END`,
-    NEW_FUND_ACCOUNT: `INSERT INTO fund_accounts (user_id, name, is_default) VALUES (?,?,?)`
+    NEW_FUND_ACCOUNT: `INSERT INTO fund_accounts (user_id, name, is_default) VALUES (?,?,?)`,
+    UDHAAR: `CREATE TABLE udhaar_REPLACE_USERID (
+                id int NOT NULL AUTO_INCREMENT,
+                unique_identifier varchar(45) DEFAULT NULL,
+                bill_no varchar(45) DEFAULT NULL,
+                amount int DEFAULT NULL,
+                date datetime NOT NULL,
+                account_id int NOT NULL,
+                customer_id int NOT NULL,
+                notes text,
+                trashed int DEFAULT NULL,
+                created_date datetime DEFAULT CURRENT_TIMESTAMP,
+                modified_date datetime DEFAULT CURRENT_TIMESTAMP,
+                PRIMARY KEY (id),
+                UNIQUE KEY unique_identifier_UNIQUE (unique_identifier),
+                UNIQUE KEY bill_no_UNIQUE (bill_no)
+              )`
 }

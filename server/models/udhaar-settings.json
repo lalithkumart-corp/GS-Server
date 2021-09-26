@@ -1,0 +1,63 @@
+{
+    "name": "UdhaarSettings",
+    "base": "PersistedModel",
+    "options": {
+      "validateUpsert": true,
+      "mysql": {
+        "schema": "developmentdb",
+        "table": "udhaar_settings"
+      }
+    },
+    "properties": {
+      "udhaarSettingsId": {
+        "type": "number",
+        "id": true,
+        "mysql": {
+          "columnName": "udhaar_settings_id",
+          "dataType": "int",
+          "dataLength": null,
+          "dataPrecision": null,
+          "dataScale": 0,
+          "nullable": "Y"
+        }
+      },
+      "userId": {
+        "type": "number",
+        "mysql": {
+          "columnName": "user_id",
+          "dataType": "int",
+          "dataLength": null,
+          "dataPrecision": null,
+          "dataScale": 0,
+          "nullable": "N"
+        }
+      },
+      "billSeries": {
+        "type": "string",
+        "mysql": {
+          "columnName": "bill_series",
+          "dataType": "varchar",
+          "dataLength": null,
+          "dataPrecision": null,
+          "dataScale": 0,
+          "nullable": "Y"
+        }
+      },
+      "nextBillNo": {
+        "type": "number",
+        "mysql": {
+          "columnName": "next_bill_no",
+          "dataType": "int",
+          "dataLength": null,
+          "dataPrecision": null,
+          "dataScale": 0,
+          "nullable": "Y"
+        }
+      }
+    },
+    "validations": [],
+    "relations": {},
+    "acls": [],
+    "methods": {}
+  }
+  

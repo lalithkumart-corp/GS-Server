@@ -130,5 +130,13 @@
   "LoanBillTemplate": {
     "dataSource": "developmentdb",
     "public": true
+  },
+  "Udhaar": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "UdhaarSettings": {
+    "dataSource": "developmentdb",
+    "public": true
   }
 }

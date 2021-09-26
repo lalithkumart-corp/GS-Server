@@ -1,0 +1,114 @@
+{
+    "name": "Udhaar",
+    "base": "PersistedModel",
+    "idInjection": true,
+    "options": {
+      "validateUpsert": true,
+      "mysql": {
+        "schema": "developmentdb"
+      }
+    },
+    "properties": {
+      "id": {
+        "type": "number",
+        "id": true,
+        "mysql": {
+          "columnName": "Id",
+          "dataType": "int",
+          "dataLength": 22,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "uniqueIdentifier": {
+        "type": "string",
+        "mysql": {
+          "columnName": "unique_identifier",
+          "dataType": "varchar",    
+          "dataLength": 50,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "N"
+        }
+      },
+      "date": {
+        "type": "date",
+        "mysql": {
+          "columnName": "date",
+          "dataType": "datetime",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "N"
+        }
+      },
+      "customerId": {
+        "type": "number",
+        "required": true,
+        "mysql": {
+          "columnName": "customer_id",
+          "dataType": "int",
+          "dataLength": 11,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "N"
+        }
+      },
+      "accountId": {
+        "type": "number",
+        "mysql": {
+          "columnName": "account_id",
+          "dataType": "int",    
+          "dataLength": 11,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "N"
+        }
+      },
+      "notes": {
+        "type": "string",
+        "mysql": {
+          "columnName": "notes",
+          "dataType": "text",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "trashed": {
+        "type": "number",
+        "mysql": {
+          "columnName": "trashed",
+          "dataType": "int",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "createdDate": {
+        "type": "date",
+        "mysql": {
+          "columnName": "created_date",
+          "dataType": "datetime",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "modifiedDate": {
+        "type": "date",
+        "mysql": {
+          "columnName": "modified_date",
+          "dataType": "datetime",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      }
+    },
+    "validations": [],
+    "relations": {},
+    "acls": [],
+    "methods": {}
+  }
+  
