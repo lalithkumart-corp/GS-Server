@@ -842,10 +842,10 @@ module.exports = function(FundTransaction) {
             let destAccDetail = params.destinationAccountDetail;
 
             let qv = [params._userId, params.customerId, params.accountId, params._uniqId, dateformat(params.udhaarCreationDate, 'yyyy-mm-dd HH:MM:ss', true), 0, params.amount, 'Udhaar', params.notes,
-            apiParams.paymentMode, destAccDetail.toAccountId, destAccDetail.accNo, destAccDetail.ifscCode, destAccDetail.upiId];
+            params.paymentMode, destAccDetail.toAccountId, destAccDetail.accNo, destAccDetail.ifscCode, destAccDetail.upiId];
 
             let sql = SQL.INTERNAL_UDHAAR_TRANSACTION;
-            sql = sql.replace(/REPLACE_USERID/g, parsedArg._userId);
+            sql = sql.replace(/REPLACE_USERID/g, params._userId);
             FundTransaction.dataSource.connector.query(sql, qv, (err, res) => {
                 if(err) {
                     return reject(err);

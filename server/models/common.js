@@ -654,6 +654,7 @@ let SQL = {
                 account_id int NOT NULL,
                 customer_id int NOT NULL,
                 notes text,
+                status int NULL DEFAULT 1,
                 trashed int DEFAULT NULL,
                 created_date datetime DEFAULT CURRENT_TIMESTAMP,
                 modified_date datetime DEFAULT CURRENT_TIMESTAMP,

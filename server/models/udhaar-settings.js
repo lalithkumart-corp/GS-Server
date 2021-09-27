@@ -55,8 +55,6 @@ module.exports = function(UdhaarSettings) {
 
     UdhaarSettings.updateNextBillNumber = (userId, nextBillNo) => {
         return new Promise((resolve, reject) => {
-            let userId = data._userId;
-
             UdhaarSettings.findOrCreate({where: {userId: userId}}, {userId: userId}, (err, res) => {
                 if(err) {
                     console.log(err); //TODO: Replace with Logger;
