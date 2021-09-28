@@ -539,6 +539,7 @@ let SQL = {
                     cash_out_to_upi varchar(45) DEFAULT NULL,
                     cash_in_mode varchar(45) DEFAULT NULL,
                     alert int DEFAULT NULL,
+                    is_internal int DEFAULT 0,
                     PRIMARY KEY (id),
                     KEY category (category),
                     KEY gs_uid_idx (gs_uid)
@@ -563,6 +564,7 @@ let SQL = {
                         cash_out_to_upi varchar(45) DEFAULT NULL,
                         cash_in_mode varchar(45) DEFAULT NULL,
                         alert int DEFAULT NULL,
+                        is_internal int DEFAULT 0,
                         beforeBal decimal(10,0) DEFAULT NULL,
                         afterBal decimal(10,0) DEFAULT NULL
                     )`,

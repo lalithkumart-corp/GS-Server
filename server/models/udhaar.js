@@ -148,6 +148,28 @@ module.exports = function(Udhaar) {
         description: 'For fetching udhaar detail'
     });
 
+    Udhaar.remoteMethod('markResolvedByPaymentClerance', {
+        accepts: {
+            arg: 'apiParams',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/mark-resolved-by-payment-clearance', verb: 'post'},
+        description: 'Udhaar - Mark resolved if all payments cleared.',
+    });
+
     Udhaar.createApi = (apiParams, cb) => {
         Udhaar._createApi(apiParams).then((resp) => {
             if(resp)
@@ -411,6 +433,55 @@ module.exports = function(Udhaar) {
             throw e;
         }
     }
+    
+    Udhaar.markResolvedByPaymentClerance = (apiParams, cb) => {
+        Udhaar._markResolvedByPaymentClerance(apiParams).then((resp) => {
+            if(resp)
+                cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            else
+                cb(null, {STATUS: 'ERROR-No Response', RESP: resp});
+        }).catch((e)=>{
+            cb({STATUS: 'EXCEPTION', ERR: e}, null);
+        });
+    }
+
+    Udhaar._markResolvedByPaymentClerance = (apiParams) => {
+        return new Promise(async (resolve, reject) => {
+            try {
+                apiParams._userId = await utils.getStoreOwnerUserId(apiParams.accessToken);
+                let params = {
+                    _userId: apiParams._userId,
+                    uids: [apiParams.uid]
+                };
+                let list = await Udhaar.app.models.FundTransaction.prototype._fetchTransactionByBillFromDB(params);
+                let cashIn = 0;
+                let cashOut = 0;
+                _.each(list, (aTransaction) => {
+                    cashIn += aTransaction.cash_in;
+                    cashOut += aTransaction.cash_out;
+                });
+                let bal = cashOut-cashIn;
+                if(bal<0)
+                    await Udhaar._markResolved(apiParams._userId, apiParams.uid);
+                return resolve(true);
+            } catch(e) {
+                return reject(e);
+            }
+        });
+    }
+
+    Udhaar._markResolved = (userId, uid) => {
+        return new Promise((resolve, reject) => {
+            let sql = SQL.MARK_RESOLVED;
+            sql = sql.replace(/REPLACE_USERID/g, userId);
+            Udhaar.dataSource.connector.query(sql, [uid], (err, res) => {
+                if(err)
+                    return reject(err);
+                else
+                    return resolve(true);
+            });
+        });
+    }
 }
 
 let SQL = {
@@ -509,5 +580,6 @@ let SQL = {
                         LEFT JOIN fund_accounts ON fund_transactions_REPLACE_USERID.account_id = fund_accounts.id
                         LEFT JOIN customer ON (customer.CustomerId = udhaar_REPLACE_USERID.customer_id)
                     WHERE
-                        unique_identifier = ? AND fund_transactions_REPLACE_USERID.deleted=0`
+                        unique_identifier = ? AND fund_transactions_REPLACE_USERID.deleted=0`,
+    MARK_RESOLVED: `UPDATE udhaar_REPLACE_USERID SET status=0 WHERE unique_identifier=?`
 };
