@@ -29,6 +29,28 @@ module.exports = function(Udhaar) {
         description: 'Udhaar - Creation.',
     });
 
+    Udhaar.remoteMethod('updateApi', {
+        accepts: {
+            arg: 'apiParams',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/update-udhaar', verb: 'post'},
+        description: 'Udhaar - Update.',
+    });
+
     Udhaar.remoteMethod('fetchCustomerBillHistoryAPIHandler', {
         accepts: [{
                 arg: 'accessToken', type: 'string', http: (ctx) => {
@@ -97,6 +119,35 @@ module.exports = function(Udhaar) {
         description: 'For fetching pending Udhaar bills.',
     });
 
+    Udhaar.remoteMethod('getUdhaarDetailApi', {
+        accepts: [{
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let accessToken = req && req.query.access_token;
+                    return accessToken;
+                },
+                description: 'Accesstoken',
+            },
+            {
+                arg: 'udhaarUid', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let udhaarUid = req && req.query.uid;
+                    return udhaarUid;
+                },
+                description: 'udhaarUid',
+            }
+        ],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            }
+        },
+        http: {path: '/get-udhaar-detail', verb: 'get'},
+        description: 'For fetching udhaar detail'
+    });
+
     Udhaar.createApi = (apiParams, cb) => {
         Udhaar._createApi(apiParams).then((resp) => {
             if(resp)
@@ -122,6 +173,36 @@ module.exports = function(Udhaar) {
                 } else {
                     await Udhaar.app.models.UdhaarSettings.updateNextBillNumber(apiParams._userId, (parseInt(apiParams.billNo)+1));
                     Udhaar.app.models.FundTransaction.prototype.add(apiParams, 'udhaar');
+                    resolve(true);
+                }
+            });
+        });
+    }
+
+    Udhaar.updateApi = (apiParams, cb) => {
+        Udhaar._updateApi(apiParams).then((resp) => {
+            if(resp)
+                cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            else
+                cb(null, {STATUS: 'ERROR', RESP: resp});
+        }).catch((e)=>{
+            cb({STATUS: 'EXCEPTION', ERR: e}, null);
+        });
+    }
+    Udhaar._updateApi = (apiParams) => {
+        return new Promise(async (resolve, reject) => {
+            apiParams._userId = await  utils.getStoreOwnerUserId(apiParams.accessToken);
+            let sql = SQL.UPDATE_UDHAAR.replace(/REPLACE_USERID/g, apiParams._userId);
+            let billNo = apiParams.billNo;
+            if(apiParams.billSeries)
+                billNo = apiParams.billSeries + '.' + apiParams.billNo;
+            apiParams.modifiedDate= new Date().toISOString().replace('T', ' ').slice(0,23);
+            let queryValues = [billNo, apiParams.amount, dateformat(apiParams.udhaarCreationDate, 'yyyy-mm-dd HH:MM:ss', true), apiParams.accountId, apiParams.customerId, apiParams.notes, apiParams.modifiedDate, apiParams.udhaarUid];
+            Udhaar.dataSource.connector.query(sql, queryValues, async (err, res) => {
+                if(err){
+                    reject(err);
+                } else {
+                    Udhaar.app.models.FundTransaction.prototype.update(apiParams, 'udhaar');
                     resolve(true);
                 }
             });
@@ -239,11 +320,9 @@ module.exports = function(Udhaar) {
                     filterPart = ` WHERE ${whereCondList.join(' AND ')}`;
 
                 if (identifier == PENDING_UDHAAR_LIST) {
-                    // LIMIT
-                    if (params.limit !== undefined && params.offset !== undefined)
+                    if (params.limit !== undefined && params.offsetStart !== undefined)
                       limitOffsetClause = ` LIMIT ${params.limit} OFFSET ${params.offsetStart}`;
           
-                    // ORDER BY
                     orderClause = 'ORDER BY udhaar_REPLACE_USERID.date DESC';
                 }
                 break;
@@ -257,11 +336,98 @@ module.exports = function(Udhaar) {
         sql = sql.replace(/REPLACE_USERID/g, params._userId);
         return sql;
     }
+
+    Udhaar.getUdhaarDetailApi = (accessToken, udhaarUid, cb) => {
+        Udhaar._getUdhaarDetailApi(accessToken, udhaarUid).then((resp) => {
+            if(resp)
+                cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            else
+                cb(null, {STATUS: 'ERROR-No Response', RESP: resp});
+        }).catch((e)=>{
+            cb({STATUS: 'EXCEPTION', ERR: e}, null);
+        });
+    }
+    Udhaar._getUdhaarDetailApi = (accessToken, udhaarUid) => {
+        return new Promise(async (resolve, reject) => {
+            let _userId = await  utils.getStoreOwnerUserId(accessToken);
+            let sql = SQL.UDHAAR_DETAIL.replace(/REPLACE_USERID/g, _userId);
+            console.log(sql);
+            console.log(udhaarUid);
+            Udhaar.dataSource.connector.query(sql, [udhaarUid], async (err, res) => {
+                if(err){
+                    reject(err);
+                } else {
+                    let detail = Udhaar.constructUdhaarDetailResponse(res);
+                    resolve({detail: detail});
+                }
+            });
+        });
+    }
+    Udhaar.constructUdhaarDetailResponse = (res) => {
+        try {
+            if(res && res.length > 0) {
+                let detail = {
+                    udhaarUid: res[0].udhaarUid,
+                    udhaarBillNo: res[0].udhaarBillNo,
+                    udhaarAmt: res[0].udhaarAmt,
+                    udhaarDate: res[0].udhaarDate,
+                    udhaarNotes: res[0].udhaarNotes,
+                    udhaarStatus: res[0].udhaarStatus,
+                    udhaarTrashedFlag: res[0].udhaarTrashedFlag,
+                    customerInfo: {
+                        customerId: res[0].customerId,
+                        customerName: res[0].customerName,
+                        guardianName: res[0].guardianName,
+                        address: res[0].address,
+                        place: res[0].place,
+                        city: res[0].city,
+                        pincode: res[0].pincode,
+                        mobile: res[0].mobile,
+                        secMobile: res[0].secMobile
+                    },
+                    fundTransactions: []
+                };
+                _.each(res, (aRow, index) => {
+                    detail.fundTransactions.push({
+                        fundTrnsDate: aRow.fundTrnsDate,
+                        fundTrnsCashIn: aRow.fundTrnsCashIn,
+                        fundTrnsCashOut: aRow.fundTrnsCashOut,
+                        fundTrnsCategory: aRow.fundTrnsCategory,
+                        fundTrnsRemarks: aRow.fundTrnsRemarks,
+                        fundTrnsDeleted: aRow.fundTrnsDeleted,
+                        fundTrnsCashOutMode: aRow.fundTrnsCashOutMode,
+                        fundTrnsCashOutToBankId: aRow.fundTrnsCashOutToBankId,
+                        fundTrnsCashOutToBankIfsc: aRow.fundTrnsCashOutToBankIfsc,
+                        fundTrnsCashOutToUpi: aRow.fundTrnsCashOutToUpi,
+                        fundTrnsCashInMode: aRow.fundTrnsCashInMode,
+                        fundHouseName: aRow.fundHouseName
+                    });
+                });
+                return detail;
+            } else {
+                return null;
+            }
+        } catch(e) {
+            throw e;
+        }
+    }
 }
 
 let SQL = {
     CREATE_UDHAAR: `INSERT INTO udhaar_REPLACE_USERID (unique_identifier, bill_no, amount, date, account_id, customer_id, notes)
                         VALUES(?,?,?,?,?,?,?)`,
+    UPDATE_UDHAAR: `UPDATE
+                        udhaar_REPLACE_USERID
+                            SET
+                        bill_no=?,
+                        amount=?,
+                        date=?,
+                        account_id=?,
+                        customer_id=?,
+                        notes=?,
+                        modified_date=?
+                            WHERE
+                        unique_identifier=?`,
     CUSTOMER_BILL_HISTORY: `SELECT                         
                                 udhaar_REPLACE_USERID.unique_identifier AS udhaarUid,
                                 udhaar_REPLACE_USERID.bill_no AS udhaarBillNo,
@@ -296,12 +462,52 @@ let SQL = {
                                 udhaar_REPLACE_USERID
                                     LEFT JOIN
                                 customer ON udhaar_REPLACE_USERID.customer_id = customer.CustomerId
-                            WHERE_CLAUSE`,
+                            WHERE_CLAUSE
+                            ORDER_CLAUSE
+                            LIMIT_OFFSET_CLAUSE`,
     PENDING_UDHAAR_LIST_COUNT: `SELECT
                                     COUNT(*) AS count
                                 FROM
                                     udhaar_REPLACE_USERID
                                         LEFT JOIN
                                     customer ON udhaar_REPLACE_USERID.customer_id = customer.CustomerId
-                                WHERE_CLAUSE`
+                                WHERE_CLAUSE`,
+    UDHAAR_DETAIL: `SELECT
+                        udhaar_REPLACE_USERID.unique_identifier AS udhaarUid,
+                        udhaar_REPLACE_USERID.bill_no AS udhaarBillNo,
+                        udhaar_REPLACE_USERID.amount AS udhaarAmt,
+                        udhaar_REPLACE_USERID.date AS udhaarDate,
+                        udhaar_REPLACE_USERID.notes AS udhaarNotes,
+                        udhaar_REPLACE_USERID.status AS udhaarStatus,
+                        udhaar_REPLACE_USERID.trashed AS udhaarTrashedFlag,
+                        fund_transactions_REPLACE_USERID.id AS fundTrnsId,
+                        fund_transactions_REPLACE_USERID.account_id AS udhaarAccId,
+                        fund_transactions_REPLACE_USERID.transaction_date AS fundTrnsDate,
+                        fund_transactions_REPLACE_USERID.cash_in AS fundTrnsCashIn,
+                        fund_transactions_REPLACE_USERID.cash_out AS fundTrnsCashOut,
+                        fund_transactions_REPLACE_USERID.category AS fundTrnsCategory,
+                        fund_transactions_REPLACE_USERID.remarks AS fundTrnsRemarks,
+                        fund_transactions_REPLACE_USERID.deleted AS fundTrnsDeleted,
+                        fund_transactions_REPLACE_USERID.cash_out_mode AS fundTrnsCashOutMode,
+                        fund_transactions_REPLACE_USERID.cash_out_to_bank_id AS fundTrnsCashOutToBankId,
+                        fund_transactions_REPLACE_USERID.cash_out_to_bank_ifsc AS fundTrnsCashOutToBankIfsc,
+                        fund_transactions_REPLACE_USERID.cash_out_to_upi AS fundTrnsCashOutToUpi,
+                        fund_transactions_REPLACE_USERID.cash_in_mode AS fundTrnsCashInMode,
+                        fund_accounts.name AS fundHouseName,
+                        customer.CustomerId AS customerId,
+                        customer.Name AS customerName,
+                        customer.GaurdianName AS guardianName,
+                        customer.Address AS address,
+                        customer.Place AS place,
+                        customer.City AS city,
+                        customer.Pincode AS pincode,
+                        customer.Mobile AS mobile,
+                        customer.SecMobile AS secMobile
+                    FROM
+                        udhaar_REPLACE_USERID
+                        LEFT JOIN fund_transactions_REPLACE_USERID ON (fund_transactions_REPLACE_USERID.gs_uid = udhaar_REPLACE_USERID.unique_identifier)
+                        LEFT JOIN fund_accounts ON fund_transactions_REPLACE_USERID.account_id = fund_accounts.id
+                        LEFT JOIN customer ON (customer.CustomerId = udhaar_REPLACE_USERID.customer_id)
+                    WHERE
+                        unique_identifier = ? AND fund_transactions_REPLACE_USERID.deleted=0`
 };

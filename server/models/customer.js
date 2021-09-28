@@ -115,6 +115,37 @@ module.exports = function(Customer) {
         description: 'For fetching metadata from Customer Data.',
     });
 
+    Customer.remoteMethod('getCustomerBasicListApi', {
+        accepts: [
+            {
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    var req = ctx && ctx.req;
+                    let access_token = req && req.query.access_token;
+                    return access_token;                    
+                },
+                description: 'Arguments goes here',
+            }, {
+                arg: 'params', type: 'object', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let params = req && req.query.params;
+                    params = params ? JSON.parse(params) : {};
+                    return params;
+                },
+                description: 'Arguments goes here',
+        }
+        ],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            },
+        },
+        http: {path: '/customer-basic-list', verb: 'get'},
+        description: 'For fetching customer list.',
+    });
+
+
     Customer.createCustomerAPIHandler = async (data) => {
         try {
             data._userId = await utils.getStoreOwnerUserId(data.accessToken);
@@ -372,6 +403,8 @@ module.exports = function(Customer) {
     Customer.getQuery = (identifier, params) => {
         let sql = '';
         let whereCondition = '';
+        let limitOffset = '';
+        let whereClause = '';
         switch(identifier) {
             case 'all':
                 whereCondition = Customer._getWhereCondition(params);
@@ -403,6 +436,26 @@ module.exports = function(Customer) {
                         sql += ` LIMIT ${params.limit}`;
                     if(params.start)
                         sql += ` OFFSET ${params.start}`;
+                break;
+            case 'customer-list-basic':
+                sql = SQL.CUSTOMER_LIST_BASIC;
+                whereClause = Customer._getWhereCondition(params);
+                if(params.limit)
+                    limitOffset = `LIMIT ${params.limit} OFFSET ${params.start||0}`;
+
+                sql = sql.replace(/WHERE_CLAUSE/g, whereClause);    
+                sql = sql.replace(/LIMIT_OFFSET_CLAUSE/g, limitOffset);
+
+                break;
+            case 'customer-list-detailed':
+                sql = SQL.CUSTOMER_LIST_DETAILED;
+                whereClause = Customer._getWhereCondition(params);
+                if(params.limit)
+                    limitOffset = `LIMIT ${params.limit} OFFSET ${params.start||0}`;
+
+                sql = sql.replace(/WHERE_CLAUSE/g, whereClause);    
+                sql = sql.replace(/LIMIT_OFFSET_CLAUSE/g, limitOffset);
+
                 break;
             case 'countQuery': 
                 whereCondition = Customer._getWhereCondition(params);
@@ -442,6 +495,10 @@ module.exports = function(Customer) {
             filters.push(`customer.HashKey = '${params.hashKey}'`);
         if(params.onlyIsActive)
             filters.push(`customer.CustStatus = 1`);
+        if(params.customerHashKey)
+            filters.push(`customer.hashKey = '${params.customerHashKey}'`);
+        if(params.customerId)
+            filters.push(`customer.customerId = ${params.customerId}`);
         if(filters.length)
             whereCondition = ` WHERE ${filters.join(' AND ')}`;
         return whereCondition;
@@ -770,9 +827,33 @@ module.exports = function(Customer) {
         });
     };
 
+    Customer.getCustomerBasicListApi = (accessToken, params, cb) => {
+        Customer._getCustomerBasicListApi(accessToken, params).then((resp) => {
+            if(resp)
+                cb(null, {STATUS: 'SUCCESS', RESP: {list: resp}});
+            else
+                cb(null, {STATUS: 'ERROR', RESP: {list: resp}});
+        }).catch((e)=>{
+            cb({STATUS: 'EXCEPTION', ERR: e}, null);
+        });
+    }
+
+    Customer._getCustomerBasicListApi = (accessToken, params) => {
+        return new Promise(async (resolve, reject) => {
+            params.userId = await utils.getStoreOwnerUserId(accessToken);
+            let query = Customer.getQuery('customer-list-basic', params);
+            Customer.dataSource.connector.query(query, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(res);
+                }
+            });
+        });
+    }
 };
 
-let sql = {
+let SQL = {
     Name: `SELECT DISTINCT Name from customer`,
     GaurdianName: `SELECT DISTINCT GaurdianName FROM customer`,
     Address: `SELECT DISTINCT Address FROM customer`,
@@ -780,5 +861,47 @@ let sql = {
     City: `SELECT DISTINCT City FROM customer`,
     Mobile: `SELECT DISTINCT Mobile FROM customer`,
     Pincode: `SELECT DISTINCT Pincode FROM customer`,
-    OtherDetails: `` //TODO:
+    OtherDetails: ``, //TODO:
+    CUSTOMER_LIST_BASIC: `SELECT 
+                        customer.CustomerId AS customerId,
+                        customer.UserId AS userId,
+                        customer.Name AS name,
+                        customer.GaurdianName AS gaurdianName,
+                        customer.Address AS address,
+                        customer.Place AS place,
+                        customer.City AS city,
+                        customer.Pincode AS pincode,
+                        customer.Mobile AS mobile,
+                        customer.HashKey AS hashKey,
+                        customer.SecMobile AS secMobile,
+                        customer.CustStatus AS custStatus
+                    FROM customer
+                    WHERE_CLAUSE
+                    ORDER BY customer.Name ASC
+                    LIMIT_OFFSET_CLAUSE`,
+    CUSTOMER_LIST_DETAILED: `SELECT 
+                                customer.CustomerId AS customerId,
+                                customer.UserId AS userId,
+                                customer.Name AS name,
+                                customer.GaurdianName AS gaurdianName,
+                                customer.Address AS address,
+                                customer.Place AS place,
+                                customer.City AS city,
+                                customer.Pincode AS pincode,
+                                customer.Mobile AS mobile,
+                                customer.HashKey AS hashKey,
+                                customer.SecMobile AS secMobile,
+                                customer.OtherDetails AS otherDetails,
+                                customer.CustStatus AS custStatus,
+                                image.Id AS imageTableId,
+                                image.Path AS userImagePath,
+                                image.Format AS userImageFormat,
+                                image.Optional AS userImageOptionals,
+                                image.StorageMode AS userImageStorageMode
+                            FROM customer
+                                LEFT JOIN 
+                            image ON customer.ImageId = image.Id
+                            WHERE_CLAUSE
+                            ORDER BY customer.Name ASC
+                            LIMIT_OFFSET_CLAUSE`
 }

@@ -197,11 +197,10 @@ module.exports = function(FundTransaction) {
                 description: 'Arguments goes here',
             },
             {
-                arg: 'params', type: 'object', http: (ctx) => {
+                arg: 'uids', type: 'array', http: (ctx) => {
                     let req = ctx && ctx.req;
-                    let loan_uid = req && req.query.loan_uid;
-                    let closed_uid = req && req.query.closed_uid;
-                    return {loan_uid, closed_uid};
+                    let uids = req && req.query.uids;
+                    return JSON.parse(uids);
                 },
                 description: 'Arguments goes here',
             }],
@@ -534,12 +533,13 @@ module.exports = function(FundTransaction) {
             case 'FETCH_TRANSACTION_LIST_BY_BILL':
                 if(params._userId)
                     filters.push(`fund_transactions_REPLACE_USERID.user_id=${params._userId}`);
-                if(params.loan_uid) {
-                    if(params.closed_uid)
-                        filters.push(`(fund_transactions_REPLACE_USERID.gs_uid=${params.loan_uid} OR fund_transactions_REPLACE_USERID.gs_uid=${params.closed_uid})`);
-                    else
-                        filters.push(`fund_transactions_REPLACE_USERID.gs_uid=${params.loan_uid}`);
-                }
+                // if(params.loan_uid) {
+                //     if(params.closed_uid)
+                //         filters.push(`(fund_transactions_REPLACE_USERID.gs_uid=${params.loan_uid} OR fund_transactions_REPLACE_USERID.gs_uid=${params.closed_uid})`);
+                //     else
+                //         filters.push(`fund_transactions_REPLACE_USERID.gs_uid=${params.loan_uid}`);
+                // }
+                filters.push(`fund_transactions_REPLACE_USERID.gs_uid IN ('${params.uids.join("', '")}')`);
                 break;
         }
 
@@ -866,6 +866,9 @@ module.exports = function(FundTransaction) {
                     case 'redeem':
                         await FundTransaction.updateRedeemEntry(params);
                         break;
+                    case 'udhaar':
+                        await FundTransaction.updateUdhaarEntry(params);
+                        break;
                 }
                 return resolve(true);
             } catch(e) {
@@ -942,6 +945,25 @@ module.exports = function(FundTransaction) {
         return new Promise((resolve, reject) => {
             let sql = SQL.INTERNAL_REDEEM_TRANSACTION_UPDATE;
             sql = sql.replace(/REPLACE_USERID/g, options._userId);
+            FundTransaction.dataSource.connector.query(sql, qv, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(true);
+                }
+            });
+        });
+    }
+
+    FundTransaction.updateUdhaarEntry = (params) => {
+        return new Promise((resolve, reject) => {
+            let destAccDetail = params.destinationAccountDetail;
+
+            let qv = [params.customerId, params.accountId, dateformat(params.udhaarCreationDate, 'yyyy-mm-dd HH:MM:ss', true), 0, params.amount, params.notes,
+            params.paymentMode, destAccDetail.toAccountId, destAccDetail.accNo, destAccDetail.ifscCode, destAccDetail.upiId, params.udhaarUid, params._userId];
+
+            let sql = SQL.INTERNAL_UDHAAR_TRANSACTION_UPDATE;
+            sql = sql.replace(/REPLACE_USERID/g, params._userId);
             FundTransaction.dataSource.connector.query(sql, qv, (err, res) => {
                 if(err) {
                     return reject(err);
@@ -1145,8 +1167,8 @@ module.exports = function(FundTransaction) {
         });
     }
 
-    FundTransaction.fetchTransactionsByBillIdApi = (accessToken, params, cb) => {
-        FundTransaction._fetchTransactionsByBillIdApi(accessToken, params).then(
+    FundTransaction.fetchTransactionsByBillIdApi = (accessToken, uids, cb) => {
+        FundTransaction._fetchTransactionsByBillIdApi(accessToken, uids).then(
             (resp) => {
                 cb(null, {STATUS: 'SUCCESS', RESP: resp});
             }
@@ -1157,10 +1179,11 @@ module.exports = function(FundTransaction) {
         );
     }
 
-    FundTransaction._fetchTransactionsByBillIdApi = (accessToken, params) => {
+    FundTransaction._fetchTransactionsByBillIdApi = (accessToken, uids) => {
         return new Promise(async (resolve, reject) => {
-            if(!params.loan_uid)
+            if(uids.length == 0)
                 return reject('Bill ID is not passed.');
+            let params = {uids: uids};
             params._userId = await utils.getStoreOwnerUserId(accessToken);
             let sql = SQL.TRANSACTION_LIST;
             sql = FundTransaction._appendFilters(sql, params, 'FETCH_TRANSACTION_LIST_BY_BILL');
@@ -1469,6 +1492,7 @@ let SQL = {
     INTERNAL_UDHAAR_TRANSACTION: `INSERT INTO fund_transactions_REPLACE_USERID (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     INTERNAL_GIRVI_TRANSACTION_UPDATE: `UPDATE fund_transactions_REPLACE_USERID SET customer_id=?, account_id=?, transaction_date=?, cash_in=?, cash_out=?, remarks=?, cash_out_mode=?, cash_out_to_bank_id=?, cash_out_to_bank_acc_no=?, cash_out_to_bank_ifsc=?, cash_out_to_upi=? WHERE gs_uid=? AND user_id=?`,
     INTERNAL_REDEEM_TRANSACTION_UPDATE: `UPDATE fund_transactions_REPLACE_USERID SET customer_id=?, account_id=?, transaction_date=?, cash_out=?, remarks=?, cash_in_mode=? WHERE gs_uid=? AND user_id=? `,
+    INTERNAL_UDHAAR_TRANSACTION_UPDATE: `UPDATE fund_transactions_REPLACE_USERID SET customer_id=?, account_id=?, transaction_date=?, cash_in=?, cash_out=?, remarks=?, cash_out_mode=?, cash_out_to_bank_id=?, cash_out_to_bank_acc_no=?, cash_out_to_bank_ifsc=?, cash_out_to_upi=? WHERE gs_uid=? AND user_id=?`,
     ADD_CASH_FOR_BILL: `INSERT INTO fund_transactions_REPLACE_USERID (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks, cash_in_mode) VALUES (?,?,?,?,?,?,?,?,?,?)`,
     UPDATE_TRANSACTION_FOR_CASH_IN: `UPDATE fund_transactions_REPLACE_USERID SET account_id=?, customer_id=?, transaction_date=?, cash_in=?, category=?, remarks=?, cash_in_mode=? WHERE id=? AND user_id=?`,
     UPDATE_TRANSACTION_FOR_CASH_OUT: `UPDATE fund_transactions_REPLACE_USERID SET account_id=?, customer_id=?, transaction_date=?, cash_out=?, category=?, remarks=?, cash_out_mode=?, cash_out_to_bank_id=?, cash_out_to_bank_acc_no=?, cash_out_to_bank_ifsc=?, cash_out_to_upi=? WHERE id=? AND user_id=?`,
