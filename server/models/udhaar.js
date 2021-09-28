@@ -373,8 +373,6 @@ module.exports = function(Udhaar) {
         return new Promise(async (resolve, reject) => {
             let _userId = await  utils.getStoreOwnerUserId(accessToken);
             let sql = SQL.UDHAAR_DETAIL.replace(/REPLACE_USERID/g, _userId);
-            console.log(sql);
-            console.log(udhaarUid);
             Udhaar.dataSource.connector.query(sql, [udhaarUid], async (err, res) => {
                 if(err){
                     reject(err);
