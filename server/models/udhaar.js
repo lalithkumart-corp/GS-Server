@@ -3,8 +3,8 @@ let _ = require('lodash');
 let utils = require('../utils/commonUtils');
 let dateformat = require('dateformat');
 
-const PENDING_UDHAAR_LIST = 'PENDING_UDHAAR_LIST';
-const PENDING_UDHAAR_LIST_COUNT = 'PENDING_UDHAAR_LIST_COUNT';
+const UDHAAR_LIST = 'UDHAAR_LIST';
+const UDHAAR_LIST_COUNT = 'UDHAAR_LIST_COUNT';
 
 module.exports = function(Udhaar) {
     Udhaar.remoteMethod('createApi', {
@@ -273,7 +273,7 @@ module.exports = function(Udhaar) {
             apiParams._userId = await utils.getStoreOwnerUserId(accessToken);
 
             let promise1 = new Promise((resolve, reject) => {
-                let query = Udhaar._constructQuery(PENDING_UDHAAR_LIST, apiParams);
+                let query = Udhaar._constructQuery(UDHAAR_LIST, apiParams);
                 Udhaar.dataSource.connector.query(query, (err, res) => {
                     if(err)
                         return reject(err);
@@ -283,7 +283,7 @@ module.exports = function(Udhaar) {
             });
 
             let promise2 = new Promise((resolve, reject) => {
-                let query = Udhaar._constructQuery(PENDING_UDHAAR_LIST_COUNT, apiParams);
+                let query = Udhaar._constructQuery(UDHAAR_LIST_COUNT, apiParams);
                 Udhaar.dataSource.connector.query(query, (err, res) => {
                     if(err)
                         return reject(err);
@@ -320,8 +320,8 @@ module.exports = function(Udhaar) {
         let limitOffsetClause = '';
         let sql = '';
         switch(identifier) {
-            case PENDING_UDHAAR_LIST:
-            case PENDING_UDHAAR_LIST_COUNT:
+            case UDHAAR_LIST:
+            case UDHAAR_LIST_COUNT:
                 sql = SQL[identifier];
                 let filters = params.filters;
                 if(filters.startDate && filters.endDate)
@@ -336,11 +336,14 @@ module.exports = function(Udhaar) {
                     whereCondList.push(`customer_REPLACE_USERID.Address LIKE '${filters.address}%' `);
                 if(filters.mobile)
                     whereCondList.push(`customer_REPLACE_USERID.Mobile LIKE '${filters.mobile}%' `);
-                
+                if(filters.include) {
+                    if(filters.include == 'pending') whereCondList.push(`udhaar_REPLACE_USERID.status=1`);
+                    else if(filters.include == 'resolved') whereCondList.push(`udhaar_REPLACE_USERID.status=0`);
+                } 
                 if (whereCondList.length > 0)
                     filterPart = ` WHERE ${whereCondList.join(' AND ')}`;
 
-                if (identifier == PENDING_UDHAAR_LIST) {
+                if (identifier == UDHAAR_LIST) {
                     if (params.limit !== undefined && params.offsetStart !== undefined)
                       limitOffsetClause = ` LIMIT ${params.limit} OFFSET ${params.offsetStart}`;
           
@@ -510,7 +513,7 @@ let SQL = {
                                 customer_REPLACE_USERID ON udhaar_REPLACE_USERID.customer_id = customer_REPLACE_USERID.CustomerId
                             WHERE
                                 udhaar_REPLACE_USERID.customer_id = ?`,
-    PENDING_UDHAAR_LIST: `SELECT                         
+    UDHAAR_LIST: `SELECT                         
                                 udhaar_REPLACE_USERID.unique_identifier AS udhaarUid,
                                 udhaar_REPLACE_USERID.bill_no AS udhaarBillNo,
                                 udhaar_REPLACE_USERID.amount AS udhaarAmt,
@@ -533,7 +536,7 @@ let SQL = {
                             WHERE_CLAUSE
                             ORDER_CLAUSE
                             LIMIT_OFFSET_CLAUSE`,
-    PENDING_UDHAAR_LIST_COUNT: `SELECT
+    UDHAAR_LIST_COUNT: `SELECT
                                     COUNT(*) AS count
                                 FROM
                                     udhaar_REPLACE_USERID
