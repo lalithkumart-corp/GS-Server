@@ -7,7 +7,6 @@ let GsErrorCtrl = require('../components/logger/gsErrorCtrl');
 let logger = app.get('logger');
 module.exports = function(Customer) {
 
-
     Customer.remoteMethod('createCustomerAPIHandler', {
         accepts: {
             arg: 'data',
@@ -261,11 +260,23 @@ module.exports = function(Customer) {
                 createdAt: new Date(),
                 modifiedAt: new Date()
             }
-            Customer.create(dbInputValues, (err, result) => {
+            // Customer.create(dbInputValues, (err, result) => {
+            let qv = [
+                dbInputValues.userId, dbInputValues.name,
+                dbInputValues.gaurdianName, dbInputValues.imageId,
+                dbInputValues.address, dbInputValues.place,
+                dbInputValues.city, dbInputValues.pincode,
+                dbInputValues.mobile, JSON.stringify(dbInputValues.otherDetails),
+                dbInputValues.hashKey,
+                dbInputValues.createdAt, dbInputValues.modifiedAt,
+            ];
+            let query = SQL.INSERT_NEW_CUSTOMER;
+            query = query.replace(/REPLACE_USERID/g, params._userId);
+            Customer.dataSource.connector.query(query, qv, (err, result) => {
                 if(err) {
                     return reject(err);
                 } else {
-                    return resolve(result);
+                    return resolve({...dbInputValues, customerId: result.insertId});
                 }
             });
         });
@@ -301,7 +312,9 @@ module.exports = function(Customer) {
                 }                
 
                 let promise1 = new Promise( (resolve, reject) => {
-                    Customer.dataSource.connector.query(Customer.getQuery('all', {userId: userId, ...params}), (err, result) => {                
+                    let query = Customer.getQuery('all', {userId: userId, ...params});
+                    query = query.replace(/REPLACE_USERID/g, userId);
+                    Customer.dataSource.connector.query(query, (err, result) => {                
                         if(err) {
                             return reject(err);
                         } else {
@@ -320,7 +333,9 @@ module.exports = function(Customer) {
                 });
 
                 let promise2 = new Promise( (resolve, reject) => {
-                    Customer.dataSource.connector.query(Customer.getQuery('countQuery', {userId: userId, ...params}), (err, res) => {
+                    let qry = Customer.getQuery('countQuery', {userId: userId, ...params});
+                    qry = qry.replace(/REPLACE_USERID/g, userId);
+                    Customer.dataSource.connector.query(qry, (err, res) => {
                         if(err) {
                             return reject(err);
                         } else {
@@ -409,29 +424,29 @@ module.exports = function(Customer) {
             case 'all':
                 whereCondition = Customer._getWhereCondition(params);
                 sql = `SELECT 
-                            customer.CustomerId AS customerId,
-                            customer.UserId AS userId,
-                            customer.Name AS name,
-                            customer.GaurdianName AS gaurdianName,
-                            customer.Address AS address,
-                            customer.Place AS place,
-                            customer.City AS city,
-                            customer.Pincode AS pincode,
-                            customer.Mobile AS mobile,
-                            customer.HashKey AS hashKey,
-                            customer.SecMobile AS secMobile,
-                            customer.OtherDetails AS otherDetails,
-                            customer.CustStatus AS custStatus,
+                            customer_REPLACE_USERID.CustomerId AS customerId,
+                            customer_REPLACE_USERID.UserId AS userId,
+                            customer_REPLACE_USERID.Name AS name,
+                            customer_REPLACE_USERID.GaurdianName AS gaurdianName,
+                            customer_REPLACE_USERID.Address AS address,
+                            customer_REPLACE_USERID.Place AS place,
+                            customer_REPLACE_USERID.City AS city,
+                            customer_REPLACE_USERID.Pincode AS pincode,
+                            customer_REPLACE_USERID.Mobile AS mobile,
+                            customer_REPLACE_USERID.HashKey AS hashKey,
+                            customer_REPLACE_USERID.SecMobile AS secMobile,
+                            customer_REPLACE_USERID.OtherDetails AS otherDetails,
+                            customer_REPLACE_USERID.CustStatus AS custStatus,
                             image.Id AS imageTableId,
                             image.Path AS userImagePath,
                             image.Format AS userImageFormat,
                             image.Optional AS userImageOptionals,
                             image.StorageMode AS userImageStorageMode
-                        FROM customer
+                        FROM customer_REPLACE_USERID
                             LEFT JOIN 
-                        image ON customer.ImageId = image.Id
+                        image ON customer_REPLACE_USERID.ImageId = image.Id
                            ${whereCondition}
-                        ORDER BY customer.Name ASC`;
+                        ORDER BY customer_REPLACE_USERID.Name ASC`;
                     if(params.limit)
                         sql += ` LIMIT ${params.limit}`;
                     if(params.start)
@@ -461,22 +476,22 @@ module.exports = function(Customer) {
                 whereCondition = Customer._getWhereCondition(params);
                 sql = `SELECT
                             COUNT(*) AS count
-                        FROM customer
+                        FROM customer_REPLACE_USERID
                             LEFT JOIN 
-                        image ON customer.ImageId = image.Id
+                        image ON customer_REPLACE_USERID.ImageId = image.Id
                             ${whereCondition}`;
                 break;
             case 'replace-customer-hashkey-map':
                 sql = `UPDATE ${params.pledgebookTableName} SET CustomerId = '${params._customerIdForMergeInto}' where CustomerId = '${params._customerIdForMerge}'`;
                 break;
             case 'disable-customer':
-                sql = `UPDATE customer SET CustStatus = ${params.status} WHERE CustomerId = '${params.custId}' AND UserId=${params.userId}`;
+                sql = `UPDATE customer_REPLACE_USERID SET CustStatus = ${params.status} WHERE CustomerId = '${params.custId}' AND UserId=${params.userId}`;
                 break;
             case 'update-sec-mobile':
-                sql = `UPDATE customer SET SecMobile=? WHERE CustomerId=?`;
+                sql = `UPDATE customer_REPLACE_USERID SET SecMobile=? WHERE CustomerId=?`;
                 break;
             case 'update-primary-mobile':
-                sql = `UPDATE customer SET Mobile=? WHERE CustomerId=?`;
+                sql = `UPDATE customer_REPLACE_USERID SET Mobile=? WHERE CustomerId=?`;
                 break;
         }
         return sql;
@@ -486,19 +501,19 @@ module.exports = function(Customer) {
         let whereCondition = '';
         let filters = [];
         if(params.userId)
-            filters.push(`customer.UserId=${params.userId}`);
+            filters.push(`customer_REPLACE_USERID.UserId=${params.userId}`);
         if(params.cname)
-            filters.push(`customer.Name LIKE '${params.cname}%'`);
+            filters.push(`customer_REPLACE_USERID.Name LIKE '${params.cname}%'`);
         if(params.fgname)
-            filters.push(`customer.GaurdianName LIKE '${params.fgname}%'`);
+            filters.push(`customer_REPLACE_USERID.GaurdianName LIKE '${params.fgname}%'`);
         if(params.hashKey)
-            filters.push(`customer.HashKey = '${params.hashKey}'`);
+            filters.push(`customer_REPLACE_USERID.HashKey = '${params.hashKey}'`);
         if(params.onlyIsActive)
-            filters.push(`customer.CustStatus = 1`);
+            filters.push(`customer_REPLACE_USERID.CustStatus = 1`);
         if(params.customerHashKey)
-            filters.push(`customer.hashKey = '${params.customerHashKey}'`);
+            filters.push(`customer_REPLACE_USERID.hashKey = '${params.customerHashKey}'`);
         if(params.customerId)
-            filters.push(`customer.customerId = ${params.customerId}`);
+            filters.push(`customer_REPLACE_USERID.customerId = ${params.customerId}`);
         if(filters.length)
             whereCondition = ` WHERE ${filters.join(' AND ')}`;
         return whereCondition;
@@ -520,7 +535,7 @@ module.exports = function(Customer) {
     //TODO: check with respect to UserId also in where condition
     Customer.isAlreadyExists = (hashKey, optional) => {
         return new Promise( (resolve, reject) => {
-            let whereCondition = {hashKey: hashKey}
+            /*let whereCondition = {hashKey: hashKey}
 
             if(optional) {
                 if(optional.ignoreCustId)
@@ -531,16 +546,33 @@ module.exports = function(Customer) {
                     whereCondition.userId = optional._userId;
             }
 
-            // if(optional && optional.ignoreCustId)
-            //     whereCondition = {hashKey: hashKey, customerId: {neq: optional.ignoreCustId}};
+            if(optional && optional.ignoreCustId)
+                whereCondition = {hashKey: hashKey, customerId: {neq: optional.ignoreCustId}};
             
             Customer.findOne({where: whereCondition}, (err, result) => {
+            */
+            let whereClause = '';
+            let whereList = [];
+            whereList.push(`HashKey='${hashKey}'`);
+            if(optional) {
+                if(optional.ignoreCustId)
+                    whereList.push(`CustomerId <> ${optional.ignoreCustId}`);
+                if(optional.onlyActive)
+                    whereList.push(`CustStatus <> 0`);
+                // if(optional._userId)
+                //     whereList.push(`UsedId = ${optional._userId}`);
+            }
+            whereClause = whereList.join(' AND ');
+            
+            let query = `SELECT * FROM customer_REPLACE_USERID WHERE ${whereClause}`;
+            query = query.replace(/REPLACE_USERID/g, optional._userId);
+            Customer.dataSource.connector.query(query, (err, result) => {
                 if(err) {
                     //TODO: Log the error
                     reject(err);
                 } else {
-                    if(result)
-                        resolve(result);
+                    if(result && result.length)
+                        resolve(result[0]);
                     else
                         resolve(false);
                 }
@@ -605,12 +637,37 @@ module.exports = function(Customer) {
                 throw new Error(msg);
             }
             params = verification.params;
-            let response = await Customer.updateAll({customerId: params.customerId}, {name: params.cname, imageId: params.picture.id, gaurdianName: params.gaurdianName, address: params.address, place: params.place, city: params.city, mobile: params.mobile, secMobile: params.secMobile, pincode: params.pinCode, otherDetails: params.otherDetails, hashKey: params._hashKey});
-            return response;
+            
+            // let response = await Customer.updateAll({customerId: params.customerId}, {name: params.cname, imageId: params.picture.id, gaurdianName: params.gaurdianName, address: params.address, place: params.place, city: params.city, mobile: params.mobile, secMobile: params.secMobile, pincode: params.pinCode, otherDetails: params.otherDetails, hashKey: params._hashKey});
+            await Customer._update(params);
+            return true; //response;
         } catch(e) {
             console.log(e);
             throw e;
         }
+    }
+
+    Customer._update = (params) => {
+        return new Promise((resolve, reject) => {
+            let modifiedDate = new Date().toISOString().replace('T', ' ').slice(0,23);
+            let query = SQL.UPDATE_CUSTOMER;
+            query = query.replace(/REPLACE_USERID/g, params._userId);
+            let qv = [
+                params.cname, params.gaurdianName,
+                params.picture.id, params.address,
+                params.place, params.city,
+                params.pinCode, params.mobile, params.secMobile,
+                JSON.stringify(params.otherDetails), params._hashKey,
+                modifiedDate, params.customerId
+            ];
+            Customer.dataSource.connector.query(query, qv, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(true);
+                }
+            });
+        });
     }
 
     Customer.checkInputDetails = async (params) => {
@@ -715,14 +772,18 @@ module.exports = function(Customer) {
         });        
     }
 
-    Customer._getById = (custId) => {
+    Customer._getById = (custId, _userId) => {
         return new Promise( (resolve, reject) => {
             try {
-                Customer.findOne({where: {customerId: custId} }, (err, res) => {
+                // Customer.findOne({where: {customerId: custId} }, (err, res) => {
+
+                let query = `SELECT * FROM customer_REPLACE_USERID WHERE CustomerId=${custId}`;
+                query = query.replace(/REPLACE_USERID/g, _userId);
+                Customer.dataSource.connector.query(query, (err, res) => {
                     if(err)
                         reject(err);
                     else {
-                        resolve(res);
+                        resolve(res[0]);
                     }
                 });
             } catch(e) {
@@ -734,7 +795,7 @@ module.exports = function(Customer) {
     Customer.getIdByHashKey = (hashKey) => {
         return new Promise( (resolve, reject ) => {
             try {
-                Customer.dataSource.connector.query(`SELECT * FROM customer WHERE HashKey='${hashKey}'`, (err, res) => {
+                Customer.dataSource.connector.query(`SELECT * FROM customer_REPLACE_USERID WHERE HashKey='${hashKey}'`, (err, res) => {
                     if(err) {
                         return reject(err);
                     } else {
@@ -759,7 +820,7 @@ module.exports = function(Customer) {
                 if(pendingBills.length > 0)
                     throw new Error('This Customer has Pending Bills. Redeem those bills to disable this customer...');
             } else { //To enable, there should not be any already existing hashkey
-                let custRecord = await Customer._getById(data.custId);
+                let custRecord = await Customer._getById(data.custId, _userId);
                 let custRecords = await Customer.isAlreadyExists(custRecord.hashKey, {onlyActive: true, ignoreCustId: data.custId, _userId: _userId});
                 if(custRecords)
                     throw new Error(`Could not Enable! Snce there is another customer with Same key = ${custRecord.hashKey}`);
@@ -854,45 +915,45 @@ module.exports = function(Customer) {
 };
 
 let SQL = {
-    Name: `SELECT DISTINCT Name from customer`,
-    GaurdianName: `SELECT DISTINCT GaurdianName FROM customer`,
-    Address: `SELECT DISTINCT Address FROM customer`,
-    Place: `SELECT DISTINCT Place FROM customer`,
-    City: `SELECT DISTINCT City FROM customer`,
-    Mobile: `SELECT DISTINCT Mobile FROM customer`,
-    Pincode: `SELECT DISTINCT Pincode FROM customer`,
+    Name: `SELECT DISTINCT Name from customer_REPLACE_USERID`,
+    GaurdianName: `SELECT DISTINCT GaurdianName FROM customer_REPLACE_USERID`,
+    Address: `SELECT DISTINCT Address FROM customer_REPLACE_USERID`,
+    Place: `SELECT DISTINCT Place FROM customer_REPLACE_USERID`,
+    City: `SELECT DISTINCT City FROM customer_REPLACE_USERID`,
+    Mobile: `SELECT DISTINCT Mobile FROM customer_REPLACE_USERID`,
+    Pincode: `SELECT DISTINCT Pincode FROM customer_REPLACE_USERID`,
     OtherDetails: ``, //TODO:
     CUSTOMER_LIST_BASIC: `SELECT 
-                        customer.CustomerId AS customerId,
-                        customer.UserId AS userId,
-                        customer.Name AS name,
-                        customer.GaurdianName AS gaurdianName,
-                        customer.Address AS address,
-                        customer.Place AS place,
-                        customer.City AS city,
-                        customer.Pincode AS pincode,
-                        customer.Mobile AS mobile,
-                        customer.HashKey AS hashKey,
-                        customer.SecMobile AS secMobile,
-                        customer.CustStatus AS custStatus
+                        customer_REPLACE_USERID.CustomerId AS customerId,
+                        customer_REPLACE_USERID.UserId AS userId,
+                        customer_REPLACE_USERID.Name AS name,
+                        customer_REPLACE_USERID.GaurdianName AS gaurdianName,
+                        customer_REPLACE_USERID.Address AS address,
+                        customer_REPLACE_USERID.Place AS place,
+                        customer_REPLACE_USERID.City AS city,
+                        customer_REPLACE_USERID.Pincode AS pincode,
+                        customer_REPLACE_USERID.Mobile AS mobile,
+                        customer_REPLACE_USERID.HashKey AS hashKey,
+                        customer_REPLACE_USERID.SecMobile AS secMobile,
+                        customer_REPLACE_USERID.CustStatus AS custStatus
                     FROM customer
                     WHERE_CLAUSE
-                    ORDER BY customer.Name ASC
+                    ORDER BY customer_REPLACE_USERID.Name ASC
                     LIMIT_OFFSET_CLAUSE`,
     CUSTOMER_LIST_DETAILED: `SELECT 
-                                customer.CustomerId AS customerId,
-                                customer.UserId AS userId,
-                                customer.Name AS name,
-                                customer.GaurdianName AS gaurdianName,
-                                customer.Address AS address,
-                                customer.Place AS place,
-                                customer.City AS city,
-                                customer.Pincode AS pincode,
-                                customer.Mobile AS mobile,
-                                customer.HashKey AS hashKey,
-                                customer.SecMobile AS secMobile,
-                                customer.OtherDetails AS otherDetails,
-                                customer.CustStatus AS custStatus,
+                                customer_REPLACE_USERID.CustomerId AS customerId,
+                                customer_REPLACE_USERID.UserId AS userId,
+                                customer_REPLACE_USERID.Name AS name,
+                                customer_REPLACE_USERID.GaurdianName AS gaurdianName,
+                                customer_REPLACE_USERID.Address AS address,
+                                customer_REPLACE_USERID.Place AS place,
+                                customer_REPLACE_USERID.City AS city,
+                                customer_REPLACE_USERID.Pincode AS pincode,
+                                customer_REPLACE_USERID.Mobile AS mobile,
+                                customer_REPLACE_USERID.HashKey AS hashKey,
+                                customer_REPLACE_USERID.SecMobile AS secMobile,
+                                customer_REPLACE_USERID.OtherDetails AS otherDetails,
+                                customer_REPLACE_USERID.CustStatus AS custStatus,
                                 image.Id AS imageTableId,
                                 image.Path AS userImagePath,
                                 image.Format AS userImageFormat,
@@ -900,8 +961,23 @@ let SQL = {
                                 image.StorageMode AS userImageStorageMode
                             FROM customer
                                 LEFT JOIN 
-                            image ON customer.ImageId = image.Id
+                            image ON customer_REPLACE_USERID.ImageId = image.Id
                             WHERE_CLAUSE
-                            ORDER BY customer.Name ASC
-                            LIMIT_OFFSET_CLAUSE`
+                            ORDER BY customer_REPLACE_USERID.Name ASC
+                            LIMIT_OFFSET_CLAUSE`,
+    INSERT_NEW_CUSTOMER: `INSERT INTO 
+                                customer_REPLACE_USERID 
+                                (UserID, Name, GaurdianName, ImageId, Address, Place, City, Pincode, Mobile, OtherDetails, HashKey, CreatedAt, ModifiedAt)
+                            VALUES
+                                (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    UPDATE_CUSTOMER: `UPDATE 
+                            customer_REPLACE_USERID
+                        SET
+                            Name=?, gaurdianName=?, ImageId=?,
+                            Address=?, Place=?, City=?, 
+                            Pincode=?, Mobile=?, SecMobile=?,
+                            OtherDetails=?, HashKey=?, ModifiedAt=?
+                        WHERE
+                            CustomerId=?
+    `
 }

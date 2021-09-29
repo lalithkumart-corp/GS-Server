@@ -502,7 +502,7 @@ module.exports = function(FundTransaction) {
                     filters.push(`(transaction_date BETWEEN '${params.startDate}' AND '${params.endDate}')`);
 
                 if(params.customerVal)
-                    filters.push(`customer.Name like '${params.customerVal}%'`);
+                    filters.push(`customer_REPLACE_USERID.Name like '${params.customerVal}%'`);
 
                 if(params.remarks)
                     filters.push(`fund_trns_tmp_REPLACE_USERID.remarks like '%${params.remarks}%'`);
@@ -1537,7 +1537,7 @@ let SQL = {
     TRANSACTION_LIST_V2: `SELECT 
                             fund_accounts.name AS fund_house_name,
                             fund_trns_tmp_REPLACE_USERID.*,
-                            customer.Name AS CustomerName,
+                            customer_REPLACE_USERID.Name AS CustomerName,
                             alerts.id AS alertId,
                             alerts.title AS alertTitle,
                             alerts.message AS alertMsg,
@@ -1552,7 +1552,7 @@ let SQL = {
                                 LEFT JOIN
                             fund_accounts ON fund_trns_tmp_REPLACE_USERID.account_id = fund_accounts.id
                                 LEFT JOIN
-                            customer ON customer.CustomerId = fund_trns_tmp_REPLACE_USERID.customer_id
+                            customer_REPLACE_USERID ON customer_REPLACE_USERID.CustomerId = fund_trns_tmp_REPLACE_USERID.customer_id
                                 LEFT JOIN
                             alerts ON (fund_trns_tmp_REPLACE_USERID.alert = alerts.id AND alerts.archived=0)
                         WHERE_CLAUSE
@@ -1565,6 +1565,6 @@ let SQL = {
                                         LEFT JOIN
                                     fund_accounts ON fund_trns_tmp_REPLACE_USERID.account_id = fund_accounts.id
                                         LEFT JOIN
-                                    customer ON customer.CustomerId = fund_trns_tmp_REPLACE_USERID.customer_id
+                                    customer_REPLACE_USERID ON customer_REPLACE_USERID.CustomerId = fund_trns_tmp_REPLACE_USERID.customer_id
                                 WHERE_CLAUSE`
 }

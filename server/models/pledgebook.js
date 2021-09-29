@@ -524,7 +524,8 @@ module.exports = function(Pledgebook) {
                 });
 
 
-                let countQuery = Pledgebook.getQuery('countQuery', params, pledgebookTableName, pledgebookClosedBillTableName);            
+                let countQuery = Pledgebook.getQuery('countQuery', params, pledgebookTableName, pledgebookClosedBillTableName); 
+                countQuery = countQuery.replace(/REPLACE_USERID/g, userId);           
                 let promise2 = new Promise((resolve, reject) => {
                     Pledgebook.dataSource.connector.query(countQuery, queryValues, (err, result) => {
                         if(err) {
@@ -711,7 +712,7 @@ module.exports = function(Pledgebook) {
             case 'normal':
                 query = `SELECT                         
                                 ${pledgebookTableName}.*,
-                                customer.*,
+                                customer_REPLACE_USERID.*,
                                 ${pledgebookClosedBillTableName}.*,
                                 ${pledgebookTableName}.Date AS PledgedDate,
                                 ${pledgebookTableName}.Archived AS PledgebookBillArchived,
@@ -749,9 +750,9 @@ module.exports = function(Pledgebook) {
                             FROM
                                 ${pledgebookTableName}
                                     LEFT JOIN
-                                customer ON ${pledgebookTableName}.CustomerId = customer.CustomerId
+                                customer_REPLACE_USERID ON ${pledgebookTableName}.CustomerId = customer_REPLACE_USERID.CustomerId
                                     LEFT JOIN
-                                image ON customer.ImageId = image.Id
+                                image ON customer_REPLACE_USERID.ImageId = image.Id
                                     LEFT JOIN
                                 orn_images ON ${pledgebookTableName}.OrnPictureId = orn_images.Id
                                     LEFT JOIN
@@ -792,9 +793,9 @@ module.exports = function(Pledgebook) {
                         FROM
                             ${pledgebookTableName}
                                 LEFT JOIN
-                            customer ON ${pledgebookTableName}.CustomerId = customer.CustomerId
+                            customer_REPLACE_USERID ON ${pledgebookTableName}.CustomerId = customer_REPLACE_USERID.CustomerId
                                 LEFT JOIN
-                            image ON customer.ImageId = image.Id
+                            image ON customer_REPLACE_USERID.ImageId = image.Id
                                 LEFT JOIN
                             ${pledgebookClosedBillTableName} ON ${pledgebookClosedBillTableName}.pledgebook_uid = ${pledgebookTableName}.UniqueIdentifier`;
                 query = Pledgebook.appendFilters(params, query, pledgebookTableName, pledgebookClosedBillTableName, queryIdentifier);
@@ -807,7 +808,7 @@ module.exports = function(Pledgebook) {
                         FROM
                             ${pledgebookTableName}
                                 LEFT JOIN
-                            customer ON ${pledgebookTableName}.CustomerId = customer.CustomerId      
+                            customer_REPLACE_USERID ON ${pledgebookTableName}.CustomerId = customer_REPLACE_USERID.CustomerId      
                                 LEFT JOIN
                             orn_images ON ${pledgebookTableName}.OrnPictureId = orn_images.Id
                                 LEFT JOIN
@@ -894,7 +895,7 @@ module.exports = function(Pledgebook) {
             case 'billDetails':                
                 query = `SELECT                         
                             ${pledgebookTableName}.*,
-                            customer.*,
+                            customer_REPLACE_USERID.*,
                             image.Id AS ImageTableID,
                             image.Image AS UserImageBlob,
                             orn_images.Id AS OrnImageTableID,
@@ -919,9 +920,9 @@ module.exports = function(Pledgebook) {
                         FROM
                             ${pledgebookTableName}
                                 LEFT JOIN
-                            customer ON ${pledgebookTableName}.CustomerId = customer.CustomerId
+                            customer_REPLACE_USERID ON ${pledgebookTableName}.CustomerId = customer_REPLACE_USERID.CustomerId
                                 LEFT JOIN
-                            image ON customer.ImageId = image.Id
+                            image ON customer_REPLACE_USERID.ImageId = image.Id
                                 LEFT JOIN
                             orn_images ON ${pledgebookTableName}.OrnPictureId = orn_images.Id
                                 LEFT JOIN
@@ -975,11 +976,11 @@ module.exports = function(Pledgebook) {
             // if(params.filters.amount && params.filters.amount > 0)
             //     filterQueries.push(`amount >= ${params.filters.amount}`);
             if(params.filters.cName)
-                filterQueries.push(`customer.Name like '${params.filters.cName}%'`);
+                filterQueries.push(`customer_REPLACE_USERID.Name like '${params.filters.cName}%'`);
             if(params.filters.gName)
-                filterQueries.push(`customer.GaurdianName like '${params.filters.gName}%'`);
+                filterQueries.push(`customer_REPLACE_USERID.GaurdianName like '${params.filters.gName}%'`);
             if(params.filters.address)
-                filterQueries.push(`customer.Address like '%${params.filters.address}%'`);
+                filterQueries.push(`customer_REPLACE_USERID.Address like '%${params.filters.address}%'`);
             if(params.filters.include && params.filters.include == 'pending')
                 filterQueries.push(`${pledgebookTableName}.Status=1`);
             else if(params.filters.include && params.filters.include == 'closed')

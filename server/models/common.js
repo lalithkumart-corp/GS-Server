@@ -56,6 +56,7 @@ module.exports = function(Common) {
 
     Common.createNewTablesIfNotExist = async (userId) => {
         try {
+            await Common._createCustomerTable(userId);
             await Common._createPledgebookTable(userId);
             await Common._createPledgebookClosingBillTable(userId);
             await Common._createStockTable(userId);
@@ -79,6 +80,32 @@ module.exports = function(Common) {
         } catch(e) {
             throw e;
         }
+    }
+
+    Common._createCustomerTable = (userId) => {
+        return new Promise( (resolve, reject) => {
+            let simpleSql = `SELECT * FROM customer_${userId} LIMIT 1`;
+            app.models.GsUser.dataSource.connector.query(simpleSql, (error, result) => {
+                if(error && error.code == "ER_NO_SUCH_TABLE") {
+                    let sql = SQL.CUSTOMER_TABLE.replace(/REPLACE_USERID/g, userId);
+                    app.models.GsUser.dataSource.connector.query(sql, (err, resp) => {
+                        if(err) {
+                            console.log(err);
+                            console.log(`Error occured while creating a new "customer_${userId}" table for the user: ${userId}`);
+                            return reject(err);
+                        } else {
+                            console.log(`New "customer_${userId}" table created!`);
+                            return resolve(true);
+                        }
+                    });
+                } else if(error) {
+                    return reject(error);
+                } else {
+                    console.log(`"customer_${userId}" table for this user:${userId} exists already, So new table not created.`);
+                    return resolve(false);
+                }
+            });
+        });
     }
 
     Common._createPledgebookTable = (userId) => {
@@ -370,6 +397,29 @@ module.exports = function(Common) {
 };
 
 let SQL = {
+    CUSTOMER_TABLE: `CREATE TABLE customer_REPLACE_USERID (
+        CustomerId int NOT NULL AUTO_INCREMENT,
+        UserId int DEFAULT NULL,
+        NamePrefix varchar(45) DEFAULT NULL,
+        Name varchar(255) DEFAULT NULL,
+        GuardianRelation varchar(45) DEFAULT 'c/o',
+        GuardianNamePrefix varchar(45) DEFAULT NULL,
+        GaurdianName varchar(255) DEFAULT NULL,
+        ImageId int DEFAULT NULL,
+        Address varchar(255) DEFAULT NULL,
+        Place varchar(255) DEFAULT NULL,
+        City varchar(255) DEFAULT NULL,
+        Pincode int DEFAULT NULL,
+        Mobile bigint DEFAULT NULL,
+        SecMobile bigint DEFAULT NULL,
+        OtherDetails text,
+        Notes text,
+        HashKey varchar(45) DEFAULT NULL,
+        CustStatus int DEFAULT '1',
+        CreatedAt datetime DEFAULT NULL,
+        ModifiedAt datetime DEFAULT NULL,
+        PRIMARY KEY (CustomerId)
+      )`,
     PLEDGEBOOK_TABLE: `CREATE TABLE pledgebook_REPLACE_USERID (
                             UniqueIdentifier varchar(45),
                             BillNo varchar(45) DEFAULT NULL,

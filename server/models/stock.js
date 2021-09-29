@@ -738,6 +738,7 @@ module.exports = function(Stock) {
             sql += Stock._getFilterQueryPartForSoldOutItems(params);
             sql = sql.replace(/STOCK_SOLD_TABLE/g, `stock_sold_${params._userId}`);
             sql = sql.replace(/INVOICE_DETAIL_TABLE/g, `invoice_details_${params._userId}`);
+            sql = sql.replace(/REPLACE_USERID/g, params._userId);
             let res = await utils.executeSqlQuery(Stock.dataSource, sql);
             //TODO:
             return res;
@@ -775,6 +776,7 @@ module.exports = function(Stock) {
             sql += Stock._getFilterQueryPartForSoldOutItems(params, true);
             sql = sql.replace(/STOCK_SOLD_TABLE/g, `stock_sold_${params._userId}`);
             sql = sql.replace(/INVOICE_DETAIL_TABLE/g, `invoice_details_${params._userId}`);
+            sql = sql.replace(/REPLACE_USERID/g, params._userId);
             let res = await utils.executeSqlQuery(Stock.dataSource, sql);
             let count = 0;
             if(res && res.length>0)
@@ -910,16 +912,16 @@ let SQL = {
                                 FROM
                                 STOCK_SOLD_TABLE
                                 LEFT JOIN INVOICE_DETAIL_TABLE ON STOCK_SOLD_TABLE.invoice_ref = INVOICE_DETAIL_TABLE.ukey
-                                LEFT JOIN customer ON INVOICE_DETAIL_TABLE.cust_id = customer.CustomerId`,
+                                LEFT JOIN customer_REPLACE_USERID ON INVOICE_DETAIL_TABLE.cust_id = customer_REPLACE_USERID.CustomerId`,
     FETCH_SOLD_OUT_ITEMS_LIST: `SELECT
-                            customer.CustomerId AS CustomerId,
+                            customer_REPLACE_USERID.CustomerId AS CustomerId,
                             date AS InvoicingDate,
-                            customer.Name AS CustomerName,
-                            customer.GaurdianName AS GaurdianName,
-                            customer.Address AS Address,
-                            customer.City AS City,
-                            customer.Mobile AS Mobile,
-                            customer.SecMobile AS SecMobile,
+                            customer_REPLACE_USERID.Name AS CustomerName,
+                            customer_REPLACE_USERID.GaurdianName AS GaurdianName,
+                            customer_REPLACE_USERID.Address AS Address,
+                            customer_REPLACE_USERID.City AS City,
+                            customer_REPLACE_USERID.Mobile AS Mobile,
+                            customer_REPLACE_USERID.SecMobile AS SecMobile,
                             prod_id AS ProdId,
                             metal_rate AS MetalRate,
                             retail_rate AS RetailRate,
@@ -944,6 +946,6 @@ let SQL = {
                         FROM
                             STOCK_SOLD_TABLE
                             LEFT JOIN INVOICE_DETAIL_TABLE ON STOCK_SOLD_TABLE.invoice_ref = INVOICE_DETAIL_TABLE.ukey
-                            LEFT JOIN customer ON INVOICE_DETAIL_TABLE.cust_id = customer.CustomerId
+                            LEFT JOIN customer_REPLACE_USERID ON INVOICE_DETAIL_TABLE.cust_id = customer_REPLACE_USERID.CustomerId
                             LEFT JOIN orn_list_jewellery ON STOCK_SOLD_TABLE.ornament = orn_list_jewellery.id`
 }

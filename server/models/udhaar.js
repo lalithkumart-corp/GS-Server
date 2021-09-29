@@ -218,7 +218,7 @@ module.exports = function(Udhaar) {
             let billNo = apiParams.billNo;
             if(apiParams.billSeries)
                 billNo = apiParams.billSeries + '.' + apiParams.billNo;
-            apiParams.modifiedDate= new Date().toISOString().replace('T', ' ').slice(0,23);
+            apiParams.modifiedDate = new Date().toISOString().replace('T', ' ').slice(0,23);
             let queryValues = [billNo, apiParams.amount, dateformat(apiParams.udhaarCreationDate, 'yyyy-mm-dd HH:MM:ss', true), apiParams.accountId, apiParams.customerId, apiParams.notes, apiParams.modifiedDate, apiParams.udhaarUid];
             Udhaar.dataSource.connector.query(sql, queryValues, async (err, res) => {
                 if(err){
@@ -328,15 +328,15 @@ module.exports = function(Udhaar) {
                 if(filters.startDate && filters.endDate)
                     whereCondList.push(`udhaar_REPLACE_USERID.date BETWEEN '${filters.startDate}' AND '${filters.endDate}'`);
                 if(filters.customerName)
-                    whereCondList.push(`customer.Name LIKE '${filters.customerName}%' `);
+                    whereCondList.push(`customer_REPLACE_USERID.Name LIKE '${filters.customerName}%' `);
                 if(filters.guardianName)
-                    whereCondList.push(`customer.GuardianName LIKE '${filters.guardianName}%' `);
+                    whereCondList.push(`customer_REPLACE_USERID.GuardianName LIKE '${filters.guardianName}%' `);
                 if(filters.place)
-                    whereCondList.push(`customer.Place LIKE '${filters.place}%' `);
+                    whereCondList.push(`customer_REPLACE_USERID.Place LIKE '${filters.place}%' `);
                 if(filters.address)
-                    whereCondList.push(`customer.Address LIKE '${filters.address}%' `);
+                    whereCondList.push(`customer_REPLACE_USERID.Address LIKE '${filters.address}%' `);
                 if(filters.mobile)
-                    whereCondList.push(`customer.Mobile LIKE '${filters.mobile}%' `);
+                    whereCondList.push(`customer_REPLACE_USERID.Mobile LIKE '${filters.mobile}%' `);
                 
                 if (whereCondList.length > 0)
                     filterPart = ` WHERE ${whereCondList.join(' AND ')}`;
@@ -508,7 +508,7 @@ let SQL = {
                             FROM
                                 udhaar_REPLACE_USERID
                                     LEFT JOIN
-                                customer ON udhaar_REPLACE_USERID.customer_id = customer.CustomerId
+                                customer_REPLACE_USERID ON udhaar_REPLACE_USERID.customer_id = customer_REPLACE_USERID.CustomerId
                             WHERE
                                 udhaar_REPLACE_USERID.customer_id = ?`,
     PENDING_UDHAAR_LIST: `SELECT                         
@@ -519,18 +519,18 @@ let SQL = {
                                 udhaar_REPLACE_USERID.account_id AS udhaarAccId,
                                 udhaar_REPLACE_USERID.notes AS udhaarNotes,
                                 udhaar_REPLACE_USERID.trashed AS udhaarTrashedFlag,
-                                customer.Name AS customerName,
-                                customer.GaurdianName AS guardianName,
-                                customer.Address AS address,
-                                customer.Place AS place,
-                                customer.City AS city,
-                                customer.Pincode AS pincode,
-                                customer.Mobile AS mobile,
-                                customer.SecMobile AS secMobile
+                                customer_REPLACE_USERID.Name AS customerName,
+                                customer_REPLACE_USERID.GaurdianName AS guardianName,
+                                customer_REPLACE_USERID.Address AS address,
+                                customer_REPLACE_USERID.Place AS place,
+                                customer_REPLACE_USERID.City AS city,
+                                customer_REPLACE_USERID.Pincode AS pincode,
+                                customer_REPLACE_USERID.Mobile AS mobile,
+                                customer_REPLACE_USERID.SecMobile AS secMobile
                             FROM
                                 udhaar_REPLACE_USERID
                                     LEFT JOIN
-                                customer ON udhaar_REPLACE_USERID.customer_id = customer.CustomerId
+                                customer_REPLACE_USERID ON udhaar_REPLACE_USERID.customer_id = customer_REPLACE_USERID.CustomerId
                             WHERE_CLAUSE
                             ORDER_CLAUSE
                             LIMIT_OFFSET_CLAUSE`,
@@ -539,7 +539,7 @@ let SQL = {
                                 FROM
                                     udhaar_REPLACE_USERID
                                         LEFT JOIN
-                                    customer ON udhaar_REPLACE_USERID.customer_id = customer.CustomerId
+                                    customer_REPLACE_USERID ON udhaar_REPLACE_USERID.customer_id = customer_REPLACE_USERID.CustomerId
                                 WHERE_CLAUSE`,
     UDHAAR_DETAIL: `SELECT
                         udhaar_REPLACE_USERID.unique_identifier AS udhaarUid,
@@ -563,20 +563,20 @@ let SQL = {
                         fund_transactions_REPLACE_USERID.cash_out_to_upi AS fundTrnsCashOutToUpi,
                         fund_transactions_REPLACE_USERID.cash_in_mode AS fundTrnsCashInMode,
                         fund_accounts.name AS fundHouseName,
-                        customer.CustomerId AS customerId,
-                        customer.Name AS customerName,
-                        customer.GaurdianName AS guardianName,
-                        customer.Address AS address,
-                        customer.Place AS place,
-                        customer.City AS city,
-                        customer.Pincode AS pincode,
-                        customer.Mobile AS mobile,
-                        customer.SecMobile AS secMobile
+                        customer_REPLACE_USERID.CustomerId AS customerId,
+                        customer_REPLACE_USERID.Name AS customerName,
+                        customer_REPLACE_USERID.GaurdianName AS guardianName,
+                        customer_REPLACE_USERID.Address AS address,
+                        customer_REPLACE_USERID.Place AS place,
+                        customer_REPLACE_USERID.City AS city,
+                        customer_REPLACE_USERID.Pincode AS pincode,
+                        customer_REPLACE_USERID.Mobile AS mobile,
+                        customer_REPLACE_USERID.SecMobile AS secMobile
                     FROM
                         udhaar_REPLACE_USERID
                         LEFT JOIN fund_transactions_REPLACE_USERID ON (fund_transactions_REPLACE_USERID.gs_uid = udhaar_REPLACE_USERID.unique_identifier)
                         LEFT JOIN fund_accounts ON fund_transactions_REPLACE_USERID.account_id = fund_accounts.id
-                        LEFT JOIN customer ON (customer.CustomerId = udhaar_REPLACE_USERID.customer_id)
+                        LEFT JOIN customer_REPLACE_USERID ON (customer_REPLACE_USERID.CustomerId = udhaar_REPLACE_USERID.customer_id)
                     WHERE
                         unique_identifier = ? AND fund_transactions_REPLACE_USERID.deleted=0`,
     MARK_RESOLVED: `UPDATE udhaar_REPLACE_USERID SET status=0 WHERE unique_identifier=?`
