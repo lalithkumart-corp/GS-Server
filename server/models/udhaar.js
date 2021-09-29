@@ -248,7 +248,6 @@ module.exports = function(Udhaar) {
                 sql +=  ` AND status=1`;
             else if(params.includeOnly == "closed")
                 sql += ` AND status=0`;
-            console.log(sql);
             Udhaar.dataSource.connector.query(sql, [params.customerId], (err, result) => {
                 if(err) {
                     reject(err);
@@ -459,7 +458,7 @@ module.exports = function(Udhaar) {
                     cashOut += aTransaction.cash_out;
                 });
                 let bal = cashOut-cashIn;
-                if(bal<0)
+                if(bal<1)
                     await Udhaar._markResolved(apiParams._userId, apiParams.uid);
                 return resolve(true);
             } catch(e) {

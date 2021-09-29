@@ -417,16 +417,16 @@ module.exports = function(Pledgebook) {
 
                 if(parsedArg.mobile) {
                     if(!customerObj.record.mobile || customerObj.record.mobile == 'null') {
-                        await app.models.Customer._updatePrimaryMobile(parsedArg.mobile, parsedArg.customerId);
+                        await app.models.Customer._updatePrimaryMobile(parsedArg.mobile, parsedArg.customerId, parsedArg._userId);
                     } else if(customerObj.record.mobile !== parsedArg.mobile){ //CUSTOM: Mobile number Handling:  ---- > If the given phone number in Bill is different, then save the number given in bill as Comment)
                         
                         let oldPrimaryNumber = customerObj.record.mobile;
-                        await app.models.Customer._updatePrimaryMobile(parsedArg.mobile, parsedArg.customerId);
+                        await app.models.Customer._updatePrimaryMobile(parsedArg.mobile, parsedArg.customerId, parsedArg._userId);
                         if(!customerObj.record.secMobile || customerObj.record.secMobile == 'null')
-                            await app.models.Customer._updateSecMobile(oldPrimaryNumber, parsedArg.customerId);
+                            await app.models.Customer._updateSecMobile(oldPrimaryNumber, parsedArg.customerId, parsedArg._userId);
                         else {
                             let oldSecNumber = customerObj.record.secMobile;
-                            await app.models.Customer._updateSecMobile(oldPrimaryNumber, parsedArg.customerId);
+                            await app.models.Customer._updateSecMobile(oldPrimaryNumber, parsedArg.customerId, parsedArg._userId);
                             
                             if(customerObj.record.secMobile == parsedArg.mobile) {
                                 console.log('Mobile number shiffling only happened. So, dont add in BillRemarks section');
@@ -439,9 +439,9 @@ module.exports = function(Pledgebook) {
                 // //CUSTOM: Mobile number Handling:  ---- > If the given phone number in Bill is different, then save the number given in bill as Comment)
                 // if(parsedArg.mobile && customerObj.record.mobile !== parsedArg.mobile) {
                 //     if(!customerObj.record.mobile || customerObj.record.mobile == 'null')
-                //         await app.models.Customer._updatePrimaryMobile(parsedArg.mobile, parsedArg.customerId);
+                //         await app.models.Customer._updatePrimaryMobile(parsedArg.mobile, parsedArg.customerId, parsedArg._userId);
                 //     else if(!customerObj.record.secMobile)
-                //         await app.models.Customer._updateSecMobile(parsedArg.mobile, parsedArg.customerId);
+                //         await app.models.Customer._updateSecMobile(parsedArg.mobile, parsedArg, parsedArg._userId.customerId);
                 //     else if(customerObj.record.secMobile == parsedArg.mobile)
                 //         console.log('Sec mobile is already filled, so do nothing now');
                 //     else
@@ -1228,16 +1228,16 @@ module.exports = function(Pledgebook) {
 
             if(parsedArg.mobile) {
                 if(!customerObj.record.mobile || customerObj.record.mobile == 'null') {
-                    await app.models.Customer._updatePrimaryMobile(parsedArg.mobile, parsedArg.customerId);
+                    await app.models.Customer._updatePrimaryMobile(parsedArg.mobile, parsedArg.customerId, parsedArg._userId);
                 } else if(customerObj.record.mobile !== parsedArg.mobile){ //CUSTOM: Mobile number Handling:  ---- > If the given phone number in Bill is different, then save the number given in bill as Comment)
                     
                     let oldPrimaryNumber = customerObj.record.mobile;
-                    await app.models.Customer._updatePrimaryMobile(parsedArg.mobile, parsedArg.customerId);
+                    await app.models.Customer._updatePrimaryMobile(parsedArg.mobile, parsedArg.customerId, parsedArg._userId);
                     if(!customerObj.record.secMobile || customerObj.record.secMobile == 'null')
-                        await app.models.Customer._updateSecMobile(oldPrimaryNumber, parsedArg.customerId);
+                        await app.models.Customer._updateSecMobile(oldPrimaryNumber, parsedArg.customerId, parsedArg._userId);
                     else {
                         let oldSecNumber = customerObj.record.secMobile;
-                        await app.models.Customer._updateSecMobile(oldPrimaryNumber, parsedArg.customerId);
+                        await app.models.Customer._updateSecMobile(oldPrimaryNumber, parsedArg.customerId, parsedArg._userId);
                         
                         if(customerObj.record.secMobile == parsedArg.mobile) {
                             console.log('Mobile number shiffling only happened. So, dont add in BillRemarks section');
@@ -1250,9 +1250,9 @@ module.exports = function(Pledgebook) {
             
             // if(parsedArg.mobile && customerObj.record.mobile !== parsedArg.mobile) {
             //     if(!customerObj.record.mobile || customerObj.record.mobile == 'null')
-            //         await app.models.Customer._updatePrimaryMobile(parsedArg.mobile, parsedArg.customerId);
+            //         await app.models.Customer._updatePrimaryMobile(parsedArg.mobile, parsedArg.customerId, parsedArg._userId);
             //     else if(!customerObj.record.secMobile)
-            //         await app.models.Customer._updateSecMobile(parsedArg.mobile, parsedArg.customerId);
+            //         await app.models.Customer._updateSecMobile(parsedArg.mobile, parsedArg, parsedArg._userId.customerId);
             //     else if(customerObj.record.secMobile == parsedArg.mobile)
             //         console.log('Sec mobile is already filled, so do nothing now');
             //     else if(parsedArg.billRemarks.indexOf(parsedArg.mobile) == -1)

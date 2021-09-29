@@ -629,6 +629,7 @@ let SQL = {
                 transaction_date DATETIME NOT NULL,
                 user_id INT NOT NULL,
                 account_id INT NOT NULL,
+                customer_id INT NULL,
                 gs_uid VARCHAR(45) NULL,
                 category VARCHAR(200) NOT NULL,
                 remarks TEXT NULL,
@@ -644,17 +645,19 @@ let SQL = {
                 cash_out_to_upi VARCHAR(45) NULL,
                 cash_in_mode VARCHAR(45) NULL,
                 alert INT NULL,
+                is_internal INT NULL,
                 beforeBal DECIMAL NULL,
                 afterBal DECIMAL NULL
             );
             
             
-            INSERT INTO fund_trns_tmp_REPLACE_USERID (id, transaction_date, user_id, account_id, gs_uid, category, remarks, deleted, cash_in, cash_out, created_date, modified_date, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi, cash_in_mode, alert)
+            INSERT INTO fund_trns_tmp_REPLACE_USERID (id, transaction_date, user_id, account_id, customer_id gs_uid, category, remarks, deleted, cash_in, cash_out, created_date, modified_date, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi, cash_in_mode, alert, is_internal)
             SELECT
                 id,
                 transaction_date,
                 user_id,
                 account_id,
+                customer_id,
                 gs_uid,
                 category,
                 remarks,
@@ -669,7 +672,8 @@ let SQL = {
                 cash_out_to_bank_ifsc,
                 cash_out_to_upi,
                 cash_in_mode,
-                alert
+                alert,
+                is_internal
             FROM
                 fund_transactions_REPLACE_USERID
             WHERE

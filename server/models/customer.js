@@ -696,8 +696,8 @@ module.exports = function(Customer) {
             let _userId = await utils.getStoreOwnerUserId(params.accessToken);
             params._userId = _userId;
             params.pledgebookTableName = await app.models.Pledgebook.getPledgebookTableName(_userId);
-            params._customerIdForMerge = await Customer.getIdByHashKey(params.custHashkeyForMerge);
-            params._customerIdForMergeInto = await Customer.getIdByHashKey(params.custHashkeyForMergeInto);
+            params._customerIdForMerge = await Customer.getIdByHashKey(params.custHashkeyForMerge, params._userId);
+            params._customerIdForMergeInto = await Customer.getIdByHashKey(params.custHashkeyForMergeInto, params._userId);
             if(!params._customerIdForMerge || !params._customerIdForMergeInto)
                 throw new Error('Customer not found, Please enter valid Hashkey');
             await Customer._updateByMergingIntoOther(params);
@@ -733,6 +733,7 @@ module.exports = function(Customer) {
         return new Promise( (resolve, reject) => {
             try {
                 let sql = Customer.getQuery('replace-customer-hashkey-map', params);
+                sql = sql.replace(/REPLACE_USERID/g, params._userId);
                 Customer.dataSource.connector.query(sql, async (err, res) => {
                     if(err) {
                         return reject(err);
@@ -762,7 +763,9 @@ module.exports = function(Customer) {
                 userId: userId,
                 status: status
             }
-            Customer.dataSource.connector.query(Customer.getQuery('disable-customer', params), (err1, res1) => {
+            let query = Customer.getQuery('disable-customer', params);
+            query = query.replace(/REPLACE_USERID/g, userId);
+            Customer.dataSource.connector.query(query, (err1, res1) => {
                 if(err1) {
                     reject(err1);
                 } else {
@@ -792,10 +795,12 @@ module.exports = function(Customer) {
         });
     }
 
-    Customer.getIdByHashKey = (hashKey) => {
+    Customer.getIdByHashKey = (hashKey, userId) => {
         return new Promise( (resolve, reject ) => {
             try {
-                Customer.dataSource.connector.query(`SELECT * FROM customer_REPLACE_USERID WHERE HashKey='${hashKey}'`, (err, res) => {
+                let query = `SELECT * FROM customer_REPLACE_USERID WHERE HashKey='${hashKey}'`;
+                query = query.replace(/REPLACE_USERID/g, userId);
+                Customer.dataSource.connector.query(query, (err, res) => {
                     if(err) {
                         return reject(err);
                     } else {
@@ -862,9 +867,10 @@ module.exports = function(Customer) {
         description: 'Updating the customer Status'
     });
 
-    Customer._updatePrimaryMobile = (mobNumber, custId) => {
+    Customer._updatePrimaryMobile = (mobNumber, custId, userId) => {
         return new Promise( (resolve, reject) => {
             let sql = Customer.getQuery('update-primary-mobile');
+            sql = sql.replace(/REPLACE_USERID/g, userId);
             Customer.dataSource.connector.query(sql, [mobNumber, custId], (err, res) => {
                 if(err) {
                     reject(err);
@@ -875,9 +881,10 @@ module.exports = function(Customer) {
         });
     };
 
-    Customer._updateSecMobile = (mobNumber, custId) => {
+    Customer._updateSecMobile = (mobNumber, custId, userId) => {
         return new Promise( (resolve, reject) => {
             let sql = Customer.getQuery('update-sec-mobile');
+            sql = sql.replace(/REPLACE_USERID/g, userId);
             Customer.dataSource.connector.query(sql, [mobNumber, custId], (err, res) => {
                 if(err) {
                     reject(err);
@@ -903,6 +910,7 @@ module.exports = function(Customer) {
         return new Promise(async (resolve, reject) => {
             params.userId = await utils.getStoreOwnerUserId(accessToken);
             let query = Customer.getQuery('customer-list-basic', params);
+            query = query.replace(/REPLACE_USERID/g, params.userId);
             Customer.dataSource.connector.query(query, (err, res) => {
                 if(err) {
                     return reject(err);
@@ -936,7 +944,7 @@ let SQL = {
                         customer_REPLACE_USERID.HashKey AS hashKey,
                         customer_REPLACE_USERID.SecMobile AS secMobile,
                         customer_REPLACE_USERID.CustStatus AS custStatus
-                    FROM customer
+                    FROM customer_REPLACE_USERID
                     WHERE_CLAUSE
                     ORDER BY customer_REPLACE_USERID.Name ASC
                     LIMIT_OFFSET_CLAUSE`,
@@ -959,7 +967,7 @@ let SQL = {
                                 image.Format AS userImageFormat,
                                 image.Optional AS userImageOptionals,
                                 image.StorageMode AS userImageStorageMode
-                            FROM customer
+                            FROM customer_REPLACE_USERID
                                 LEFT JOIN 
                             image ON customer_REPLACE_USERID.ImageId = image.Id
                             WHERE_CLAUSE
