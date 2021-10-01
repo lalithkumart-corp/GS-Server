@@ -508,6 +508,9 @@ module.exports = function(FundTransaction) {
                 if(params.remarks)
                     filters.push(`fund_trns_tmp_REPLACE_USERID.remarks like '%${params.remarks}%'`);
 
+                if(params.tagId)
+                    filters.push(`fund_trns_tmp_REPLACE_USERID.tag_ui = ${params.tagId}`);
+
                 if(identifier !== 'FETCH_TRANSACTION_LIST_TOT_COUNT') {
                     if(params.orderCol && params.orderBy) {
                         if(params.orderCol == 'TRN_DATE')
