@@ -2,6 +2,7 @@
 var DbBackup = require('../jobs/database-backup-job');
 let app = require('../server');
 const { resolve } = require('app-root-path');
+let utils = require('../utils/commonUtils');
 
 module.exports = function(Common) {
     Common.exportDbAPIHandler = async (accessToken, res, cb) => {
@@ -40,6 +41,51 @@ module.exports = function(Common) {
         http: {path: '/export-db', verb: 'get'},
         description: 'For exporting the Full Database'
     });
+
+    Common.remoteMethod('addTagApi', {
+        accepts: {
+            arg: 'apiParams',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/add-tag', verb: 'post'},
+        description: 'Add Tags.',
+    });
+
+    Common.remoteMethod('removeTagApi', {
+        accepts: {
+            arg: 'apiParams',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/remove-tag', verb: 'post'},
+        description: 'Add Tags.',
+    });
+
 
     Common.remoteMethod('fetchBankList', {
         accepts: [],
@@ -394,6 +440,64 @@ module.exports = function(Common) {
             });
         });
     }
+
+    Common.addTagApi = (apiParams, cb) => {
+        Common._addTagApi(apiParams).then(
+            (resp) => {
+                cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            }
+        ).catch(
+            (e)=> {
+                cb({STATUS: 'EXCEPTION', ERR: e}, null);
+            }
+        );
+    }
+
+    Common._addTagApi = (apiParams) => {
+        return new Promise(async (resolve, reject) => {
+            try {
+                apiParams._userId = await utils.getStoreOwnerUserId(apiParams.accessToken);
+                switch(apiParams.identifier) {
+                    case 'fund_transaction':
+                        await Common.app.models.FundTransaction.prototype.addTag(apiParams);
+                        break;
+                }
+                return resolve(true);
+            } catch(e) {
+                console.log(e);
+                return reject(e);
+            }
+        });
+    }
+
+    Common.removeTagApi = (apiParams, cb) => {
+        Common._removeTagApi(apiParams).then(
+            (resp) => {
+                cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            }
+        ).catch(
+            (e)=> {
+                cb({STATUS: 'EXCEPTION', ERR: e}, null);
+            }
+        );
+    }
+
+    Common._removeTagApi = (apiParams) => {
+        return new Promise(async (resolve, reject) => {
+            try {
+                apiParams._userId = await utils.getStoreOwnerUserId(apiParams.accessToken);
+                switch(apiParams.identifier) {
+                    case 'fund_transaction':
+                        await Common.app.models.FundTransaction.prototype.removeTag(apiParams);
+                        break;
+                }
+                return resolve(true);
+            } catch(e) {
+                console.log(e);
+                return reject(e);
+            }
+        });
+    }
 };
 
 let SQL = {
@@ -646,12 +750,13 @@ let SQL = {
                 cash_in_mode VARCHAR(45) NULL,
                 alert INT NULL,
                 is_internal INT NULL,
+                tag_ui INT NULL,
                 beforeBal DECIMAL NULL,
                 afterBal DECIMAL NULL
             );
             
             
-            INSERT INTO fund_trns_tmp_REPLACE_USERID (id, transaction_date, user_id, account_id, customer_id gs_uid, category, remarks, deleted, cash_in, cash_out, created_date, modified_date, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi, cash_in_mode, alert, is_internal)
+            INSERT INTO fund_trns_tmp_REPLACE_USERID (id, transaction_date, user_id, account_id, customer_id gs_uid, category, remarks, deleted, cash_in, cash_out, created_date, modified_date, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi, cash_in_mode, alert, is_internal, tag_ui)
             SELECT
                 id,
                 transaction_date,
@@ -673,7 +778,8 @@ let SQL = {
                 cash_out_to_upi,
                 cash_in_mode,
                 alert,
-                is_internal
+                is_internal,
+                tag_ui
             FROM
                 fund_transactions_REPLACE_USERID
             WHERE

@@ -294,6 +294,7 @@ module.exports = function(FundTransaction) {
         http: {path: '/delete-by-transactionid', verb: 'del'},
         description: 'Delete transactions by ID'
     });
+    
     FundTransaction.remoteMethod('addCashInForBill', {
         accepts: {
             arg: 'apiParams',
@@ -1489,6 +1490,34 @@ module.exports = function(FundTransaction) {
             });
         });
     }*/
+
+    FundTransaction.prototype.addTag = (apiParams) => {
+        return new Promise(async (resolve, reject) => {
+            let sql = SQL.ADD_TAG;
+            sql = sql.replace(/REPLACE_USERID/g, apiParams._userId);
+            FundTransaction.dataSource.connector.query(sql, [apiParams.tagNumber, apiParams.ids], (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve('Tagged Successfully!');
+                }
+            });
+        });
+    }
+
+    FundTransaction.prototype.removeTag = (apiParams) => {
+        return new Promise(async (resolve, reject) => {
+            let sql = SQL.REMOVE_TAG;
+            sql = sql.replace(/REPLACE_USERID/g, apiParams._userId);
+            FundTransaction.dataSource.connector.query(sql, [apiParams.ids], (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve('Removed Tags Successfully!');
+                }
+            });
+        });
+    }
 }
 
 let SQL = {
@@ -1566,5 +1595,15 @@ let SQL = {
                                     fund_accounts ON fund_trns_tmp_REPLACE_USERID.account_id = fund_accounts.id
                                         LEFT JOIN
                                     customer_REPLACE_USERID ON customer_REPLACE_USERID.CustomerId = fund_trns_tmp_REPLACE_USERID.customer_id
-                                WHERE_CLAUSE`
+                                WHERE_CLAUSE`,
+    ADD_TAG: `UPDATE fund_transactions_REPLACE_USERID 
+                SET 
+                    tag_ui = ?
+                WHERE
+                    id IN (?);`,
+    REMOVE_TAG: `UPDATE fund_transactions_REPLACE_USERID
+                SET 
+                    tag_ui = NULL
+                WHERE
+                    id IN (?);`
 }
