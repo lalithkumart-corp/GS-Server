@@ -509,7 +509,7 @@ module.exports = function(FundTransaction) {
                     filters.push(`fund_trns_tmp_REPLACE_USERID.remarks like '%${params.remarks}%'`);
 
                 if(params.tagId)
-                    filters.push(`fund_trns_tmp_REPLACE_USERID.tag_ui = ${params.tagId}`);
+                    filters.push(`fund_trns_tmp_REPLACE_USERID.tag_indicator = ${params.tagId}`);
 
                 if(identifier !== 'FETCH_TRANSACTION_LIST_TOT_COUNT') {
                     if(params.orderCol && params.orderBy) {
@@ -1601,12 +1601,12 @@ let SQL = {
                                 WHERE_CLAUSE`,
     ADD_TAG: `UPDATE fund_transactions_REPLACE_USERID 
                 SET 
-                    tag_ui = ?
+                    tag_indicator = ?
                 WHERE
                     id IN (?);`,
     REMOVE_TAG: `UPDATE fund_transactions_REPLACE_USERID
                 SET 
-                    tag_ui = NULL
+                    tag_indicator = NULL
                 WHERE
                     id IN (?);`
 }

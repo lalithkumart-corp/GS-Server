@@ -694,6 +694,7 @@ let SQL = {
                     cash_in_mode varchar(45) DEFAULT NULL,
                     alert int DEFAULT NULL,
                     is_internal int DEFAULT 0,
+                    tag_indicator INT NULL,
                     PRIMARY KEY (id),
                     KEY category (category),
                     KEY gs_uid_idx (gs_uid)
@@ -750,13 +751,13 @@ let SQL = {
                 cash_in_mode VARCHAR(45) NULL,
                 alert INT NULL,
                 is_internal INT NULL,
-                tag_ui INT NULL,
+                tag_indicator INT NULL,
                 beforeBal DECIMAL NULL,
                 afterBal DECIMAL NULL
             );
             
             
-            INSERT INTO fund_trns_tmp_REPLACE_USERID (id, transaction_date, user_id, account_id, customer_id gs_uid, category, remarks, deleted, cash_in, cash_out, created_date, modified_date, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi, cash_in_mode, alert, is_internal, tag_ui)
+            INSERT INTO fund_trns_tmp_REPLACE_USERID (id, transaction_date, user_id, account_id, customer_id gs_uid, category, remarks, deleted, cash_in, cash_out, created_date, modified_date, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi, cash_in_mode, alert, is_internal, tag_indicator)
             SELECT
                 id,
                 transaction_date,
@@ -779,7 +780,7 @@ let SQL = {
                 cash_in_mode,
                 alert,
                 is_internal,
-                tag_ui
+                tag_indicator
             FROM
                 fund_transactions_REPLACE_USERID
             WHERE
