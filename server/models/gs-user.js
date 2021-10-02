@@ -217,6 +217,30 @@ module.exports = function(Gsuser) {
         http: {verb: 'post', path: '/check-email-existance'}
     });
 
+    Gsuser.remoteMethod('passwordResetApi', {
+        description: 'Password reset',
+        accepts: {
+            arg: 'apiParams',
+            type: 'object',
+            default: {
+                "accessToken": "",
+                "current": "",
+                "new": ""
+            },
+            http: {
+                source: 'body'
+            }
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {verb: 'post', path: '/password-reset'}
+    });
+
     Gsuser.checkEmailExistance = (apiParams, cb) => {
         try {
             Gsuser.find({where:{ email: apiParams.email }}, (err, res)=> {
@@ -603,6 +627,64 @@ module.exports = function(Gsuser) {
             });
         });
     }
+
+    Gsuser.passwordResetApi = (apiParams, cb) => {
+        Gsuser._passwordReset(apiParams).then(
+            (resp) => {
+                cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            }
+        ).catch(
+            (e)=> {
+                cb({STATUS: 'EXCEPTION', ERR: e}, null);
+            }
+        );
+    }
+
+    Gsuser._passwordReset = (apiParams) => {
+        return new Promise(async (resolve, reject) => {
+            let userId = await utils.getStoreOwnerUserId(apiParams.accessToken);
+            let userRec = await Gsuser._find(userId);
+            if(userRec && userRec.pwd == apiParams.currentPassword) {
+                userRec.updateAttribute('password', apiParams.newPassword, (err, res) => {
+                    if(err) return reject(err);
+                    else {
+                        Gsuser.updateAll({email: userRec.email}, {pwd: apiParams.newPassword}, (err, res) => {
+                            if(err) {
+                                console.log(err);
+                                return reject(err);
+                            } else {
+                                return resolve('Updated password in DB');
+                            }
+                        });
+                    }
+                });
+            } else {
+                return reject('Please enter your correct Current Password.');
+            }
+        });
+    };
+
+     /*FundTransaction.getUdhaarListApi = (params, cb) => {
+        FundTransaction._getUdhaarListApi(params).then(
+            (resp) => {
+                cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            }
+        ).catch(
+            (e)=> {
+                cb({STATUS: 'EXCEPTION', ERR: e}, null);
+            }
+        );
+    }
+
+    FundTransaction._getUdhaarListApi = (params) => {
+        return new Promise(async (resolve, reject) => {
+            let userId = await utils.getStoreOwnerUserId(params.accessToken);
+            
+            let promise1 = new Promise((resolve, reject) => {
+                FundTransaction.dataSource.connector.query()
+            });
+        });
+    }*/
 };
 
 let pledgebookStructure = `CREATE TABLE TABLENAME (
