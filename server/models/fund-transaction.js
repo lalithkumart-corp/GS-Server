@@ -362,7 +362,7 @@ module.exports = function(FundTransaction) {
         return new Promise( async (resolve, reject) => {
             let userId = await  utils.getStoreOwnerUserId(apiParams.accessToken);
             let sql = SQL.CASH_TRANSACTION_IN.replace(/REPLACE_USERID/g, userId);
-            let queryValues = [userId, apiParams.customerId, apiParams.fundHouse, dateformat(apiParams.transactionDate, 'yyyy-mm-dd HH:MM:ss', true), apiParams.amount, 0, apiParams.category, apiParams.remarks, apiParams.paymentMode];
+            let queryValues = [userId, apiParams.customerId, apiParams.accountId, dateformat(apiParams.transactionDate, 'yyyy-mm-dd HH:MM:ss', true), apiParams.amount, 0, apiParams.category, apiParams.remarks, apiParams.paymentMode];
             FundTransaction.dataSource.connector.query(sql, queryValues, (err, res) => {
                 if(err){
                     reject(err);
@@ -389,8 +389,9 @@ module.exports = function(FundTransaction) {
             let userId =await  utils.getStoreOwnerUserId(apiParams.accessToken);
 
             let destAccDetail = apiParams.destinationAccountDetail;
-            let queryValues = [userId, apiParams.customerId, apiParams.myFundAccountId, dateformat(apiParams.transactionDate, 'yyyy-mm-dd HH:MM:ss', true), 0, apiParams.amount, apiParams.category, apiParams.remarks,
+            let queryValues = [userId, apiParams.customerId, apiParams.accountId, dateformat(apiParams.transactionDate, 'yyyy-mm-dd HH:MM:ss', true), 0, apiParams.amount, apiParams.category, apiParams.remarks,
                 apiParams.paymentMode, destAccDetail.toAccountId, destAccDetail.accNo, destAccDetail.ifscCode, destAccDetail.upiId];
+
             let sql = SQL.CASH_TRANSACTION_OUT.replace(/REPLACE_USERID/g, userId);
             FundTransaction.dataSource.connector.query(sql, queryValues, (err, res) => {
                 if(err){
@@ -1256,7 +1257,6 @@ module.exports = function(FundTransaction) {
             let destAccDetail = params.destinationAccountDetail;
             let queryValues = [params.accountId, params.customerId, dateformat(params.transactionDate, 'yyyy-mm-dd HH:MM:ss', true), params.amount, params.category, params.remarks, 
                 params.paymentMode, destAccDetail.toAccountId, destAccDetail.accNo, destAccDetail.ifscCode, destAccDetail.upiId, params.transactionId, userId];
-            
             let sql = SQL.UPDATE_TRANSACTION_FOR_CASH_OUT;
             sql = sql.replace(/REPLACE_USERID/g, userId);
             FundTransaction.dataSource.connector.query(sql, queryValues, (err, res) => {

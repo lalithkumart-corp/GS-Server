@@ -1199,6 +1199,7 @@ module.exports = function(Pledgebook) {
             data._pledgebookTableName = await Pledgebook.getPledgebookTableName(data._userId);
             data._pledgebookClosedBillTableName = await Pledgebook.getPledgebookClosedTableName(data._userId);
             let query = Pledgebook.getQuery('byCustomerId', data, data._pledgebookTableName, data._pledgebookClosedBillTableName);
+            query = query.replace(/REPLACE_USERID/g, data._userId); 
             Pledgebook.dataSource.connector.query(query, [data.customerId], (err, result) => {
                 if(err) {
                     reject(err);

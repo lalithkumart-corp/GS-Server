@@ -256,7 +256,7 @@ module.exports = function(Customer) {
                 city: params.city,
                 pincode: params.pinCode || null,
                 mobile: params.mobile || null,
-                otherDetails: params.moreDetails,
+                otherDetails: params.moreDetails || [],
                 createdAt: new Date(),
                 modifiedAt: new Date()
             }
@@ -564,7 +564,9 @@ module.exports = function(Customer) {
             }
             whereClause = whereList.join(' AND ');
             
-            let query = `SELECT * FROM customer_REPLACE_USERID WHERE ${whereClause}`;
+            // let query = `SELECT * FROM customer_REPLACE_USERID WHERE ${whereClause}`;
+            let query = SQL.SELECT_QUERY;
+            query += ` WHERE ${whereClause}`;
             query = query.replace(/REPLACE_USERID/g, optional._userId);
             Customer.dataSource.connector.query(query, (err, result) => {
                 if(err) {
@@ -780,7 +782,9 @@ module.exports = function(Customer) {
             try {
                 // Customer.findOne({where: {customerId: custId} }, (err, res) => {
 
-                let query = `SELECT * FROM customer_REPLACE_USERID WHERE CustomerId=${custId}`;
+                // let query = `SELECT * FROM customer_REPLACE_USERID WHERE CustomerId=${custId}`;
+                let query = SQL.SELECT_QUERY;
+                query += ` WHERE CustomerId=${custId}`;
                 query = query.replace(/REPLACE_USERID/g, _userId);
                 Customer.dataSource.connector.query(query, (err, res) => {
                     if(err)
@@ -798,9 +802,10 @@ module.exports = function(Customer) {
     Customer.getIdByHashKey = (hashKey, userId) => {
         return new Promise( (resolve, reject ) => {
             try {
-                let query = `SELECT * FROM customer_REPLACE_USERID WHERE HashKey='${hashKey}'`;
+                // let query = `SELECT * FROM customer_REPLACE_USERID WHERE HashKey='${hashKey}'`;
+                let query = SQL.CUSTOMER_BY_HASHKEY;
                 query = query.replace(/REPLACE_USERID/g, userId);
-                Customer.dataSource.connector.query(query, (err, res) => {
+                Customer.dataSource.connector.query(query, [hashKey], (err, res) => {
                     if(err) {
                         return reject(err);
                     } else {
@@ -931,6 +936,38 @@ let SQL = {
     Mobile: `SELECT DISTINCT Mobile FROM customer_REPLACE_USERID`,
     Pincode: `SELECT DISTINCT Pincode FROM customer_REPLACE_USERID`,
     OtherDetails: ``, //TODO:
+    SELECT_QUERY: `SELECT 
+                        customer_REPLACE_USERID.CustomerId AS customerId,
+                        customer_REPLACE_USERID.UserId AS userId,
+                        customer_REPLACE_USERID.Name AS name,
+                        customer_REPLACE_USERID.GaurdianName AS gaurdianName,
+                        customer_REPLACE_USERID.Address AS address,
+                        customer_REPLACE_USERID.Place AS place,
+                        customer_REPLACE_USERID.City AS city,
+                        customer_REPLACE_USERID.Pincode AS pincode,
+                        customer_REPLACE_USERID.Mobile AS mobile,
+                        customer_REPLACE_USERID.HashKey AS hashKey,
+                        customer_REPLACE_USERID.SecMobile AS secMobile,
+                        customer_REPLACE_USERID.CustStatus AS custStatus
+                    FROM 
+                        customer_REPLACE_USERID`,
+    CUSTOMER_BY_HASHKEY: `SELECT 
+                        customer_REPLACE_USERID.CustomerId AS customerId,
+                        customer_REPLACE_USERID.UserId AS userId,
+                        customer_REPLACE_USERID.Name AS name,
+                        customer_REPLACE_USERID.GaurdianName AS gaurdianName,
+                        customer_REPLACE_USERID.Address AS address,
+                        customer_REPLACE_USERID.Place AS place,
+                        customer_REPLACE_USERID.City AS city,
+                        customer_REPLACE_USERID.Pincode AS pincode,
+                        customer_REPLACE_USERID.Mobile AS mobile,
+                        customer_REPLACE_USERID.HashKey AS hashKey,
+                        customer_REPLACE_USERID.SecMobile AS secMobile,
+                        customer_REPLACE_USERID.CustStatus AS custStatus
+                    FROM 
+                        customer_REPLACE_USERID 
+                    WHERE
+                        HashKey=?`,
     CUSTOMER_LIST_BASIC: `SELECT 
                         customer_REPLACE_USERID.CustomerId AS customerId,
                         customer_REPLACE_USERID.UserId AS userId,
