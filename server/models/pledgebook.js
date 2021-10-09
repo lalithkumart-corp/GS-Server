@@ -1659,13 +1659,14 @@ module.exports = function(Pledgebook) {
 
                 await Pledgebook._copyToRecycleBinTable(params);
                 await Pledgebook._copyClosedBillsToRecycleBinTable(params);
-                await Pledgebook._deleteBillsInPledgebook(params);
                 await Pledgebook._deleteBillsInClosedPledgebook(params);
+                await Pledgebook._deleteBillsInPledgebook(params);
             } else {
                 throw 'No bills selected for deleting';
             }
             return {STATUS: 'SUCCESS', STATUS_MSG: 'Successfully deleted the bills'};
         } catch(e) {
+            console.log(e);
             return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
         }
     }
@@ -1708,10 +1709,10 @@ module.exports = function(Pledgebook) {
 
     Pledgebook._deleteBillsInPledgebook = (params) => {
         return new Promise((resolve, reject) => {
-            let sql = `DELETE FROM ${params._pledgebookTableName} WHERE UniqueIdentifier IN (?)`;
+            let sql = `DELETE FROM ${params._pledgebookTableName} WHERE UniqueIdentifier IN (?) AND Trashed=1`;
             Pledgebook.dataSource.connector.query(sql, [params.uniqueIdentifiers], (err, res) => {
                 if(err) {
-                    return resolve(true);
+                    return reject(err);
                 } else {
                     return resolve(true);
                 }
@@ -1724,7 +1725,7 @@ module.exports = function(Pledgebook) {
             let sql = `DELETE FROM ${params._pledgebookClosedBillTableName} WHERE pledgebook_uid IN (?)`;
             Pledgebook.dataSource.connector.query(sql, [params.uniqueIdentifiers], (err, res) => {
                 if(err) {
-                    return resolve(true);
+                    return reject(err);
                 } else {
                     return resolve(true);
                 }

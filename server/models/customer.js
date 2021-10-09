@@ -810,7 +810,7 @@ module.exports = function(Customer) {
                         return reject(err);
                     } else {
                         if(res && res.length > 0)
-                            return resolve(res[0].CustomerId);
+                            return resolve(res[0].customerId); // CustomerId
                         else
                             return resolve(null);
                     }
