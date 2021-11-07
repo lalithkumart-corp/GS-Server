@@ -131,6 +131,10 @@
     "dataSource": "developmentdb",
     "public": true
   },
+  "JewelleryBillSetting": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
   "Udhaar": {
     "dataSource": "developmentdb",
     "public": true

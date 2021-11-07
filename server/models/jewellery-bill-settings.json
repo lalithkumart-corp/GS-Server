@@ -1,0 +1,95 @@
+{
+    "name": "JewelleryBillSetting",
+    "plural": "JewelleryBillSettings",
+    "base": "PersistedModel",
+    "idInjection": true,
+    "options": {
+      "validateUpsert": true,
+      "mysql": {
+        "schema": "developmentdb",
+        "table": "jewellery_bill_settings"
+      }
+    },
+    "properties": {
+      "id": {
+        "type": "number",
+        "id": true,
+        "mysql": {
+          "columnName": "id",
+          "dataType": "int",
+          "dataLength": 22,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "userId": {
+        "type": "number",
+        "mysql": {
+          "columnName": "user_id",
+          "dataType": "int",
+          "dataLength": 22,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "category": {
+        "type": "string",
+        "mysql": {
+          "columnName": "category",
+          "dataType": "varchar",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "billSeries": {
+        "type": "string",
+        "mysql": {
+          "columnName": "bill_series",
+          "dataType": "varchar",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "billNo": {
+        "type": "number",
+        "mysql": {
+          "columnName": "bill_no",
+          "dataType": "int",
+          "dataLength": 22,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "selectedTemplate": {
+        "type": "number",
+        "mysql": {
+          "columnName": "selected_template",
+          "dataType": "int",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "customCss": {
+        "type": "string",
+        "mysql": {
+          "columnName": "custom_css",
+          "dataType": "text",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      }
+      
+    },
+    "validations": [],
+    "relations": {},
+    "acls": [],
+    "methods": {}
+  }
+  

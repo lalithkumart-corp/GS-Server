@@ -107,6 +107,7 @@ module.exports = function(Store) {
                 pincode: apiParams.pincode,
                 mobile: apiParams.mobile,
                 email: apiParams.email,
+                gstNo: apiParams.gstNo,
                 loanLicenseName: apiParams.loanLicenseName,
                 loanBillAddrLine1: apiParams.loanBillAddrLine1,
                 loanBillAddrLine2: apiParams.loanBillAddrLine2,
