@@ -65,7 +65,7 @@ module.exports = function(JewelleryBillSettings) {
     });
 
     JewelleryBillSettings.getSettingsApi = (accessToken, category, cb) => {
-        JewelleryBillSettings.prototype._getSettingsApi({accessToken, category}).then(
+        JewelleryBillSettings.prototype._getSettingsApiByCategory({accessToken, category}).then(
             (resp) => {
                 if(resp)
                     cb(null, {STATUS: 'SUCCESS', RESP: resp});
@@ -83,7 +83,34 @@ module.exports = function(JewelleryBillSettings) {
         try {
             if(!params._userId)
                 params._userId = await utils.getStoreOwnerUserId(params.accessToken);
-            let records = await JewelleryBillSettings.find({where: {userId: params._userId, category: params.category}});
+            let whereObj = {
+                userId: params._userId,
+            };
+            if(params.category)
+                whereObj.category = params.category;
+                
+            let records = await JewelleryBillSettings.find({ where: whereObj });
+            if(records && records.length > 0)
+                return records;
+            else
+                return null;
+        } catch(e) {
+            console.log(e);
+            throw e;
+        }
+    }
+
+    JewelleryBillSettings.prototype._getSettingsApiByCategory = async (params) => {
+        try {
+            if(!params._userId)
+                params._userId = await utils.getStoreOwnerUserId(params.accessToken);
+            let whereObj = {
+                userId: params._userId,
+            };
+            if(params.category)
+                whereObj.category = params.category;
+                
+            let records = await JewelleryBillSettings.find({ where: whereObj });
             if(records && records.length > 0)
                 return records[0];
             else

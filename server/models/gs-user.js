@@ -40,7 +40,8 @@ module.exports = function(Gsuser) {
                 userPreferences: userPreferences,
                 applicationStatus: status,
                 setupActionsStatus: setupActionsStatus,
-                loanBillTemplateSettings: otherStuffs.loanBillTemplateSettings
+                loanBillTemplateSettings: otherStuffs.loanBillTemplateSettings,
+                jewelleryGstBillTemplateSettings: otherStuffs.jewelleryGstBillTemplateSettings
             }
             return response;
         } catch(e) {
@@ -597,11 +598,17 @@ module.exports = function(Gsuser) {
                 let row = await app.models.LoanBillTemplate.prototype._getSettingsApi({_userId: ownerUserId});
                 return resolve(row);
             });
+
+            let jewelleryGstBillTemplateSettings = new Promise(async (resolve, reject) => {
+                let row = await app.models.JewelleryBillSetting.prototype._getSettingsApi({_userId: ownerUserId});
+                return resolve(row);
+            });
     
-            Promise.all([fetchLoanBillTemplateSettings]).then(
+            Promise.all([fetchLoanBillTemplateSettings, jewelleryGstBillTemplateSettings]).then(
                 (results) => {
                     let obj = {
-                        loanBillTemplateSettings: results[0]
+                        loanBillTemplateSettings: results[0],
+                        jewelleryGstBillTemplateSettings: results[1]
                     }
                     resolve(obj);
                 },
