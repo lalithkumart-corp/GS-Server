@@ -876,6 +876,7 @@ let SQL = {
                                 prod_id,
                                 i_touch,
                                 touch.purity AS pure_touch,
+                                touch.name AS touch_name,
                                 quantity, avl_qty, sold_qty,
                                 gross_wt, net_wt, pure_wt,
                                 avl_g_wt, avl_n_wt, avl_p_wt,
