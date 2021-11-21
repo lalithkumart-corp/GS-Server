@@ -970,7 +970,8 @@ let SQL = {
                             STOCK_SOLD_TABLE.created_date AS created_date,
                             INVOICE_DETAIL_TABLE.payment_mode AS PaymentMode,
                             INVOICE_DETAIL_TABLE.paid_amt AS PaidAmt,
-                            INVOICE_DETAIL_TABLE.balance_amt AS BalAmt
+                            INVOICE_DETAIL_TABLE.balance_amt AS BalAmt,
+                            INVOICE_DETAIL_TABLE.ukey AS InvoiceRef
                         FROM
                             STOCK_SOLD_TABLE
                             LEFT JOIN INVOICE_DETAIL_TABLE ON STOCK_SOLD_TABLE.invoice_ref = INVOICE_DETAIL_TABLE.ukey
