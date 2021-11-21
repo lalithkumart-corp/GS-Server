@@ -1,0 +1,18 @@
+{
+    "name": "JewelleryInvoice",
+    "plural": "JewelleryInvoices",
+    "base": "PersistedModel",
+    "options": {
+      "validateUpsert": true,
+      "mysql": {
+        "schema": "developmentdb",
+        "table": "jewellery_invoice_details"
+      }
+    },
+    "properties": {},
+    "validations": [],
+    "relations": {},
+    "acls": [],
+    "methods": {}
+}
+  

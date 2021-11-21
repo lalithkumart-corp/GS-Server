@@ -1,5 +1,6 @@
 'use strict';
 let utils = require('../utils/commonUtils');
+let _ = require('lodash');
 
 module.exports = function(JewelleryBillSettings) {
     JewelleryBillSettings.remoteMethod('getSettingsApi', {
@@ -79,7 +80,7 @@ module.exports = function(JewelleryBillSettings) {
         );
     };
 
-    JewelleryBillSettings.prototype._getSettingsApi = async (params) => {
+    JewelleryBillSettings.prototype._getTemplateSettingsApi = async (params) => {
         try {
             if(!params._userId)
                 params._userId = await utils.getStoreOwnerUserId(params.accessToken);
@@ -90,10 +91,19 @@ module.exports = function(JewelleryBillSettings) {
                 whereObj.category = params.category;
                 
             let records = await JewelleryBillSettings.find({ where: whereObj });
-            if(records && records.length > 0)
-                return records;
-            else
+            if(records && records.length > 0) {
+                let rows = [];
+                _.each(records, (aRow, index) => {
+                    rows.push({
+                        selectedTemplate: aRow.selectedTemplate,
+                        customCss: aRow.customCss,
+                        category: aRow.category
+                    });
+                });
+                return rows;
+            } else {
                 return null;
+            }
         } catch(e) {
             console.log(e);
             throw e;
@@ -188,8 +198,21 @@ module.exports = function(JewelleryBillSettings) {
             });
         });
     }
+
+    JewelleryBillSettings.prototype.incrementSerialAndNumber = (userId, billNo, category) => {
+        return new Promise((resolve, reject) => {
+            JewelleryBillSettings.dataSource.connector.query(SQL.INCR_INVOICE_NO, [billNo, category, userId], (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(res);
+                }
+            });
+        });
+    }
 }
 
 let SQL = {
-    LIST: `SELECT * FROM jewellery_bill_avl_template_list`
+    LIST: `SELECT * FROM jewellery_bill_avl_template_list`,
+    INCR_INVOICE_NO: `UPDATE jewellery_bill_settings SET bill_no = ? WHERE (category = ? AND user_id = ?)`
 }

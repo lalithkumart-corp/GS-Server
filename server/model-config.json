@@ -135,6 +135,10 @@
     "dataSource": "developmentdb",
     "public": true
   },
+  "JewelleryInvoice": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
   "Udhaar": {
     "dataSource": "developmentdb",
     "public": true

@@ -600,7 +600,7 @@ module.exports = function(Gsuser) {
             });
 
             let jewelleryGstBillTemplateSettings = new Promise(async (resolve, reject) => {
-                let row = await app.models.JewelleryBillSetting.prototype._getSettingsApi({_userId: ownerUserId});
+                let row = await app.models.JewelleryBillSetting.prototype._getTemplateSettingsApi({_userId: ownerUserId});
                 return resolve(row);
             });
     

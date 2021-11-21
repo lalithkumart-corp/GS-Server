@@ -294,7 +294,7 @@ module.exports = function(Stock) {
 
     Stock.remoteMethod('sellItemApiHandler', {
         accepts: {
-            arg: 'payload',
+            arg: 'apiParams',
             type: 'object',
             default: {
                 
@@ -587,20 +587,27 @@ module.exports = function(Stock) {
         });
     }
 
-    Stock.sellItemApiHandler = async (payload) => {
+    Stock.sellItemApiHandler = async (data) => {
         try {
-            console.log(payload);
-            payload._userId = await utils.getStoreOwnerUserId(payload.accessToken);
-            payload._uniqString = (Date.now() + Math.random()).toString(36).replace('.', '');
-            let isAvl = await Stock.checkItemAvlQty(payload.apiParams.newProds);
+            console.log(data);
+            data._userId = await utils.getStoreOwnerUserId(data.accessToken);
+            data._uniqString = (Date.now() + Math.random()).toString(36).replace('.', '');
+            let isAvl = await Stock.checkItemAvlQty(data.apiParams.newProds);
             if(!isAvl)
                 throw 'Please check item quantity';
-            let invoiceDetailResp = await Stock.insertInvoiceData(payload);
+            // let invoiceDetailResp = await Stock.insertInvoiceData(data);
+            let invoiceDetailResp = await Stock.app.models.JewelleryInvoice.prototype.insertInvoiceData(data);
             if(!invoiceDetailResp)
                 throw 'Invoice creation failed. Please check Logs.';
             
-            await Stock.insertInSellingDetail(payload);
-            await Stock.updateQtyInStockTable(payload);
+            await Stock.insertInSellingDetail(data);
+            await Stock.updateQtyInStockTable(data);
+            
+            if(data.apiParams.oldOrnaments && data.apiParams.oldOrnaments.netWt)
+                await Stock.insertIntoOldOrnamentsTable(data);
+            
+            let newNumber = parseInt(data.apiParams.invoiceNo) + 1;
+            await Stock.app.models.JewelleryBillSetting.prototype.incrementSerialAndNumber(data._userId, newNumber, 'gst');
 
             return {STATUS: 'SUCCESS'};
         } catch(e) {
@@ -638,15 +645,20 @@ module.exports = function(Stock) {
 
     Stock.insertInvoiceData = async (payload) => {
         try {
+            let invoiceNoFull = payload.apiParams.invoiceNo;
+            if(payload.apiParams.invoiceSeries)
+                invoiceNoFull = `${payload.apiParams.invoiceSeries}.${payload.apiParams.invoiceNo}`;
             let sql = SQL.INSERT_INVOICE_DETAIL.replace(/INVOICE_TABLE/g, `invoice_details_${payload._userId}`);
             let queryVal = [
                     payload._uniqString,
+                    invoiceNoFull,
                     payload.apiParams.customerId,
                     'SOLD',
                     payload.apiParams.paymentFormData.paid,
                     payload.apiParams.paymentFormData.balance,
                     payload.apiParams.paymentFormData.paymentMode,
-                    JSON.stringify(payload.apiParams.paymentFormData)
+                    JSON.stringify(payload.apiParams.paymentFormData),
+                    JSON.stringify(payload.apiParams)
                 ];
             let result = await utils.executeSqlQuery(Stock.dataSource, sql, queryVal);
             return result;
@@ -672,8 +684,9 @@ module.exports = function(Stock) {
                 temp.push(anItem.grossWt || 0);
                 temp.push(anItem.netWt || 0);
                 
-                temp.push(anItem.wastage || 0);
-                temp.push(anItem.labour || 0);
+                temp.push(anItem.wastagePercent || 0);
+                temp.push(anItem.wastageVal || 0);
+                temp.push(anItem.makingCharge || 0);
                 temp.push(anItem.cgstPercent || 0);
                 temp.push(anItem.sgstPercent || 0);
                 temp.push(anItem.discount || 0);
@@ -722,6 +735,19 @@ module.exports = function(Stock) {
         }
     }
 
+    Stock.insertIntoOldOrnamentsTable = async (data) => {
+        try {
+            let sql = SQL.INSERT_INTO_OLD_ITEM_STOCK;
+            let oldOrnaments = data.apiParams.oldOrnaments;
+            let queryParams = [oldOrnaments.itemType, oldOrnaments.grossWt, oldOrnaments.netWt, oldOrnaments.wastageVal, oldOrnaments.pricePerGram, oldOrnaments.netAmount, data._uniqString];
+            await utils.executeSqlQuery(Stock.dataSource, sql, queryParams);
+        } catch(e) {
+            console.log(e);
+            logger.error(GsErrorCtrl.create({className: 'Stock', methodName: 'insertIntoOldOrnamentsTable', cause: e, message: 'Exception in sql query execution'}));
+            throw e;
+        }
+    }
+
     Stock.fetchSoldOutItemList = async (accessToken, filters) => {
         try {
             let params = {accessToken: accessToken, filters: filters};
@@ -737,7 +763,7 @@ module.exports = function(Stock) {
             let sql = SQL.FETCH_SOLD_OUT_ITEMS_LIST;
             sql += Stock._getFilterQueryPartForSoldOutItems(params);
             sql = sql.replace(/STOCK_SOLD_TABLE/g, `stock_sold_${params._userId}`);
-            sql = sql.replace(/INVOICE_DETAIL_TABLE/g, `invoice_details_${params._userId}`);
+            sql = sql.replace(/INVOICE_DETAIL_TABLE/g, `jewellery_invoice_details_${params._userId}`);
             sql = sql.replace(/REPLACE_USERID/g, params._userId);
             let res = await utils.executeSqlQuery(Stock.dataSource, sql);
             //TODO:
@@ -775,7 +801,7 @@ module.exports = function(Stock) {
             let sql = SQL.FETCH_SOLD_OUT_ITEMS_COUNT;
             sql += Stock._getFilterQueryPartForSoldOutItems(params, true);
             sql = sql.replace(/STOCK_SOLD_TABLE/g, `stock_sold_${params._userId}`);
-            sql = sql.replace(/INVOICE_DETAIL_TABLE/g, `invoice_details_${params._userId}`);
+            sql = sql.replace(/INVOICE_DETAIL_TABLE/g, `jewellery_invoice_details_${params._userId}`);
             sql = sql.replace(/REPLACE_USERID/g, params._userId);
             let res = await utils.executeSqlQuery(Stock.dataSource, sql);
             let count = 0;
@@ -901,13 +927,14 @@ let SQL = {
     INSERT_INTO_STOCK_SOLD: `INSERT INTO STOCK_SOLD_TABLE (
                                 date, prod_id, metal_rate, retail_rate, ornament, qty, 
                                 gross_wt, net_wt, 
-                                wastage, labour,
+                                wastage, wastage_val, labour,
                                 cgst_percent, sgst_percent, discount, total,
                                 invoice_ref
                             ) 
-                            VALUES `
-                            ,
-    INSERT_INVOICE_DETAIL: `INSERT INTO INVOICE_TABLE (ukey, cust_id, action, paid_amt, balance_amt, payment_mode, raw_payment_data) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+                            VALUES `,
+    INSERT_INTO_OLD_ITEM_STOCK: `INSERT INTO old_items_stock_1 (item_type, gross_wt, net_wt, wastage_val, applied_retail_rate, price, invoice_ref)
+                            VALUES(?,?,?,?,?,?,?)`,
+    INSERT_INVOICE_DETAIL: `INSERT INTO INVOICE_TABLE (ukey, invoice_no, cust_id, action, paid_amt, balance_amt, payment_mode, raw_payment_data, raw_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     FETCH_SOLD_OUT_ITEMS_COUNT: `SELECT
                                     COUNT(*) AS Count
                                 FROM
