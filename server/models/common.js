@@ -650,7 +650,6 @@ let SQL = {
                         created_date datetime DEFAULT CURRENT_TIMESTAMP,
                         modified_date datetime DEFAULT CURRENT_TIMESTAMP,
                         PRIMARY KEY (id),
-                        KEY prod_id_idx (prod_id),
                         KEY invoice_ref_idx (invoice_ref)
                     )`,
     INVOICE_DETAIL: `CREATE TABLE jewellery_invoice_details_REPLACE_USERID (
