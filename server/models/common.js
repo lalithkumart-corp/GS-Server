@@ -613,6 +613,7 @@ let SQL = {
                 )`,
     STOCK_SOLD_TABLE: `CREATE TABLE stock_sold_REPLACE_USERID (
                     id int NOT NULL AUTO_INCREMENT,
+                    uid VARCHAR(45) NOT NULL,
                     date datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     prod_id varchar(45) DEFAULT NULL,
                     metal_rate int DEFAULT NULL,
