@@ -1,4 +1,9 @@
-
+----To START/STOP docker service via cli
+   -- "net" comand
+      net start com.docker.service
+      net stop com.docker.service
+   -- "sc" command
+      sc start com.docker.service
 
 
 docker exec -it <container_name> bash
@@ -47,6 +52,8 @@ EX:2     for mysql
 
 
 
+EX: 3 Creating VOLUMES
+1. docker volume create gs-server-logs
 
 
 docker run -d --name gs-server-contr --link mysql-contr gs-server-prj:2

@@ -1,18 +1,18 @@
 version: "3.9"
 services:
-  # frontend:
-  #   image: "gs-client-prj:2"
-  #   ports:
-  #     - "3004:3000"
+  frontend:
+    image: "gs-client-img:1"
+    ports:
+      - "3004:3000"
   backend:
-    image: "gs-server:1"
+    image: "gs-server-img:1"
     ports: 
-      - "3102:3102"
+      - "3102:3003"
     depends_on: 
       - db
     volumes:
       - gs-server-logs:/usr/src/app/server/logs
-    restart: always
+    restart: unless-stopped
   db:
     command: mysqld --default-authentication-plugin=mysql_native_password
     environment: 
@@ -23,7 +23,7 @@ services:
       - "3307:3306"
     volumes: 
       - gs-mysql-data:/var/lib/mysql
-    restart: always
+    restart: unless-stopped
 volumes:
   gs-mysql-data:
     external: true
