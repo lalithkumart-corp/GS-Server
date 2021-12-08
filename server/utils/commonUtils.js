@@ -8,8 +8,8 @@ const getStoreOwnerUserId = (accessToken) => {
             if(err) {
                 reject(err);
             } else {
-                if(res) {
-                    let userId = res.userId;
+                if(res && res[0]) {
+                    let userId = res[0].userId;
                     app.models.GsUser.findOne({where: {id: userId}}, (error, result) => {
                         if(error){
                             reject(err);
@@ -17,7 +17,7 @@ const getStoreOwnerUserId = (accessToken) => {
                             if(result && result.ownerId != 0)
                                 resolve(result.ownerId);
                             else
-                                resolve(res.userId);
+                                resolve(res[0].userId);
                         }
                     });
                 } else {
