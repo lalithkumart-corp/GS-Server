@@ -4,7 +4,7 @@ let admin = require('../firebase-service');
 // Getting userId ie., Store owner's user id
 const getStoreOwnerUserId = (accessToken) => {
     return new Promise( (resolve, reject) => {        
-        app.models.AccessToken.findOne({where: {id: accessToken}}, (err, res) => {
+        app.models.AccessToken.find({where: {id: accessToken}}, (err, res) => {
             if(err) {
                 reject(err);
             } else {

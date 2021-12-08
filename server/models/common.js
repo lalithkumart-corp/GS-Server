@@ -100,6 +100,28 @@ module.exports = function(Common) {
         description: 'For fetching all banks list.',
     });
 
+    Common.remoteMethod('saveLocation', {
+        accepts: {
+            arg: 'apiParams',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/save-location', verb: 'post'},
+        description: 'Save user logged in Location',
+    });
+
     Common.createNewTablesIfNotExist = async (userId) => {
         try {
             await Common._createCustomerTable(userId);
@@ -498,6 +520,38 @@ module.exports = function(Common) {
             }
         });
     }
+
+    Common.saveLocation = (apiParams, cb) => {
+        Common._saveLocation(apiParams).then(
+            (resp) => {
+                cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            }
+        ).catch(
+            (e)=> {
+                cb({STATUS: 'EXCEPTION', ERR: e}, null);
+            }
+        );
+    }
+
+    // EXTERNAL CODE - CAN BE SEPARATED
+    Common._saveLocation = (apiParams) => {
+        return new Promise(async (resolve, reject) => {
+            try {
+                apiParams._userId = await utils.getStoreOwnerUserId(apiParams.accessToken);
+                app.models.GsUser.dataSource.connector.query(SQL.STORE_LOCATION, [apiParams.latitude, apiParams.longitude, apiParams._userId], (err, res) => {
+                    if(err){
+                        return reject(err);
+                    } else {
+                        return resolve(res);
+                    }
+                });
+                // return resolve(true);
+            } catch(e) {
+                console.log(e);
+                return reject(e);
+            }
+        });
+    }
 };
 
 let SQL = {
@@ -829,5 +883,6 @@ let SQL = {
                 PRIMARY KEY (id),
                 UNIQUE KEY unique_identifier_UNIQUE (unique_identifier),
                 UNIQUE KEY bill_no_UNIQUE (bill_no)
-              )`
+              )`,
+    STORE_LOCATION: `INSERT INTO analytics_locations (latitude, longitude, user_id) VALUES (?,?,?)`
 }
