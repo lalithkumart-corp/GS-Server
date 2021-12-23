@@ -142,6 +142,17 @@
         "nullable": "Y"
       }
     },
+    "ExpiryDate": {
+      "type": "date",
+      "mysql": {
+        "columnName": "ExpiryDate",
+        "dataType": "datetime",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
     "CreatedDate": {
       "type": "date",
       "mysql": {

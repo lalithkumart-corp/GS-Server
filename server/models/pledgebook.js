@@ -481,6 +481,7 @@ module.exports = function(Pledgebook) {
                 params.paymentMode,
                 1,
                 JSON.stringify({}), 
+                params.expiryDate,
                 params.createdDate,
                 params.modifiedDate,
             ];
@@ -696,7 +697,7 @@ module.exports = function(Pledgebook) {
                                 OrnPictureId,
                                 OrnCategory, TotalWeight,
                                 IntPercent, IntVal, OtherCharges, LandedCost, PaymentMode,
-                                Status, History,
+                                Status, History, ExpiryDate,
                                 CreatedDate, ModifiedDate) 
                             VALUES
                                 (?, ?,
@@ -706,7 +707,7 @@ module.exports = function(Pledgebook) {
                                 ?,
                                 ?, ?,
                                 ?, ?, ?, ?, ?,
-                                ?, ?,
+                                ?, ?, ?,
                                 ?, ?);`
                 break;
             case 'normal':
@@ -715,6 +716,7 @@ module.exports = function(Pledgebook) {
                                 customer_REPLACE_USERID.*,
                                 ${pledgebookClosedBillTableName}.*,
                                 ${pledgebookTableName}.Date AS PledgedDate,
+                                ${pledgebookTableName}.ExpiryDate AS LoanExpiryDate,
                                 ${pledgebookTableName}.Archived AS PledgebookBillArchived,
                                 ${pledgebookTableName}.Trashed AS PledgebookBillTrashed,
                                 image.Id AS ImageTableID,
@@ -956,6 +958,7 @@ module.exports = function(Pledgebook) {
                             IntVal=?,
                             OtherCharges=?,
                             LandedCost=?,
+                            ExpiryDate=?,
                             PaymentMode=?,
                             ModifiedDate=?
                                 WHERE
@@ -1286,6 +1289,7 @@ module.exports = function(Pledgebook) {
                 parsedArg.interestValue,
                 parsedArg.otherCharges,
                 parsedArg.landedCost,
+                parsedArg.expiryDate,
                 parsedArg.paymentMode,
                 parsedArg.modifiedDate,
                 parsedArg.uniqueIdentifier

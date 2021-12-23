@@ -598,6 +598,7 @@ let SQL = {
                             Status int(11) NOT NULL DEFAULT 1,
                             closedBillReference varchar(45) DEFAULT NULL,
                             History text,
+                            ExpiryDate datetime DEFAULT NULL,
                             Alert int(11) DEFAULT NULL,
                             Archived int(11) DEFAULT 0,
                             Trashed int(11) DEFAULT 0,
