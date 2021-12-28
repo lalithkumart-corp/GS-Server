@@ -1389,6 +1389,7 @@ module.exports = function(Pledgebook) {
                 Name: aRec.Name,
                 GaurdianName: aRec.GaurdianName,
                 Orn: Pledgebook._constructOrnString(aRec.Orn),
+                TotalWeight: aRec.TotalWeight || 0,
                 Status: (aRec.Status)?'PENDING':'CLOSED',
                 Address: aRec.Address,
                 Place: aRec.Place,
@@ -1492,7 +1493,8 @@ module.exports = function(Pledgebook) {
                 {id: 'City', title: 'City'},
                 {id: 'Pincode', title: 'Pincode'},
                 {id: 'Mobile', title: 'Mobile'},
-                {id: 'Orn', title: 'Orn'}
+                {id: 'Orn', title: 'Orn'},
+                {id: 'TotalWeight', title: 'TotalWeight'}
             ]
         });
          
