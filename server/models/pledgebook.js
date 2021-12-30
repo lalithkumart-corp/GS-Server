@@ -1448,6 +1448,7 @@ module.exports = function(Pledgebook) {
                     {id: 'Name', title: 'Name'},
                     {id: 'GaurdianName', title: 'GaurdianName'},
                     {id: 'Orn', title: 'Orn'},
+                    {id: 'TotalWeight', title: 'TotalWeight'},
                     {id: 'Status', title: 'Status'},
                     {id: 'Address', title: 'Address'},
                     {id: 'Place', title: 'Place'},
