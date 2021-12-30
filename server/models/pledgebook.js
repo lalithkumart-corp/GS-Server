@@ -1312,7 +1312,7 @@ module.exports = function(Pledgebook) {
             let pledgebook = await Pledgebook.getPledgebookData(accessToken, params);
             let exportDataJSON = Pledgebook._constructExportDataJSON(pledgebook);
             let csvStr = Pledgebook._convertToCsvString(exportDataJSON);
-            let fileLocation = path.join(process.cwd(), '../../client/csvfiles/file.csv');
+            let fileLocation = utils.getCsvStorePath();
             let status = await Pledgebook._writeCSVfile(exportDataJSON, fileLocation);
             res.download(fileLocation, 'pledgebook.csv');
 

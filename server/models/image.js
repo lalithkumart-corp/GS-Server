@@ -214,7 +214,7 @@ module.exports = function(Image) {
             let serverFile = { localFile: '', originalName: '', mimeType: '' };
             let storage = multer.diskStorage({
                 destination: function (req, file, cb) {            
-                    var dirPath = __dirname + Image.app.get('clientUploadsPath'); // checking and creating uploads folder where files will be uploaded
+                    var dirPath = utils.getPictureUploadPath(); // checking and creating uploads folder where files will be uploaded
                  if (!fs.existsSync(dirPath))
                         fs.mkdirSync(dirPath);
                     cb(null, dirPath + '/');
@@ -236,7 +236,7 @@ module.exports = function(Image) {
                     // An error occurred when uploading
                     reject(err);
                 } else {
-                    let path = __dirname + Image.app.get('clientUploadsPath');
+                    let path = utils.getPictureUploadPath();
                     resolve({path: path, options: serverFile});
                 }
             });
@@ -246,9 +246,9 @@ module.exports = function(Image) {
     Image.writeImgFromBase64 = (picData) => {
         return new Promise( (resolve, reject) => {
             let fileName = Date.now() + '.png';
-            let dirPath = Image.app.get('clientUploadsPath');
+            let dirPath = utils.getPictureUploadPath();
 
-            let filePathAndName = __dirname + dirPath + fileName;
+            let filePathAndName = dirPath + fileName;
 
             fs.writeFile(filePathAndName, picData.pic, 'base64', function(err) {
                 if(err)

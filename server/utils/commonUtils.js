@@ -3,7 +3,7 @@ let admin = require('../firebase-service');
 
 // Getting userId ie., Store owner's user id
 const getStoreOwnerUserId = (accessToken) => {
-    return new Promise( (resolve, reject) => {        
+    return new Promise( (resolve, reject) => {
         app.models.AccessToken.find({where: {id: accessToken}}, (err, res) => {
             if(err) {
                 reject(err);
@@ -81,10 +81,28 @@ const validateSSOAuthToken = (token) => {
     });
 }
 
+const getPictureUploadPath = () => {
+    console.log('1.NODE_ENV', process.env.NODE_ENV, process.cwd(), __dirname )
+    if(process.env.NODE_ENV == 'offlineprod') {
+        return process.cwd() + '/client/uploads/'
+    } else {
+        return __dirname + app.get('clientUploadsPath')
+    }
+}
+
+const getCsvStorePath = () => {
+    console.log('2.NODE_ENV', process.env.NODE_ENV, process.cwd(), __dirname )
+    if(process.env.NODE_ENV == 'offlineprod') {
+        return path.join(process.cwd(), 'client/csvfiles/file.csv'); // ../../
+    } else {
+        return path.join(__dirname, '../../client/csvfiles/file.csv');
+    }
+}
+
 const constructImageUrl = (path) => {
     if(path) {
         let url = `${app.get('externalProtocol')}://${app.get('externalDomain')}`;
-        if(process.env.NODE_ENV == 'development')
+        if(process.env.NODE_ENV == 'development' || process.env.NODE_ENV == 'offlineprod')
             url += `:${app.get('externalPort')}${path.substring(path.indexOf('/uploads'), path.length)}`;
         else
             url += path.substring(path.indexOf('/client'), path.length);
@@ -100,5 +118,7 @@ module.exports = {
     executeSqlQuery,
     getAppStatus,
     validateSSOAuthToken,
-    constructImageUrl
+    constructImageUrl,
+    getPictureUploadPath,
+    getCsvStorePath
 }

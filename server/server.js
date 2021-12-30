@@ -11,7 +11,11 @@ let logger = app.get('logger');
 let SocketClass = require('./socket');
 const cors = require('cors');
 let AwsManager = require('./helpers/cdnuploader');
+const getmac = require('getmac')
 
+const getUniqId = () =>{
+    return getmac.default();
+}
 app.start = function() {
     // start the web server
     let server = app.listen(function() {
@@ -30,6 +34,18 @@ app.start = function() {
         }
         //init(app);
         //uploadOrnamentData(app);
+        
+        /*let macAddr = getUniqId();
+        console.log(macAddr);
+        if(macAddr !== '00:15:5d:3b:0e:3d') { // 00:15:5d:2d:af:dc
+            console.log('App Feeling Unsafe. Please contact Admin');
+            setTimeout(
+                () => {
+                    process.exit();
+                },
+                10000
+            );
+        }*/
     });
     // testUpload();
     new SocketClass(server);
