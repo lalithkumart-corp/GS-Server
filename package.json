@@ -1,9 +1,44 @@
 {
   "name": "backend",
   "version": "1.0.0",
+  "bin": "server/server.js",
   "main": "server/server.js",
   "engines": {
     "node": ">=4"
+  },
+  "pkg": {
+    "scripts": [
+      "server/boot/**/*.js",
+      "node_modules/loopback-boot/lib/plugins/*.js",
+      "node_modules/loopback/server/middleware/*.js",
+      "node_modules/loopback/lib/connectors/*.js",
+      "node_modules/loopback-component-explorer/*.js",
+      "node_modules/loopback-component-explorer/lib/*.js",
+      "node_modules/loopback/common/**/*.js",
+      "node_modules/moment/locale/*.js",
+      "server/**/*.js"
+    ],
+    "assets": [
+      "node_modules/*/node_modules/loopback-phase/intl/**/*.json",
+      "node_modules/*/intl/**/*.json",
+      "node_modules/loopback-component-explorer/public/**/*",
+      "node_modules/loopback-component-explorer/public/*",
+      "node_modules/swagger-ui/dist/*",
+      "node_modules/swagger-ui/dist/**/*",
+      "node_modules/*/node_modules/strong-globalize/cldr/*.json",
+      "node_modules/loopback/common/**/*.json",
+      "node_modules/strong-globalize/cldr/*.json",
+      "node_modules/loopback-component-explorer/intl/**/*.json",
+      "node_modules/strong-remoting/node_modules/strong-error-handler/intl/**/*.json",
+      "node_modules/strong-remoting/node_modules/strong-error-handler/views/*",
+      "node_modules/strong-remoting/node_modules/strong-error-handler/node_modules/strong-globalize/cldr/*",
+      "node_modules/strong-error-handler/intl/**/*.json",
+      "node_modules/strong-error-handler/views/*",
+      "client/**/*",
+      "common/**/*.json",
+      "server/**/*.json",
+      "server/logs/*.log"
+    ]
   },
   "scripts": {
     "lint": "eslint .",

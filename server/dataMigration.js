@@ -1,6 +1,6 @@
 let fs = require('fs');
 const _ = require('lodash');
-let json = require('../pledgebook2.json');
+let json = {};// require('../pledgebook2.json');
 let ornJSON = require('../orn.json');
 let moment = require('moment');
 //let app = require('./server');

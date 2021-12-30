@@ -1,6 +1,6 @@
 let app = require('../../server');
 let appRoot = require('app-root-path');
-let defaultLogDir = appRoot + '/server/logs';
+let defaultLogDir = process.cwd() + '/server/logs';
 let LoopBackContext = require('loopback-context');
 let Logger = require('./logger');
 
