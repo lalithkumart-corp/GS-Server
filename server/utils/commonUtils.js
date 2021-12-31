@@ -1,5 +1,6 @@
 let app = require('../server.js')
 let admin = require('../firebase-service');
+let path = require('path');
 
 // Getting userId ie., Store owner's user id
 const getStoreOwnerUserId = (accessToken) => {
@@ -82,31 +83,35 @@ const validateSSOAuthToken = (token) => {
 }
 
 const getPictureUploadPath = () => {
-    console.log('1.NODE_ENV', process.env.NODE_ENV, process.cwd(), __dirname )
-    if(process.env.NODE_ENV == 'offlineprod') {
-        return process.cwd() + '/client/uploads/'
-    } else {
-        return __dirname + app.get('clientUploadsPath')
-    }
+    let path;
+    if(process.env.NODE_ENV == 'offlineprod')
+        path = process.cwd() + app.get('clientUploadsPath')
+    else
+        path = __dirname + app.get('clientUploadsPath')
+    console.log(`**** getPictureUploadPath -  process.env.NODE_ENV: ${process.env.NODE_ENV}, process.cwd(): ${process.cwd()}, __dirname: ${__dirname}, path: ${path}`);
+    return path;
 }
 
 const getCsvStorePath = () => {
-    console.log('2.NODE_ENV', process.env.NODE_ENV, process.cwd(), __dirname )
-    if(process.env.NODE_ENV == 'offlineprod') {
-        return path.join(process.cwd(), 'client/csvfiles/file.csv'); // ../../
-    } else {
-        return path.join(__dirname, '../../client/csvfiles/file.csv');
-    }
+    let csvPath;
+    if(process.env.NODE_ENV == 'offlineprod')
+        csvPath = path.join(process.cwd(), app.get('clientCsvFolderPath'));
+    else
+        csvPath = path.join(__dirname, app.get('clientCsvFolderPath'));
+    console.log(`getCsvStorePath -  process.env.NODE_ENV: ${process.env.NODE_ENV}, process.cwd(): ${process.cwd()}, __dirname: ${__dirname}, path: ${csvPath}`);
+    return csvPath;
 }
 
 const constructImageUrl = (path) => {
     if(path) {
         let url = `${app.get('externalProtocol')}://${app.get('externalDomain')}`;
-        if(process.env.NODE_ENV == 'development' || process.env.NODE_ENV == 'offlineprod')
+        if(process.env.NODE_ENV == 'development')
+            url += `:${app.get('externalPort')}${path.substring(path.indexOf('/uploads'), path.length)}`;
+        else if(process.env.NODE_ENV == 'offlineprod')
             url += `:${app.get('externalPort')}${path.substring(path.indexOf('/uploads'), path.length)}`;
         else
             url += path.substring(path.indexOf('/client'), path.length);
-        // console.log('ConstructUrl', app.get('externalProtocol'), app.get('externalDomain'), url);
+        console.log(`---- constructImageUrl-ForUI-Response- process.env.NODE_ENV: ${process.env.NODE_ENV}, externalProtocol: ${app.get('externalProtocol')}, externalDomain: ${app.get('externalDomain')}, pathDB: ${path}, url: ${url} `);
         return url;
     } else {
         return null;

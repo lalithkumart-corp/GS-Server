@@ -11,7 +11,8 @@ let logger = app.get('logger');
 let SocketClass = require('./socket');
 const cors = require('cors');
 let AwsManager = require('./helpers/cdnuploader');
-const getmac = require('getmac')
+const getmac = require('getmac');
+let path = require('path');
 
 const getUniqId = () =>{
     return getmac.default();
@@ -63,6 +64,12 @@ boot(app, __dirname, function(err) {
 });
 
 app.use(cors());
+
+if(process.env.NODE_ENV == 'offlineprod') {
+    let path1 = path.resolve(process.cwd(), 'client');
+    console.log(`CURR CWD: ${process.cwd()}, static Folder: ${path1}`);
+    app.use(loopback.static(path1));
+}
 
 
 // const testUpload = async () => {

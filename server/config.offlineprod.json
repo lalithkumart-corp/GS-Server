@@ -1,12 +1,12 @@
 {
     "restApiRoot": "/api",
     "domain": "localhost",
-    "externalDomain": "trsoftware.in",
+    "externalDomain": "localhost",
     "host": "0.0.0.0",
     "protocol": "http",
     "externalProtocol": "http",
     "port": 3003,
-    "externalPort": 443,
+    "externalPort": 3003,
     "remoting": {
       "context": false,
       "rest": {
@@ -26,7 +26,7 @@
     },
     "pledgebookTableName": "pledgebook",
     "pledgebookClosedBillListTableName": "pledgebook_closed_bills",
-    "clientUploadsPath": "/../../client/uploads/",
-    "clientCsvFolderPath": "../../client/csvfiles/file.csv"
+    "clientUploadsPath": "/client/uploads/",
+    "clientCsvFolderPath": "client/csvfiles/file.csv"
   }
   

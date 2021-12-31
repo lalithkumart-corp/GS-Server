@@ -26,5 +26,6 @@
   },
   "pledgebookTableName": "pledgebook",
   "pledgebookClosedBillListTableName": "pledgebook_closed_bills",
-  "clientUploadsPath": "/../../client/uploads/"
+  "clientUploadsPath": "/../../client/uploads/",
+  "clientCsvFolderPath": "../../client/csvfiles/file.csv"
 }

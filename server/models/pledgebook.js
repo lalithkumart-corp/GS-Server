@@ -1329,8 +1329,8 @@ module.exports = function(Pledgebook) {
             //         cb(null, stream, 'application/octet-stream');
             //     }
             // });
-           
-            //return true;
+            res.send({STATUS: 'Downloading file'});
+            // return true;
         } catch(e) {
             res.send({STATUS: 'error', ERROR: e});
         }
