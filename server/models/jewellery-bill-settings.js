@@ -193,6 +193,9 @@ module.exports = function(JewelleryBillSettings) {
                 if(err) {
                     return reject(err);
                 } else {
+                    _.each(res, (aRow, index) => {
+                        aRow.screenshot_url = utils.constructImageUrl(aRow.screenshot_url);
+                    });
                     return resolve(res);
                 }
             });

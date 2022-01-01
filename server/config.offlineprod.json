@@ -27,6 +27,7 @@
     "pledgebookTableName": "pledgebook",
     "pledgebookClosedBillListTableName": "pledgebook_closed_bills",
     "clientUploadsPath": "/client/uploads/",
-    "clientCsvFolderPath": "client/csvfiles/file.csv"
+    "clientCsvFolderPath": "client/csvfiles/file.csv",
+    "csProductUUID": "4C4C4544-0038-3710-8053-B6C04F444332"
   }
   

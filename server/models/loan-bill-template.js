@@ -1,5 +1,6 @@
 'use strict';
 let utils = require('../utils/commonUtils');
+let _ = require('lodash');
 
 module.exports = function(LoanBillTemplate) {
     LoanBillTemplate.remoteMethod('getSettingsApi', {
@@ -139,6 +140,9 @@ module.exports = function(LoanBillTemplate) {
                 if(err) {
                     return reject(err);
                 } else {
+                    _.each(res, (aRow, index) => {
+                        aRow.screenshot_url = utils.constructImageUrl(aRow.screenshot_url);
+                    });
                     return resolve(res);
                 }
             });
