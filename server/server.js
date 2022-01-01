@@ -60,8 +60,8 @@ app.start = function() {
                 const response = execSync('wmic csproduct get UUID'); // wmic bios get serialnumber
                 let csProductUUID = String(response).split('\n')[1];
                 csProductUUID = csProductUUID.replace(/\r/g, '').trim();
-                console.log(csProductUUID);
-                console.log( app.get('csProductUUID'));
+                // console.log(csProductUUID);
+                // console.log( app.get('csProductUUID'));
                 if(csProductUUID !== app.get('csProductUUID')) {
                     console.log('App Feeling Unsafe. Please contact Admin');
                     setTimeout(
