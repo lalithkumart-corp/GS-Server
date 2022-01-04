@@ -82,6 +82,11 @@ if(process.env.NODE_ENV == 'offlineprod') {
     app.use(loopback.static(path1));
 }
 
+process.on('uncaughtException', (err) => {
+    console.log('Uncaught Exception occured');
+    console.log(err);
+});
+
 // const testUpload = async () => {
 //     try {
 //         let inst = new AwsManager();
