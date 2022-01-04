@@ -58,6 +58,7 @@ app.start = function() {
         
     });
     appValidator.validator();
+    consoleLogHandler.consoleLogHandler();
     // testUpload();
     new SocketClass(server);
     return server;

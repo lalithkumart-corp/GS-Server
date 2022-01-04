@@ -118,6 +118,17 @@ const constructImageUrl = (path) => {
     }
 }
 
+const constructConsoleLogFolder = () => {
+    let consoleLogFolder;
+    console.log(app.get('consoleLogFolder'), app.get('clientCsvFolderPath'));
+    if(process.env.NODE_ENV == 'offlineprod')
+        consoleLogFolder = process.cwd() + app.get('consoleLogFolder')
+    else
+        consoleLogFolder = __dirname + app.get('consoleLogFolder')
+    console.log(`constructConsoleLogFolder -  process.env.NODE_ENV: ${process.env.NODE_ENV}, process.cwd(): ${process.cwd()}, __dirname: ${__dirname}, path: ${consoleLogFolder}`);
+    return consoleLogFolder;
+} 
+
 module.exports = {
     getStoreOwnerUserId,
     executeSqlQuery,
@@ -125,5 +136,6 @@ module.exports = {
     validateSSOAuthToken,
     constructImageUrl,
     getPictureUploadPath,
-    getCsvStorePath
+    getCsvStorePath,
+    constructConsoleLogFolder
 }

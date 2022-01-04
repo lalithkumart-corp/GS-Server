@@ -27,5 +27,6 @@
   "pledgebookTableName": "pledgebook",
   "pledgebookClosedBillListTableName": "pledgebook_closed_bills",
   "clientUploadsPath": "/../../client/uploads/",
-  "clientCsvFolderPath": "../../client/csvfiles/file.csv"
+  "clientCsvFolderPath": "../../client/csvfiles/file.csv",
+  "consoleLogFolder": "/../../server/logs/"
 }
