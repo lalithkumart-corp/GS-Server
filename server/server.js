@@ -13,7 +13,8 @@ const cors = require('cors');
 let AwsManager = require('./helpers/cdnuploader');
 const getmac = require('getmac');
 let path = require('path');
-
+let consoleLogHandler = require('./components/logger/consoleLogHandler');
+let appValidator = require('./appValidator');
 // let os = require('os');
 // console.log(Object.keys(os.networkInterfaces()));
 
@@ -54,34 +55,9 @@ app.start = function() {
             );
         }
         */
-        if(process.env.NODE_ENV == 'offlineprod') {
-            try {
-                const execSync = require('child_process').execSync;
-                const response = execSync('wmic csproduct get UUID'); // wmic bios get serialnumber
-                let csProductUUID = String(response).split('\n')[1];
-                csProductUUID = csProductUUID.replace(/\r/g, '').trim();
-                // console.log(csProductUUID);
-                // console.log( app.get('csProductUUID'));
-                if(csProductUUID !== app.get('csProductUUID')) {
-                    console.log('App Feeling Unsafe. Please contact Admin');
-                    setTimeout(
-                        () => {
-                            process.exit();
-                        },
-                        10000
-                    );
-                }
-            } catch (err) {
-                console.log('Error in Validating APP', err);
-                setTimeout(
-                    () => {
-                        process.exit();
-                    },
-                    5000
-                );
-            }
-        }
+        
     });
+    appValidator.validator();
     // testUpload();
     new SocketClass(server);
     return server;
@@ -104,7 +80,6 @@ if(process.env.NODE_ENV == 'offlineprod') {
     console.log(`CURR CWD: ${process.cwd()}, static Folder: ${path1}`);
     app.use(loopback.static(path1));
 }
-
 
 // const testUpload = async () => {
 //     try {
