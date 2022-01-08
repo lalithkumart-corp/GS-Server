@@ -15,9 +15,16 @@ module.exports = function(Gsuser) {
     });
 
     Gsuser.loginUser = (custom, cb) => {
-        Gsuser._loginUser(custom).then((resp) => {
-            return cb(null, {STATUS: 'SUCCESS', RESP: resp});
-        }).catch((err) => {
+        Gsuser._loginUser(custom).then(
+            (resp) => {
+                return cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            },
+            (error) => {
+                console.log(error);
+                return cb(err, null);
+            }
+        ).catch((err) => {
+            console.log(err);
             return cb(err);
         });
     }
@@ -54,6 +61,7 @@ module.exports = function(Gsuser) {
         return new Promise((resolve, reject) => {
             Gsuser.login(apiParams, (err, res) => {
                 if(err) {
+                    console.log(err);
                     return reject(err);
                 } else {
                     return resolve(res);
@@ -89,9 +97,15 @@ module.exports = function(Gsuser) {
     );
 
     Gsuser.ssoLogin = (apiParams, cb) => {
-        Gsuser._ssoLogin(apiParams).then((resp) => {
-            return cb(null, {STATUS: 'SUCCESS', RESP: resp});
-        }).catch((err) => {
+        Gsuser._ssoLogin(apiParams).then(
+            (resp) => {
+                return cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            },
+            (error) => {
+                console.log(error);
+                return cb(error, null);
+            }
+        ).catch((err) => {
             return cb(err);
         });
     }
@@ -130,9 +144,15 @@ module.exports = function(Gsuser) {
     }
 
     Gsuser.logoutApi = (apiParams, cb) => {
-        Gsuser._logoutUser(apiParams.accessToken).then((resp) => {
-            return cb(null, {STATUS: 'SUCCESS', RESP: resp});
-        }).catch((err) => {
+        Gsuser._logoutUser(apiParams.accessToken).then(
+            (resp) => {
+                return cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            },
+            (error) => {
+                console.log(error);
+                return cb(error, null);
+            }
+        ).catch((err) => {
             console.log(err);
             return cb(null);
         });
@@ -276,6 +296,7 @@ module.exports = function(Gsuser) {
 
             // return {STATUS: 'SUCCESS', MSG: 'New User Created Successfully!'};
         } catch(e) {
+            console.log(e);
             return {STATUS: 'ERROR', ERROR: e};
         }
 
@@ -383,6 +404,7 @@ module.exports = function(Gsuser) {
                 MSG: "Successfully added the user"
             } 
         } catch(e) {
+            console.log(e);
             if(typeof e == 'string')
                 errors.push(e);
             else
@@ -429,6 +451,7 @@ module.exports = function(Gsuser) {
                 USER_LIST: usersList
             }
         } catch(e) {
+            console.log(e);
             return {
                 STATUS: 'ERROR',
                 ERROR: e,
@@ -555,6 +578,7 @@ module.exports = function(Gsuser) {
             await Gsuser.app.models.Store._insertNewStore({storeName: apiParams.storeName, email: apiParams.email, phone: apiParams.phone, userId: user.id});
             return true;
         } catch(e) {
+            console.log(e);
             return false;
         }
     }
@@ -566,6 +590,7 @@ module.exports = function(Gsuser) {
                 where = {where: {ownerId: ownerUserId}};
             Gsuser.find(where, (err, res) => {
                 if(err) {
+                    console.log(err);
                     reject(err);
                 } else {
                     resolve(res);
@@ -613,11 +638,13 @@ module.exports = function(Gsuser) {
                     resolve(obj);
                 },
                 (error) => {
+                    console.log(error);
                     reject(error);
                 }
             )
             .catch(
                 (exception) => {
+                    console.log(exception);
                     reject(exception);
                 }
             );
@@ -639,6 +666,10 @@ module.exports = function(Gsuser) {
         Gsuser._passwordReset(apiParams).then(
             (resp) => {
                 cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            },
+            (error) => {
+                console.log(error);
+                return cb(error, null);
             }
         ).catch(
             (e)=> {

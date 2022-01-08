@@ -55,8 +55,11 @@ app.start = function() {
             );
         }
         */
-        
     });
+    
+    bindUncaughtException();
+    bindUnhandledRejection();
+
     appValidator.validator();
     consoleLogHandler.consoleLogHandler();
     // testUpload();
@@ -82,10 +85,26 @@ if(process.env.NODE_ENV == 'offlineprod') {
     app.use(loopback.static(path1));
 }
 
-process.on('uncaughtException', (err) => {
-    console.log('Uncaught Exception occured');
-    console.log(err);
-});
+// process.on('uncaughtException', (err) => {
+//     console.log('Uncaught Exception occured');
+//     console.log(err);
+// });
+
+const bindUncaughtException = () => {
+    process.on('uncaughtException', (err) => {
+        console.error('GS noticed UnCaughtException ', err);
+    });
+}
+
+const bindUnhandledRejection = () => {
+    process.on('unhandledRejection', (err) => {
+        if(err && err.message && err.message.indexOf('Callback was already called') < 0) { // Loopback older version has this issue. Have to upgrade Loopback version
+            console.error('GS noticed UnhandledRejection ', err);
+        } else {
+            // console.imp('FLCL Caught Known Issue with Loopback older version ... Unhandled_rejection_caught');
+        }
+    });
+}
 
 // const testUpload = async () => {
 //     try {

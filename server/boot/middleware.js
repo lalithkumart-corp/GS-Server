@@ -43,33 +43,41 @@ const flclMiddleware = function(req, res, next) {
 };
 
 const updateContext = (ctx, req) => {
-    let id = uuidv1();
-    ctx.set('requestId', id);
-    ctx.set('inTime', +new Date());
+    try {
+        let id = uuidv1();
+        ctx.set('requestId', id);
+        ctx.set('inTime', +new Date());
 
-    let rootRequestId = null;
-    let forwardedRequestId = null;
-    if(req.method == 'POST' && req.body) {
-        if(req.body.rootRequestId)
-            rootRequestId = req.body.rootRequestId;
-        if(req.body.requestId)
-            forwardedRequestId = req.body.requestId;
-    } 
-    rootRequestId = rootRequestId || id;
-    ctx.set('rootRequestId', rootRequestId);
-    ctx.set('forwardedRequestId', forwardedRequestId);
+        let rootRequestId = null;
+        let forwardedRequestId = null;
+        if(req.method == 'POST' && req.body) {
+            if(req.body.rootRequestId)
+                rootRequestId = req.body.rootRequestId;
+            if(req.body.requestId)
+                forwardedRequestId = req.body.requestId;
+        } 
+        rootRequestId = rootRequestId || id;
+        ctx.set('rootRequestId', rootRequestId);
+        ctx.set('forwardedRequestId', forwardedRequestId);
+    } catch(e) {
+        console.log(e);
+    }
 };
 
 
 const logBasicReqEntry = (req) => {
-    let logData = {};
-    let context = LoopBackContext.getCurrentContext();
-    logData.req = req;
-    logData.newRequestEntry = true;
-    logData.inTime = context.get('inTime');
-    if(logData.inTime)
-        logData.inTimeDate = moment(logData.inTime).format('MMM Do YYYY, hh:mm:ss.SSS');
-    logger.info(logData);
+    try {
+        let logData = {};
+        let context = LoopBackContext.getCurrentContext();
+        logData.req = req;
+        logData.newRequestEntry = true;
+        logData.inTime = context.get('inTime');
+        if(logData.inTime)
+            logData.inTimeDate = moment(logData.inTime).format('MMM Do YYYY, hh:mm:ss.SSS');
+        logger.info(logData);
+    } catch(e) {
+        console.log(e);
+    }
 }
 
 // const logRequest = (req) => {

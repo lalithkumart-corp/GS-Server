@@ -17,7 +17,7 @@ function consoleLogHandler() {
     let theStream = new RotatingFileStream({
                   path: path.resolve(consLogFolder + '/console_out.log'),
                   period: '1d',
-                  totalFiles: '5',
+                  totalFiles: '10',
                   rotateExisting: true,
                   threshold: '20m',
                   totalSize: '50m',
@@ -27,7 +27,7 @@ function consoleLogHandler() {
     let theErrStream = new RotatingFileStream({
               path: path.resolve(consLogFolder + '/console_error.log'),
               period: '1d',
-              totalFiles: '5',
+              totalFiles: '10',
               rotateExisting: true,
               threshold: '20m',
               totalSize: '50m',
