@@ -440,12 +440,17 @@ module.exports = function(Common) {
     }
 
     Common.fetchBankList = (cb) => {
-        Common._fetchBankList().then((resp) => {
-            if(resp)
-                cb(null, {STATUS: 'SUCCESS', RESP: resp});
-            else
-                cb(null, {STATUS: 'ERROR', RESP: resp});
-        }).catch((e)=>{
+        Common._fetchBankList().then(
+            (resp) => {
+                if(resp)
+                    cb(null, {STATUS: 'SUCCESS', RESP: resp});
+                else
+                    cb(null, {STATUS: 'ERROR', RESP: resp});
+            },
+            (errResp)=> {
+                cb({STATUS: 'ERROR', ERR: errResp}, null);
+            }
+        ).catch((e)=>{
             cb({STATUS: 'EXCEPTION', ERR: e}, null);
         });
     }
@@ -455,9 +460,9 @@ module.exports = function(Common) {
             let query = `SELECT * FROM banks_list`;
             app.models.GsUser.dataSource.connector.query(query, (err, res) => {
                 if(err){
-                    reject(err);
+                    return reject(err);
                 } else {
-                    resolve(res);
+                    return resolve(res);
                 }
             });
         });
@@ -467,6 +472,9 @@ module.exports = function(Common) {
         Common._addTagApi(apiParams).then(
             (resp) => {
                 cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            },
+            (errResp)=> {
+                cb({STATUS: 'ERROR', ERR: errResp}, null);
             }
         ).catch(
             (e)=> {
@@ -496,6 +504,9 @@ module.exports = function(Common) {
         Common._removeTagApi(apiParams).then(
             (resp) => {
                 cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            },
+            (errResp)=> {
+                cb({STATUS: 'ERROR', ERR: errResp}, null);
             }
         ).catch(
             (e)=> {
@@ -525,6 +536,9 @@ module.exports = function(Common) {
         Common._saveLocation(apiParams).then(
             (resp) => {
                 cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            },
+            (errResp)=> {
+                cb({STATUS: 'ERROR', ERR: errResp}, null);
             }
         ).catch(
             (e)=> {

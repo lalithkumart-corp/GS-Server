@@ -21,7 +21,7 @@ module.exports = function(Gsuser) {
             },
             (error) => {
                 console.log(error);
-                return cb(err, null);
+                return cb(error, null);
             }
         ).catch((err) => {
             console.log(err);

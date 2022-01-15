@@ -87,6 +87,10 @@ const logBasicReqEntry = (req) => {
 
 const logResponse = (req, res, ctx) => {
     //TODO: add more context in response log
-    let params = {className: 'middleware', methodName: 'logResponse', isEndOfResponse: true};
-    logger.info(params);
+    try {
+        let params = {className: 'middleware', methodName: 'logResponse', isEndOfResponse: true};
+        logger.info(params);
+    } catch(e) {
+        console.log(e);
+    }
 }

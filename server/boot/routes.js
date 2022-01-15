@@ -1,7 +1,15 @@
 let GsErrorCtrl = require('../components/logger/gsErrorCtrl');
 let utils = require('../utils/commonUtils');
+let DataServerRouting = require('../components/dbrouting/dbrouting');
+
 
 module.exports = (app) => {
+    const _bindDataServerRouterLogic = (req, res, next) => {
+        new DataServerRouting().bindLogic(app);
+        req._boundDSRouterLogic = true;
+        return next();
+    }
+    app.use(_bindDataServerRouterLogic);
     let logger = app.get('logger');
     app.post('/trigger-event', async (req, res) => {
         try {
@@ -25,5 +33,9 @@ module.exports = (app) => {
             res.status(500).json({status: "Error", MSG: e.message});
             res.end();
         }
+    });
+    app.get('/ping', (req, res) => {
+        res.status(200).json({STATUS: 'SUCCESS', MSG: 'Server ONLINE'});
+        res.end();
     });
 }
