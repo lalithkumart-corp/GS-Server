@@ -62,21 +62,30 @@ module.exports = function(Pledgebook) {
         Pledgebook.getPendingBills(accessToken, params)
             .then(
                 (success) => {
-                    _.each(success.results, (aRec, index) => {
-                        if(aRec && typeof aRec == 'object') {
-                            aRec.OrnImagePath = utils.constructImageUrl(aRec.OrnImagePath); // aRec.OrnImagePath = `http://${app.get('domain')}:${app.get('port')}${aRec.OrnImagePath.replace('client', '')}`; 
-                            aRec.UserImagePath = utils.constructImageUrl(aRec.UserImagePath); // aRec.UserImagePath = `http://${app.get('domain')}:${app.get('port')}${aRec.UserImagePath.replace('client', '')}`;
-                        }
-                    });
-                    cb(null, success);
+                    try {
+                        // console.log('***getPendingBills api 4');
+                        _.each(success.results, (aRec, index) => {
+                            if(aRec && typeof aRec == 'object') {
+                                aRec.OrnImagePath = utils.constructImageUrl(aRec.OrnImagePath); // aRec.OrnImagePath = `http://${app.get('domain')}:${app.get('port')}${aRec.OrnImagePath.replace('client', '')}`; 
+                                aRec.UserImagePath = utils.constructImageUrl(aRec.UserImagePath); // aRec.UserImagePath = `http://${app.get('domain')}:${app.get('port')}${aRec.UserImagePath.replace('client', '')}`;
+                            }
+                        });
+                        // console.log('***getPendingBills api 5');
+                        return cb(null, success);
+                    } catch(e) {
+                        console.error(e);
+                        return cb(null, success);
+                    }
                 },
                 (error) => {
-                    cb(error, null);
+                    console.error(error);
+                    return cb(error, null);
                 }
             )
             .catch(
                 (exception) => {
-                    cb(exception, null);
+                    console.error(error);
+                    return cb(exception, null);
                 }
             )        
     };    
@@ -499,6 +508,7 @@ module.exports = function(Pledgebook) {
     Pledgebook.getPendingBills = (accessToken, params) => {
         return new Promise( async (resolve, reject) => {
             try {
+                // console.log('***getPendingBills api 1');
                 let queryValues = [(params.offsetEnd - params.offsetStart), params.offsetStart];
                 let userId = await utils.getStoreOwnerUserId(accessToken);
                 
@@ -515,6 +525,7 @@ module.exports = function(Pledgebook) {
                 let promise1 = new Promise((resolve, reject) => {
                     Pledgebook.dataSource.connector.query(query, queryValues, (err, result) => {
                         if(err) {
+                            console.error(err);
                             reject(err);
                         } else {
                             if(params.totals_only) 
@@ -530,32 +541,42 @@ module.exports = function(Pledgebook) {
                 let promise2 = new Promise((resolve, reject) => {
                     Pledgebook.dataSource.connector.query(countQuery, queryValues, (err, result) => {
                         if(err) {
+                            console.error(err);
                             reject(err);
                         } else {
                             resolve(result);
                         }
                     });
                 });
-
+                // console.log('***getPendingBills api 2');
                 Promise.all([promise1, promise2])
                     .then(
                         (results) => {
-                            let obj = {
-                                results: results[0],
-                                totalCount: results[1][0]['count']
+                            // console.log('***getPendingBills api 3');
+                            try {
+                                let obj = {
+                                    results: results[0],
+                                    totalCount: results[1][0]['count']
+                                }
+                                resolve(obj);
+                            } catch(e) {
+                                console.out(e);
+                                return {};
                             }
-                            resolve(obj);
                         },
                         (error) => {
+                            console.error(error);
                             reject(error);
                         }
                     )
                     .catch(
                         (exception) => {
+                            console.error(exception);
                             reject(exception);
                         }
                     )
             } catch(e) {
+                console.error(e);
                 reject(e);
             }
         });
@@ -566,15 +587,19 @@ module.exports = function(Pledgebook) {
         let intVal= 0;
         let totalWeight = 0.00;
         let totalRecords = 0;
-        _.each(billsList, (aBill, index) => {
-            amount += aBill.Amount;
-            if(filters.include != 'closed')
-                intVal += aBill.IntVal;
-            else
-                intVal += (parseFloat(aBill.interest_amt) - parseFloat(aBill.discount_amt));
-            totalWeight += aBill.TotalWeight;
-            totalRecords++;
-        });
+        try {
+            _.each(billsList, (aBill, index) => {
+                amount += aBill.Amount;
+                if(filters.include != 'closed')
+                    intVal += aBill.IntVal;
+                else
+                    intVal += (parseFloat(aBill.interest_amt) - parseFloat(aBill.discount_amt));
+                totalWeight += aBill.TotalWeight;
+                totalRecords++;
+            });
+        } catch(e) {
+            console.error(e);
+        }
         return {amount, intVal, totalWeight, totalRecords};
     }
 

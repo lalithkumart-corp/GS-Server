@@ -6,7 +6,8 @@ var boot = require('loopback-boot');
 //let uploadOrnamentData = require('./dataMigration').uploadOrnamentData;
 var app = module.exports = loopback();
 let GsLogger = require('./components/logger/gsLogger');
-app.set('logger', new GsLogger());
+let loggerInstance = new GsLogger();
+app.set('logger', loggerInstance);
 let logger = app.get('logger');
 let SocketClass = require('./socket');
 const cors = require('cors');
@@ -61,7 +62,7 @@ app.start = function() {
     bindUnhandledRejection();
 
     appValidator.validator();
-    consoleLogHandler.consoleLogHandler();
+    consoleLogHandler.consoleLogHandler(loggerInstance);
     // testUpload();
     new SocketClass(server);
     return server;

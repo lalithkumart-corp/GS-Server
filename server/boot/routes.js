@@ -9,7 +9,7 @@ module.exports = (app) => {
         req._boundDSRouterLogic = true;
         return next();
     }
-    app.use(_bindDataServerRouterLogic);
+    // app.use(_bindDataServerRouterLogic);
     let logger = app.get('logger');
     app.post('/trigger-event', async (req, res) => {
         try {

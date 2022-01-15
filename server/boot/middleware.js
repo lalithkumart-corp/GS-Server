@@ -21,6 +21,7 @@ const monkeyPatch = function(req, res, next) {
 
 //A middleware to track every api entry into the system
 const flclMiddleware = function(req, res, next) {
+    console.log(`-----New Request: ${req.url.substring(0, 40)}`);
     let ctx = LoopBackContext.getCurrentContext();
 
     updateContext(ctx, req);
@@ -38,7 +39,7 @@ const flclMiddleware = function(req, res, next) {
     res.on('error', function() {
         logResponse(req, res, ctx);
     });
-    
+    // console.log('-----Moving next()');
     return next();
 };
 
@@ -60,7 +61,7 @@ const updateContext = (ctx, req) => {
         ctx.set('rootRequestId', rootRequestId);
         ctx.set('forwardedRequestId', forwardedRequestId);
     } catch(e) {
-        console.log(e);
+        console.error(e);
     }
 };
 
@@ -76,7 +77,7 @@ const logBasicReqEntry = (req) => {
             logData.inTimeDate = moment(logData.inTime).format('MMM Do YYYY, hh:mm:ss.SSS');
         logger.info(logData);
     } catch(e) {
-        console.log(e);
+        console.error(e);
     }
 }
 
@@ -87,10 +88,11 @@ const logBasicReqEntry = (req) => {
 
 const logResponse = (req, res, ctx) => {
     //TODO: add more context in response log
+    console.log(`-----Resp back: ${req.url.substring(0, 40)}`);
     try {
-        let params = {className: 'middleware', methodName: 'logResponse', isEndOfResponse: true};
+        let params = {className: 'middleware', methodName: 'logResponse', isEndOfResponse: true, url: req.url};
         logger.info(params);
     } catch(e) {
-        console.log(e);
+        console.error(e);
     }
 }

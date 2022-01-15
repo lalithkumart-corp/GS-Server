@@ -6,7 +6,7 @@ const RotatingFileStream = require('bunyan-rotating-file-stream');
 let appRoot = require('app-root-path');
 let defaultLogDir = appRoot + '/server/logs';
 
-function consoleLogHandler() {
+function consoleLogHandler(logger) {
     // var log_file = fs.createWriteStream(path.resolve(__dirname + '/../../logs/consoleOut.log'), {flags : 'a'});
     // var log_file_err = fs.createWriteStream(path.resolve(__dirname + '/../../logs/consoleErr.log'), {flags : 'a'});
     var log_stdout = process.stdout;
@@ -36,19 +36,43 @@ function consoleLogHandler() {
         });
 
     console.log = function() {
-      let dt = new Date().toString();
-      let ct = dt.substr(0, dt.indexOf(' GMT'));
-      // log_file.write(`${+Date.now()} ` + util.format(arguments) + '\n');
-      log_stdout.write(`${ct} ` + util.format(arguments) + '\n');
-      theStream.write(`${ct} ` + util.format(arguments) + '\n');
+      try {
+        let dt = new Date().toString();
+        let ct = dt.substr(0, dt.indexOf(' GMT'));
+        // log_file.write(`${+Date.now()} ` + util.format(arguments) + '\n');
+        try {
+          log_stdout.write(`${ct} ` + util.format(arguments) + '\n');
+        } catch(e) {
+          logger.debug('Error in piping console log to std out');
+        }
+        try {
+          theStream.write(`${ct} ` + util.format(arguments) + '\n');
+        } catch(e) {
+          logger.debug('Error in piping console log to out file');
+        }
+      } catch(e) {
+        logger.debug('Error in piping console log to file');
+      }
     };
 
     console.error = function() {
+      try {
         let dt = new Date().toString();
-        let ct = dt.substr(0, dt.indexOf(' GMT'))
+        let ct = dt.substr(0, dt.indexOf(' GMT'));
         // log_file_err.write(`${ct} ` + util.format(arguments) + '\n');
-        log_stdout.write(`${ct} ` + util.format(arguments) + '\n');
-        theErrStream.write(`${ct} ` + util.format(arguments) + '\n');
+        try {
+          log_stdout.write(`${ct} ` + util.format(arguments) + '\n');
+        } catch(e) {
+          logger.debug('Error in piping console error to std out');
+        }
+        try {
+          theErrStream.write(`${ct} ` + util.format(arguments) + '\n');
+        } catch(e) {
+          logger.debug('Error in piping console error to out file');
+        }
+      } catch(e) {
+        logger.debug('Error in piping console error to file');
+      }
     }
 }
 
