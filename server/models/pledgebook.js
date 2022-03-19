@@ -418,8 +418,8 @@ module.exports = function(Pledgebook) {
             let pledgebookTableName = await Pledgebook.getPledgebookTableName(parsedArg._userId);
             let validation = await Pledgebook.doValidation(parsedArg, pledgebookTableName);
             if(validation.status) {
-                parsedArg.userPicture.id = parsedArg.userPicture.imageId;
-                parsedArg.ornPicture.id = parsedArg.ornPicture.imageId;
+                parsedArg.userPicture.id = parsedArg.userPicture?parsedArg.userPicture.imageId:null;
+                parsedArg.ornPicture.id = parsedArg.ornPicture?parsedArg.ornPicture.imageId:null;
                 let customerObj = await Pledgebook.app.models.Customer.handleCustomerData(parsedArg); //Save customer information in Customer Table
                 parsedArg.customerId = customerObj.customerId;
 
@@ -1251,7 +1251,7 @@ module.exports = function(Pledgebook) {
             let parsedArg = Pledgebook.parseInputDataForUpdate(params);            
             parsedArg._userId = await utils.getStoreOwnerUserId(params.accessToken);
             let pledgebookTableName = await Pledgebook.getPledgebookTableName(parsedArg._userId);                        
-            parsedArg.ornPicture.id = parsedArg.ornPicture.imageId;
+            parsedArg.ornPicture.id = parsedArg.ornPicture?parsedArg.ornPicture.imageId:null;
             let customerObj = await Pledgebook.app.models.Customer.handleCustomerData(parsedArg); //Save customer information in Customer Table
             parsedArg.customerId = customerObj.customerId;
 

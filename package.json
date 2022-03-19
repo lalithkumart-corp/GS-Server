@@ -44,6 +44,7 @@
   "scripts": {
     "lint": "eslint .",
     "start": "NODE_ENV=development node .",
+    "start_win": "SET NODE_ENV=development&&node .",
     "start_debug": "SET DEBUG=loopback:datasource&&SET NODE_ENV=development&&node .",
     "start:offlineprod": "NODE_ENV=offlineprod node .",
     "start:staging_godaddy": "NODE_ENV=staging NODE_DEPLOY_PLATFORM=godaddy node .",
