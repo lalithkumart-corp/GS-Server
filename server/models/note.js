@@ -5,16 +5,16 @@ let utils = require('../utils/commonUtils');
 module.exports = function(Note) {
     Note.fetchByCustomerId = async (accessToken, customerId) => {
         try{
-            let bucket = await Note.prototype.fetchNotes(customerId);
+            let bucket = await Note.prototype.fetchNotes(accessToken, customerId);
             return {STATUS: 'SUCCESS', DATA: bucket};
         } catch(e) {
             return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
         }  
     }
 
-    Note.prototype.fetchNotes = (customerId) => {
-        return new Promise( (resolve, reject) => {
-            // Note.find({where: {customerId: customerId}}, (err, response) => {
+    Note.prototype.fetchNotes = (accessToken, customerId) => {
+        return new Promise( async (resolve, reject) => {
+            let userId = await utils.getStoreOwnerUserId(accessToken);
             let sql = SQL.FETCH;
             sql = sql.replace(/REPLACE_USERID/g, userId);
             Note.dataSource.connector.query(sql, [customerId], (err, response) => {
