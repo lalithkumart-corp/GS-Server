@@ -133,7 +133,9 @@ module.exports = function(app) {
             //     tokenVal = context.remotingContext.args.custom.auth_user_id;
 
             let method = context.remotingContext.req.method;
-            if(method == 'GET') {
+            if(context.remotingContext.req.headers && (context.remotingContext.req.headers.authorization || context.remotingContext.req.headers.Authorization))
+                tokenVal = context.remotingContext.req.headers.authorization || context.remotingContext.req.headers.Authorization;
+            else if(method == 'GET') {
                 if(context.remotingContext.req.query && context.remotingContext.req.query.access_token)
                     tokenVal = context.remotingContext.req.query.access_token;
             } else {
