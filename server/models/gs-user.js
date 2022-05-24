@@ -30,8 +30,9 @@ module.exports = function(Gsuser) {
     }
 
     Gsuser._loginUser = async (apiParams) => {
+        let session;
         try {
-            let session = await Gsuser._invokeBuiltInLogin({email: apiParams.email, password: apiParams.password||DUMMY_PWD});
+            session = await Gsuser._invokeBuiltInLogin({email: apiParams.email, password: apiParams.password||DUMMY_PWD});
             let userTblRow = await Gsuser._find(session.userId);
 
             session.ownerId = userTblRow.ownerId;
@@ -50,9 +51,11 @@ module.exports = function(Gsuser) {
                 loanBillTemplateSettings: otherStuffs.loanBillTemplateSettings,
                 jewelleryGstBillTemplateSettings: otherStuffs.jewelleryGstBillTemplateSettings
             }
+            Gsuser.storeLoginActionDB({email: apiParams.email, status: true, userId: session.userId});
             return response;
         } catch(e) {
             console.log(e);
+            Gsuser.storeLoginActionDB({email: apiParams.email, status: false, userId: session?session.userId:null});
             throw e;
         }
     }
@@ -183,9 +186,11 @@ module.exports = function(Gsuser) {
             Gsuser.logout(accessToken, (err, res) => {
                 if(err) {
                     console.log(err);
+                    Gsuser.storeLogoutActionDB({status: false, accessToken});
                     return resolve(null);
                 } else {
                     console.log(res);
+                    Gsuser.storeLogoutActionDB({status: true, accessToken});
                     return resolve(true);
                 }
             });
@@ -701,6 +706,32 @@ module.exports = function(Gsuser) {
             }
         });
     };
+
+    Gsuser.storeLoginActionDB = (params) => {
+        return new Promise((resolve, reject) => {
+            Gsuser.dataSource.connector.query(`INSERT INTO analytics_app_login (user_id, wmic, action, resp, other) VALUES (?,?,?,?,?)`, [params.userId, app.get('observedWmic'), 'login', params.status, params.email], (err, res)=> {
+                if(err) {
+                    console.log(err);
+                    return resolve(false);
+                } else {
+                    return resolve(true);
+                }
+            })
+        });
+    }
+
+    Gsuser.storeLogoutActionDB = (params) => {
+        return new Promise((resolve, reject) => {
+            Gsuser.dataSource.connector.query(`INSERT INTO analytics_app_login (wmic, action, resp, other) VALUES (?,?,?,?)`, [app.get('observedWmic'), 'logout', params.status, params.accessToken], (err, res)=> {
+                if(err) {
+                    console.log(err);
+                    return resolve(false);
+                } else {
+                    return resolve(true);
+                }
+            })
+        });
+    }
 
      /*FundTransaction.getUdhaarListApi = (params, cb) => {
         FundTransaction._getUdhaarListApi(params).then(

@@ -122,6 +122,50 @@ module.exports = function(Common) {
         description: 'Save user logged in Location',
     });
 
+    Common.remoteMethod('syncAnalyticsAppUsage', {
+        accepts: {
+            arg: 'apiParams',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/sync-app-usage', verb: 'post'},
+        description: 'sync analytics',
+    });
+
+    Common.remoteMethod('syncAnalyticsAppLogin', {
+        accepts: {
+            arg: 'apiParams',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/sync-app-login', verb: 'post'},
+        description: 'sync analytics',
+    });
+
     Common.createNewTablesIfNotExist = async (userId) => {
         try {
             await Common._createCustomerTable(userId);
@@ -135,6 +179,7 @@ module.exports = function(Common) {
             // await Common._createFundTrnsTempTable(userId);
             await Common._createFundTrnsProcedure(userId);
             await Common._createUdhaarTable(userId);
+            await Common._createNotesTable(userId);
             return true;
         } catch(e) {
             throw e;
@@ -439,6 +484,32 @@ module.exports = function(Common) {
         });
     }
 
+    Common._createNotesTable = (userId) => {
+        return new Promise((resolve, reject) => {
+            let simpleSql = `SELECT * FROM notes_${userId} LIMIT 1`;
+            app.models.GsUser.dataSource.connector.query(simpleSql, (error, result) => {
+                if(error && error.code == "ER_NO_SUCH_TABLE") {
+                    let sql = SQL.NOTES.replace(/REPLACE_USERID/g, userId);
+                    app.models.GsUser.dataSource.connector.query(sql, (err, resp) => {
+                        if(err) {
+                            console.log(err);
+                            console.log(`Error occured while creating a new "notes_<id>" table for the user: ${userId}`);
+                            return reject(err);
+                        } else {
+                            console.log(`New "notes_${userId}" table created!`);
+                            return resolve(true);
+                        }
+                    });
+                } else if(error) {
+                    return reject(error);
+                } else {
+                    console.log(`"notes_${userId}" table for this user:${userId} exists already, So new table not created.`);
+                    return resolve(false);
+                }
+            });
+        });
+    }
+
     Common.fetchBankList = (cb) => {
         Common._fetchBankList().then(
             (resp) => {
@@ -559,6 +630,85 @@ module.exports = function(Common) {
                         return resolve(res);
                     }
                 });
+                // return resolve(true);
+            } catch(e) {
+                console.log(e);
+                return reject(e);
+            }
+        });
+    }
+
+    Common.syncAnalyticsAppUsage = (apiParams, cb) => {
+        Common._syncAnalyticsAppUsage(apiParams).then(
+            (resp) => {
+                cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            },
+            (errResp)=> {
+                cb({STATUS: 'ERROR', ERR: errResp}, null);
+            }
+        ).catch(
+            (e)=> {
+                cb({STATUS: 'EXCEPTION', ERR: e}, null);
+            }
+        );
+    }
+
+    Common._syncAnalyticsAppUsage = (apiParams) => {
+        return new Promise(async (resolve, reject) => {
+            try {
+                for(let i=0; i<apiParams.unsyncedMsgs.length; i++) {
+                    let msgObj = apiParams.unsyncedMsgs[i];
+                    app.models.GsUser.dataSource.connector.query(SQL.SYNC_ANALYTICS_APP_USAGE, 
+                        [msgObj.id, msgObj.session_uid, msgObj.wmic, msgObj.is_safe, msgObj.server_action, msgObj.created_date, msgObj.modified_date], 
+                        (err, res) => {
+                        if(err){
+                            console.log(err);
+                            return resolve(false);
+                        } else {
+                            return resolve(true);
+                        }
+                    });
+                }
+                
+                // return resolve(true);
+            } catch(e) {
+                console.log(e);
+                return reject(e);
+            }
+        });
+    }
+    Common.syncAnalyticsAppLogin = (apiParams, cb) => {
+        Common._syncAnalyticsAppLogin(apiParams).then(
+            (resp) => {
+                cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            },
+            (errResp)=> {
+                cb({STATUS: 'ERROR', ERR: errResp}, null);
+            }
+        ).catch(
+            (e)=> {
+                cb({STATUS: 'EXCEPTION', ERR: e}, null);
+            }
+        );
+    }
+
+    Common._syncAnalyticsAppLogin = (apiParams) => {
+        return new Promise(async (resolve, reject) => {
+            try {
+                for(let i=0; i<apiParams.unsyncedMsgs.length; i++) {
+                    let msgObj = apiParams.unsyncedMsgs[i];
+                    app.models.GsUser.dataSource.connector.query(SQL.SYNC_ANALYTICS_APP_LOGIN, 
+                        [msgObj.id, msgObj.user_id, msgObj.wmic, msgObj.action, msgObj.resp, msgObj.other, msgObj.created_date, msgObj.modified_date], 
+                        (err, res) => {
+                        if(err){
+                            console.log(err);
+                            return resolve(false);
+                        } else {
+                            return resolve(true);
+                        }
+                    });
+                }
+                
                 // return resolve(true);
             } catch(e) {
                 console.log(e);
@@ -899,5 +1049,18 @@ let SQL = {
                 UNIQUE KEY unique_identifier_UNIQUE (unique_identifier),
                 UNIQUE KEY bill_no_UNIQUE (bill_no)
               )`,
-    STORE_LOCATION: `INSERT INTO analytics_locations (latitude, longitude, user_id) VALUES (?,?,?)`
+    NOTES: `CREATE TABLE notes_REPLACE_USERID (
+        Id int NOT NULL AUTO_INCREMENT,
+        CustomerId int NOT NULL,
+        CustomerHashKey varchar(45) DEFAULT NULL,
+        Notes text,
+        Archived tinyint DEFAULT '0',
+        CreatedDate datetime DEFAULT CURRENT_TIMESTAMP,
+        ModifiedDate datetime DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (Id)
+      )`,
+    STORE_LOCATION: `INSERT INTO analytics_locations (latitude, longitude, user_id) VALUES (?,?,?)`,
+    LOGIN_NOTIFIER: `INSERT INTO analytics_app_login (wmic, user_id, logged_in, logged_out)`,
+    SYNC_ANALYTICS_APP_USAGE: `INSERT INTO synced_analytics_app_usage (id, session_uid, wmic, is_safe, server_action, created_date, modified_date) VALUES (?,?,?,?,?,?,?)`,
+    SYNC_ANALYTICS_APP_LOGIN: `INSERT INTO synced_analytics_app_login (id, user_id, wmic, action, resp, other, created_date, modified_date) VALUES (?,?,?,?,?,?,?,?)`,
 }

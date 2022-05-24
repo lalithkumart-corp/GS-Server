@@ -22,6 +22,9 @@ let appValidator = require('./appValidator');
 const getUniqId = () =>{
     return getmac.default();
 }
+
+app.set('gs-session-uid', +new Date());
+
 app.start = function() {
     // start the web server
     let server = app.listen(function() {
@@ -117,3 +120,38 @@ const bindUnhandledRejection = () => {
 //     }
 // }
 
+process.once('SIGINT', async (code) => { // ctrl+C (or) when stopping the application (i tried by terminating the VisualCode debug mode)
+    console.log('----------SIGINT. CODE: 1572516475314');
+    console.log(code);
+    await storeInDB({action: 'stopped(sigint)'});
+    process.exit();
+});
+
+process.once('SIGTERM', async (code) => { //when killing the port via CMD
+    console.log('----------SIGTERM. CODE: 1572516477777');
+    console.log(code);
+    await storeInDB({action: 'stopped(sigterm)'});
+    process.exit();
+});
+
+process.once('SIGQUIT', async (code) => { //when killing the port via CMD
+    console.log('----------SIGQUIT. CODE: 15725164121312');
+    console.log(code);
+    await storeInDB({action: 'stopped(sigquit)'});
+    process.exit();
+});
+
+function storeInDB(obj) {
+    return new Promise((resolve, reject) => {
+        let gsSessionUid = app.get('gs-session-uid');
+        app.models.User.dataSource.connector.query(`INSERT INTO analytics_app_usage (session_uid, server_action) VALUES (?,?)`, [gsSessionUid, obj.action], (err, res) => {
+            if(err) {
+                console.log(err);
+                return resolve(false);
+            } else {
+                console.log('');
+                return resolve(true);
+            }
+        });
+    });
+}
