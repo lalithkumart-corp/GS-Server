@@ -37,9 +37,9 @@ module.exports = (app) => {
 
     triggerUsageSyncApi = async (unsyncedMsgs) => {
         try {
-            // let resp = await axios.post('http://trsoftware.in/api/Commons/sync-app-usage', {unsyncedMsgs});
+            let resp = await axios.post('http://trsoftware.in/api/Commons/sync-app-usage', {unsyncedMsgs});
 
-            let resp = await axios.post('http://localhost:3003/api/Commons/sync-app-usage', {unsyncedMsgs});
+            // let resp = await axios.post('http://localhost:3003/api/Commons/sync-app-usage', {unsyncedMsgs});
 
             if(resp.data && resp.data.STATUS == 'SUCCESS')
                 updateAppUsageTableDB(unsyncedMsgs);
@@ -50,9 +50,9 @@ module.exports = (app) => {
 
     triggerLoginEventsSyncApi = async (unsyncedMsgs) => {
         try {
-            // let resp = await axios.post('http://trsoftware.in/api/Commons/sync-app-login', {unsyncedMsgs});
+            let resp = await axios.post('http://trsoftware.in/api/Commons/sync-app-login', {unsyncedMsgs});
 
-            let resp = await axios.post('http://localhost:3003/api/Commons/sync-app-login', {unsyncedMsgs});
+            // let resp = await axios.post('http://localhost:3003/api/Commons/sync-app-login', {unsyncedMsgs});
             if(resp.data && resp.data.STATUS == 'SUCCESS')
                 updateAppLoginTableDB(unsyncedMsgs);
         } catch(e) {
