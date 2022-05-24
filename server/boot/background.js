@@ -37,9 +37,14 @@ module.exports = (app) => {
 
     triggerUsageSyncApi = async (unsyncedMsgs) => {
         try {
-            let resp = await axios.post('http://trsoftware.in/api/Commons/sync-app-usage', {unsyncedMsgs});
+            let ll = unsyncedMsgs.map((msgObj) => {
+                msgObj.created_date = new Date(unsyncedMsgs[0].created_date).toISOString().replace('T',' ').replace('Z', '');
+                msgObj.modified_date = new Date(unsyncedMsgs[0].modified_date).toISOString().replace('T',' ').replace('Z', '');
+                return msgObj;
+            });
+            let resp = await axios.post('http://trsoftware.in/api/Commons/sync-app-usage', {unsyncedMsgs: ll});
 
-            // let resp = await axios.post('http://localhost:3003/api/Commons/sync-app-usage', {unsyncedMsgs});
+            // let resp = await axios.post('http://localhost:3003/api/Commons/sync-app-usage', {unsyncedMsgs: ll});
 
             if(resp.data && resp.data.STATUS == 'SUCCESS')
                 updateAppUsageTableDB(unsyncedMsgs);
@@ -50,9 +55,14 @@ module.exports = (app) => {
 
     triggerLoginEventsSyncApi = async (unsyncedMsgs) => {
         try {
-            let resp = await axios.post('http://trsoftware.in/api/Commons/sync-app-login', {unsyncedMsgs});
+            let ll = unsyncedMsgs.map((msgObj) => {
+                msgObj.created_date = new Date(unsyncedMsgs[0].created_date).toISOString().replace('T',' ').replace('Z', '');
+                msgObj.modified_date = new Date(unsyncedMsgs[0].modified_date).toISOString().replace('T',' ').replace('Z', '');
+                return msgObj;
+            });
+            let resp = await axios.post('http://trsoftware.in/api/Commons/sync-app-login', {unsyncedMsgs: ll});
 
-            // let resp = await axios.post('http://localhost:3003/api/Commons/sync-app-login', {unsyncedMsgs});
+            // let resp = await axios.post('http://localhost:3003/api/Commons/sync-app-login', {unsyncedMsgs: ll});
             if(resp.data && resp.data.STATUS == 'SUCCESS')
                 updateAppLoginTableDB(unsyncedMsgs);
         } catch(e) {

@@ -709,7 +709,8 @@ module.exports = function(Gsuser) {
 
     Gsuser.storeLoginActionDB = (params) => {
         return new Promise((resolve, reject) => {
-            Gsuser.dataSource.connector.query(`INSERT INTO analytics_app_login (user_id, wmic, action, resp, other) VALUES (?,?,?,?,?)`, [params.userId, app.get('observedWmic'), 'login', params.status, params.email], (err, res)=> {
+            let dt = new Date().toISOString().replace('T',' ').replace('Z', '');
+            Gsuser.dataSource.connector.query(`INSERT INTO analytics_app_login (user_id, wmic, action, resp, other, created_date, modified_date) VALUES (?,?,?,?,?,?,?)`, [params.userId, app.get('observedWmic'), 'login', params.status, params.email, dt, dt], (err, res)=> {
                 if(err) {
                     console.log(err);
                     return resolve(false);
@@ -722,7 +723,8 @@ module.exports = function(Gsuser) {
 
     Gsuser.storeLogoutActionDB = (params) => {
         return new Promise((resolve, reject) => {
-            Gsuser.dataSource.connector.query(`INSERT INTO analytics_app_login (wmic, action, resp, other) VALUES (?,?,?,?)`, [app.get('observedWmic'), 'logout', params.status, params.accessToken], (err, res)=> {
+            let dt = new Date().toISOString().replace('T',' ').replace('Z', '');
+            Gsuser.dataSource.connector.query(`INSERT INTO analytics_app_login (wmic, action, resp, other, created_date, modified_date) VALUES (?,?,?,?,?,?)`, [app.get('observedWmic'), 'logout', params.status, params.accessToken, dt, dt], (err, res)=> {
                 if(err) {
                     console.log(err);
                     return resolve(false);
