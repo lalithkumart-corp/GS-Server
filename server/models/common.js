@@ -658,8 +658,9 @@ module.exports = function(Common) {
             try {
                 for(let i=0; i<apiParams.unsyncedMsgs.length; i++) {
                     let msgObj = apiParams.unsyncedMsgs[i];
+                    let dt = new Date().toISOString().replace('T',' ').replace('Z', '');
                     app.models.GsUser.dataSource.connector.query(SQL.SYNC_ANALYTICS_APP_USAGE, 
-                        [msgObj.id, msgObj.session_uid, msgObj.wmic, msgObj.is_safe, msgObj.server_action, msgObj.created_date, msgObj.modified_date], 
+                        [msgObj.id, msgObj.session_uid, msgObj.wmic, msgObj.is_safe, msgObj.server_action, msgObj.created_date, msgObj.modified_date, dt, dt], 
                         (err, res) => {
                         if(err){
                             console.log(err);
@@ -697,8 +698,9 @@ module.exports = function(Common) {
             try {
                 for(let i=0; i<apiParams.unsyncedMsgs.length; i++) {
                     let msgObj = apiParams.unsyncedMsgs[i];
+                    let dt = new Date().toISOString().replace('T',' ').replace('Z', '');
                     app.models.GsUser.dataSource.connector.query(SQL.SYNC_ANALYTICS_APP_LOGIN, 
-                        [msgObj.id, msgObj.user_id, msgObj.wmic, msgObj.action, msgObj.resp, msgObj.other, msgObj.created_date, msgObj.modified_date], 
+                        [msgObj.id, msgObj.user_id, msgObj.wmic, msgObj.action, msgObj.resp, msgObj.other, msgObj.created_date, msgObj.modified_date, dt, dt], 
                         (err, res) => {
                         if(err){
                             console.log(err);
@@ -1061,6 +1063,6 @@ let SQL = {
       )`,
     STORE_LOCATION: `INSERT INTO analytics_locations (latitude, longitude, user_id) VALUES (?,?,?)`,
     LOGIN_NOTIFIER: `INSERT INTO analytics_app_login (wmic, user_id, logged_in, logged_out)`,
-    SYNC_ANALYTICS_APP_USAGE: `INSERT INTO synced_analytics_app_usage (id, session_uid, wmic, is_safe, server_action, created_date, modified_date) VALUES (?,?,?,?,?,?,?)`,
-    SYNC_ANALYTICS_APP_LOGIN: `INSERT INTO synced_analytics_app_login (id, user_id, wmic, action, resp, other, created_date, modified_date) VALUES (?,?,?,?,?,?,?,?)`,
+    SYNC_ANALYTICS_APP_USAGE: `INSERT INTO synced_analytics_app_usage (id, session_uid, wmic, is_safe, server_action, created_date, modified_date, mycreated_date, mymodified_date) VALUES (?,?,?,?,?,?,?,?,?)`,
+    SYNC_ANALYTICS_APP_LOGIN: `INSERT INTO synced_analytics_app_login (id, user_id, wmic, action, resp, other, created_date, modified_date, mycreated_date, mymodified_date) VALUES (?,?,?,?,?,?,?,?,?,?)`,
 }
