@@ -166,6 +166,50 @@ module.exports = function(Common) {
         description: 'sync analytics',
     });
 
+    Common.remoteMethod('syncAnalyticsPledgebook', {
+        accepts: {
+            arg: 'apiParams',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/sy-analytics-pb', verb: 'post'},
+        description: 'sync analytics PB',
+    });
+
+    Common.remoteMethod('syncAnalyticsModulesUsed', {
+        accepts: {
+            arg: 'apiParams',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/sy-analytics-modules', verb: 'post'},
+        description: 'sync analytics modules',
+    });
+
     Common.createNewTablesIfNotExist = async (userId) => {
         try {
             await Common._createCustomerTable(userId);
@@ -718,6 +762,88 @@ module.exports = function(Common) {
             }
         });
     }
+
+    Common.syncAnalyticsPledgebook = (apiParams, cb) => {
+        Common._syncAnalyticsPledgebook(apiParams).then(
+            (resp) => {
+                cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            },
+            (errResp)=> {
+                cb({STATUS: 'ERROR', ERR: errResp}, null);
+            }
+        ).catch(
+            (e)=> {
+                cb({STATUS: 'EXCEPTION', ERR: e}, null);
+            }
+        );
+    }
+
+    Common._syncAnalyticsPledgebook = (apiParams) => {
+        return new Promise(async (resolve, reject) => {
+            try {
+                for(let i=0; i<apiParams.unsyncedMsgs.length; i++) {
+                    let msgObj = apiParams.unsyncedMsgs[i];
+                    let dt = new Date().toISOString().replace('T',' ').replace('Z', '');
+                    app.models.GsUser.dataSource.connector.query(SQL.SYNC_ANALYTICS_PLEDGEBOOK, 
+                        [msgObj.id, msgObj.user_id, msgObj.unique_identifier, msgObj.bill_no, msgObj.bill_date, msgObj.cust_id, msgObj.amount, msgObj.action, msgObj.created_date, msgObj.modified_date, dt], 
+                        (err, res) => {
+                        if(err){
+                            console.log(err);
+                            return resolve(false);
+                        } else {
+                            return resolve(true);
+                        }
+                    });
+                }
+                
+                // return resolve(true);
+            } catch(e) {
+                console.log(e);
+                return reject(e);
+            }
+        });
+    }
+
+    Common.syncAnalyticsModulesUsed = (apiParams, cb) => {
+        Common._syncAnalyticsModulesUsed(apiParams).then(
+            (resp) => {
+                cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            },
+            (errResp)=> {
+                cb({STATUS: 'ERROR', ERR: errResp}, null);
+            }
+        ).catch(
+            (e)=> {
+                cb({STATUS: 'EXCEPTION', ERR: e}, null);
+            }
+        );
+    }
+
+    Common._syncAnalyticsModulesUsed = (apiParams) => {
+        return new Promise(async (resolve, reject) => {
+            try {
+                for(let i=0; i<apiParams.unsyncedMsgs.length; i++) {
+                    let msgObj = apiParams.unsyncedMsgs[i];
+                    let dt = new Date().toISOString().replace('T',' ').replace('Z', '');
+                    app.models.GsUser.dataSource.connector.query(SQL.SYNC_ANALYTICS_MODULES_USAGE, 
+                        [msgObj.id, msgObj.user_id, msgObj.module, msgObj.ctx1, msgObj.ctx2, msgObj.ctx3, msgObj.created_date, msgObj.modified_date, dt], 
+                        (err, res) => {
+                        if(err){
+                            console.log(err);
+                            return resolve(false);
+                        } else {
+                            return resolve(true);
+                        }
+                    });
+                }
+                
+                // return resolve(true);
+            } catch(e) {
+                console.log(e);
+                return reject(e);
+            }
+        });
+    }
 };
 
 let SQL = {
@@ -1065,4 +1191,6 @@ let SQL = {
     LOGIN_NOTIFIER: `INSERT INTO analytics_app_login (wmic, user_id, logged_in, logged_out)`,
     SYNC_ANALYTICS_APP_USAGE: `INSERT INTO synced_analytics_app_usage (id, session_uid, wmic, is_safe, server_action, created_date, modified_date, mycreated_date, mymodified_date) VALUES (?,?,?,?,?,?,?,?,?)`,
     SYNC_ANALYTICS_APP_LOGIN: `INSERT INTO synced_analytics_app_login (id, user_id, wmic, action, resp, other, created_date, modified_date, mycreated_date, mymodified_date) VALUES (?,?,?,?,?,?,?,?,?,?)`,
+    SYNC_ANALYTICS_PLEDGEBOOK: `INSERT INTO synced_analytics_pledgebook (id, user_id, unique_identifier, bill_no, bill_date, cust_id, amount, action, created_date, modified_date, mycreated_date) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+    SYNC_ANALYTICS_MODULES_USAGE: `INSERT INTO synced_analytics_module_used (id, user_id, module, ctx1, ctx2, ctx3, created_date, modified_date, mycreated_date) VALUES (?,?,?,?,?,?,?,?,?)`,
 }
