@@ -46,7 +46,8 @@ function storeInAppObject(obj) {
 
 function storeInDB(obj) {
     let gsSessionUid = app.get('gs-session-uid');
-    app.models.User.dataSource.connector.query(`INSERT INTO analytics_app_usage (session_uid, wmic, is_safe, server_action) VALUES (?, ?,?,?)`, [gsSessionUid, obj.csProductUUID, obj.isSafe, obj.action], (err, res) => {
+    let dt = new Date().toISOString().replace('T',' ').replace('Z', '');
+    app.models.User.dataSource.connector.query(`INSERT INTO analytics_app_usage (session_uid, wmic, is_safe, server_action, created_date, modified_date) VALUES (?,?,?,?,?,?)`, [gsSessionUid, obj.csProductUUID, obj.isSafe, obj.action, dt, dt], (err, res) => {
         if(err) {
             console.log(err);
         } else {
