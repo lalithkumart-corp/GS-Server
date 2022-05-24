@@ -73,7 +73,8 @@ module.exports = (app) => {
     updateAppUsageTableDB = (unsyncedMsgs) => {
         try {
             let unsyncedMsgIds = unsyncedMsgs.map((aMsgObj) => aMsgObj.id);
-            app.models.User.dataSource.connector.query('UPDATE analytics_app_usage SET synced = 1 WHERE id IN (?)', [unsyncedMsgIds], (err, res) => {
+            let dt = new Date().toISOString().replace('T',' ').replace('Z', '');
+            app.models.User.dataSource.connector.query('UPDATE analytics_app_usage SET synced=1, modified_date=? WHERE id IN (?)', [dt, unsyncedMsgIds], (err, res) => {
                 if(err) console.log(err);
                 else console.log('Updated synced falg to true in DB');
             });
@@ -85,7 +86,8 @@ module.exports = (app) => {
     updateAppLoginTableDB = (unsyncedMsgs) => {
         try {
             let unsyncedMsgIds = unsyncedMsgs.map((aMsgObj) => aMsgObj.id);
-            app.models.User.dataSource.connector.query('UPDATE analytics_app_login SET synced = 1 WHERE id IN (?)', [unsyncedMsgIds], (err, res) => {
+            let dt = new Date().toISOString().replace('T',' ').replace('Z', '');
+            app.models.User.dataSource.connector.query('UPDATE analytics_app_login SET synced=1, modified_date=? WHERE id IN (?)', [dt, unsyncedMsgIds], (err, res) => {
                 if(err) console.log(err);
                 else console.log('Updated synced falg to true in DB');
             });
