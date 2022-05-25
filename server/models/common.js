@@ -224,6 +224,10 @@ module.exports = function(Common) {
             await Common._createFundTrnsProcedure(userId);
             await Common._createUdhaarTable(userId);
             await Common._createNotesTable(userId);
+            await Common._createTriggers(SQL.TRIGGER_1, userId);
+            await Common._createTriggers(SQL.TRIGGER_2, userId);
+            await Common._createTriggers(SQL.TRIGGER_3, userId);
+            await Common._createTriggers(SQL.TRIGGER_4, userId);
             return true;
         } catch(e) {
             throw e;
@@ -395,7 +399,7 @@ module.exports = function(Common) {
     }
     Common._createInvoiceDetailTable = (userId) => {
         return new Promise((resolve, reject) => {
-            let simpleSql = `SELECT * FROM invoice_details_${userId} LIMIT 1`;
+            let simpleSql = `SELECT * FROM jewellery_invoice_details_${userId} LIMIT 1`;
             app.models.GsUser.dataSource.connector.query(simpleSql, (error, result) => {
                 if(error && error.code == "ER_NO_SUCH_TABLE") {
                     let sql = SQL.INVOICE_DETAIL.replace(/REPLACE_USERID/g, userId);
@@ -476,9 +480,14 @@ module.exports = function(Common) {
             let sql = SQL.FUND_TRNS_PROCEDURE.replace(/REPLACE_USERID/g, userId);
             app.models.GsUser.dataSource.connector.query(sql, (err, resp) => {
                 if(err) {
-                    console.log(err);
-                    console.log(`Error occured while creating a new "fund_trns_procedure_<id>" table for the user: ${userId}`);
-                    return reject(err);
+                    if(err.code == 'ER_SP_ALREADY_EXISTS') {
+                        console.log(`Stored Procedure fund_trns_procedure_${userId} already exists`);
+                        return resolve(false);
+                    } else {
+                        console.log(err);
+                        console.log(`Error occured while creating a new "fund_trns_procedure_<id>" table for the user: ${userId}`);
+                        return reject(err);
+                    }
                 } else {
                     console.log(`New "fund_trns_procedure_${userId}" table created!`);
                     return resolve(true);
@@ -549,6 +558,23 @@ module.exports = function(Common) {
                 } else {
                     console.log(`"notes_${userId}" table for this user:${userId} exists already, So new table not created.`);
                     return resolve(false);
+                }
+            });
+        });
+    }
+
+    Common._createTriggers = (triggerSQL, userId) => {
+        return new Promise((resolve, reject) => {
+            let sql = triggerSQL.replace(/REPLACE_USERID/g, userId);
+            app.models.GsUser.dataSource.connector.query(sql, (err, resp) => {
+                if(err) {
+                    console.log(err);
+                    console.log(`Error occured while setting "triggers <id>"  for the user: ${userId}`);
+                    console.log(triggerSQL);
+                    return reject(err);
+                } else {
+                    console.log(`New "triggers ${userId}" been set!`);
+                    return resolve(true);
                 }
             });
         });
@@ -1187,6 +1213,51 @@ let SQL = {
         ModifiedDate datetime DEFAULT CURRENT_TIMESTAMP,
         PRIMARY KEY (Id)
       )`,
+    TRIGGER_1: `CREATE TRIGGER analytics_pledgebook_REPLACE_USERID
+                AFTER INSERT ON pledgebook_REPLACE_USERID
+                FOR EACH ROW
+                BEGIN
+                    INSERT INTO analytics_pledgebook
+                    SET unique_identifier = New.UniqueIdentifier,
+                        user_id=REPLACE_USERID,
+                        bill_no = New.BillNo,
+                        bill_date = New.CreatedDate,
+                        action = 'NEW_BILL',
+                        cust_id = New.CustomerId,
+                        amount = NEW.Amount;
+                    INSERT INTO analytics_module_used
+                    SET module = 'BILL_CREATION';
+                END;`,
+    TRIGGER_2: `CREATE TRIGGER analytics_pledgebook_closed_REPLACE_USERID
+                AFTER INSERT ON pledgebook_closed_bills_REPLACE_USERID
+                FOR EACH ROW
+                BEGIN
+                    INSERT INTO analytics_pledgebook
+                    SET unique_identifier = New.uid,
+                        user_id=REPLACE_USERID,
+                        bill_no = New.bill_no,
+                        bill_date = New.closed_date,
+                        action = 'REDEEM_BILL',
+                        amount = NEW.paid_amt;
+                    INSERT INTO analytics_module_used
+                    SET module = 'BILL_REDEEM';
+                END;`,
+    TRIGGER_3: `CREATE TRIGGER analytics_customer_insert_REPLACE_USERID
+                AFTER INSERT ON customer_REPLACE_USERID
+                FOR EACH ROW
+                BEGIN
+                    INSERT INTO analytics_module_used
+                    SET module = 'CUSTOMER_INSERT',
+                    user_id=REPLACE_USERID;
+                END;`,
+    TRIGGER_4: `CREATE TRIGGER analytics_customer_update_REPLACE_USERID
+                AFTER UPDATE ON customer_REPLACE_USERID
+                FOR EACH ROW
+                BEGIN
+                    INSERT INTO analytics_module_used
+                    SET module = 'CUSTOMER_UPDATE',
+                    user_id=REPLACE_USERID;
+                END;`,
     STORE_LOCATION: `INSERT INTO analytics_locations (latitude, longitude, user_id) VALUES (?,?,?)`,
     LOGIN_NOTIFIER: `INSERT INTO analytics_app_login (wmic, user_id, logged_in, logged_out)`,
     SYNC_ANALYTICS_APP_USAGE: `INSERT INTO synced_analytics_app_usage (id, session_uid, wmic, is_safe, server_action, created_date, modified_date, mycreated_date, mymodified_date) VALUES (?,?,?,?,?,?,?,?,?)`,

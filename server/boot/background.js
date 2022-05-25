@@ -3,6 +3,8 @@ let GsErrorCtrl = require('../components/logger/gsErrorCtrl');
 let logger = app.get('logger');
 let MG = require('../myGlobals');
 const { default: axios } = require('axios');
+let domain = 'http://trsoftware.in';
+// let domain = 'http://localhost:3003';
 
 module.exports = (app) => {
     checkForAppUsageEvents = () => {
@@ -43,7 +45,7 @@ module.exports = (app) => {
                 logger.error(GsErrorCtrl.create({className: 'Background', methodName: 'checkForAnalyticsPledgebook', cause: err, message: 'Exceptoin from query', appendChildMsg: true}));
             } else {
                 if(res && res.length > 0) {
-                    console.log('Received new app login events from DB: ', res.length);
+                    console.log('Received pledgebook events from DB: ', res.length);
                     triggerPledgebookAnalyticsSyncApi(res);
                 }
             }
@@ -58,7 +60,7 @@ module.exports = (app) => {
                 logger.error(GsErrorCtrl.create({className: 'Background', methodName: 'checkForAnalyticsModulesUsed', cause: err, message: 'Exceptoin from query', appendChildMsg: true}));
             } else {
                 if(res && res.length > 0) {
-                    console.log('Received new app login events from DB: ', res.length);
+                    console.log('Received modules events from DB: ', res.length);
                     triggerModulesAnalyticsApi(res);
                 }
             }
@@ -72,7 +74,7 @@ module.exports = (app) => {
                 msgObj.modified_date = new Date(unsyncedMsgs[0].modified_date).toISOString().replace('T',' ').replace('Z', '');
                 return msgObj;
             });
-            let resp = await axios.post('http://trsoftware.in/api/Commons/sync-app-usage', {unsyncedMsgs: ll});
+            let resp = await axios.post(`${domain}/api/Commons/sync-app-usage`, {unsyncedMsgs: ll});
 
             // let resp = await axios.post('http://localhost:3003/api/Commons/sync-app-usage', {unsyncedMsgs: ll});
 
@@ -90,7 +92,7 @@ module.exports = (app) => {
                 msgObj.modified_date = new Date(unsyncedMsgs[0].modified_date).toISOString().replace('T',' ').replace('Z', '');
                 return msgObj;
             });
-            let resp = await axios.post('http://trsoftware.in/api/Commons/sync-app-login', {unsyncedMsgs: ll});
+            let resp = await axios.post(`${domain}/api/Commons/sync-app-login`, {unsyncedMsgs: ll});
 
             // let resp = await axios.post('http://localhost:3003/api/Commons/sync-app-login', {unsyncedMsgs: ll});
             if(resp.data && resp.data.STATUS == 'SUCCESS')
@@ -107,7 +109,7 @@ module.exports = (app) => {
                 msgObj.modified_date = new Date(unsyncedMsgs[0].modified_date).toISOString().replace('T',' ').replace('Z', '');
                 return msgObj;
             });
-            let resp = await axios.post('http://trsoftware.in/api/Commons/sy-analytics-pb', {unsyncedMsgs: ll});
+            let resp = await axios.post(`${domain}/api/Commons/sy-analytics-pb`, {unsyncedMsgs: ll});
 
             // let resp = await axios.post('http://localhost:3003/api/Commons/sy-analytics-pb', {unsyncedMsgs: ll});
             if(resp.data && resp.data.STATUS == 'SUCCESS')
@@ -123,7 +125,7 @@ module.exports = (app) => {
                 msgObj.created_date = new Date(unsyncedMsgs[0].created_date).toISOString().replace('T',' ').replace('Z', '');
                 return msgObj;
             });
-            let resp = await axios.post('http://trsoftware.in/api/Commons/sy-analytics-modules', {unsyncedMsgs: ll});
+            let resp = await axios.post(`${domain}/api/Commons/sy-analytics-modules`, {unsyncedMsgs: ll});
 
             // let resp = await axios.post('http://localhost:3003/api/Commons/sy-analytics-modules', {unsyncedMsgs: ll});
             if(resp.data && resp.data.STATUS == 'SUCCESS')
