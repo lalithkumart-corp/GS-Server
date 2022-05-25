@@ -734,7 +734,7 @@ module.exports = function(Common) {
                         (err, res) => {
                         if(err){
                             console.log(err);
-                            return resolve(false);
+                            return reject(err);
                         } else {
                             return resolve(true);
                         }
@@ -774,7 +774,7 @@ module.exports = function(Common) {
                         (err, res) => {
                         if(err){
                             console.log(err);
-                            return resolve(false);
+                            return reject(err);
                         } else {
                             return resolve(true);
                         }
@@ -815,7 +815,7 @@ module.exports = function(Common) {
                         (err, res) => {
                         if(err){
                             console.log(err);
-                            return resolve(false);
+                            return reject(err);
                         } else {
                             return resolve(true);
                         }
@@ -856,7 +856,7 @@ module.exports = function(Common) {
                         (err, res) => {
                         if(err){
                             console.log(err);
-                            return resolve(false);
+                            return reject(err);
                         } else {
                             return resolve(true);
                         }
