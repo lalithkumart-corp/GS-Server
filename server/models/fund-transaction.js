@@ -186,6 +186,36 @@ module.exports = function(FundTransaction) {
         description: 'For fetching fund transactions overview.',
     });
 
+    FundTransaction.remoteMethod('fetchConsolTransactionsApi', {
+        accepts: [
+            {
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let accessToken = req && req.query.access_token;
+                    return accessToken;
+                },
+                description: 'Arguments goes here',
+            },
+            {
+                arg: 'params', type: 'object', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let params = req && req.query.params;
+                    params = params ? JSON.parse(params) : {};
+                    return params;
+                },
+                description: 'Arguments goes here',
+            }],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            },
+        },
+        http: {path: '/fetch-consol-transactions', verb: 'get'},
+        description: 'For fetching consolidated fund transactions.',
+    });
+
     FundTransaction.remoteMethod('fetchTransactionsByBillIdApi', {
         accepts: [
             {
@@ -435,6 +465,21 @@ module.exports = function(FundTransaction) {
 
     FundTransaction.fetchTransactionsOverviewApi = (accessToken, params, cb) => {
         FundTransaction._fetchTransactionsOverviewApi(accessToken, params).then(
+            (resp) => {
+                if(resp)
+                    cb(null, {STATUS: 'SUCCESS', RESP: resp});
+                else
+                    cb(null, {STATUS: 'ERROR', RESP: resp});
+            }
+        ).catch(
+            (e)=> {
+                cb({STATUS: 'EXCEPTION', ERR: e}, null);
+            }
+        );
+    }
+
+    FundTransaction.fetchConsolTransactionsApi = (accessToken, params, cb) => {
+        FundTransaction._fetchConsolTransactionsApi(accessToken, params).then(
             (resp) => {
                 if(resp)
                     cb(null, {STATUS: 'SUCCESS', RESP: resp});
@@ -736,6 +781,21 @@ module.exports = function(FundTransaction) {
                             arr.push(anObj.category);
                     });
                     return resolve(arr);
+                }
+            });
+        });
+    }
+
+    FundTransaction._fetchConsolTransactionsApi = (accessToken, params) => {
+        return new Promise(async (resolve, reject) => {
+            let userId = await utils.getStoreOwnerUserId(accessToken);
+            let sql = SQL.CONSOLIDATED_TRANSACTION_LIST;
+            sql = sql.replace(/REPLACE_USERID/g, userId);
+            FundTransaction.dataSource.connector.query(sql, [params.startDate, params.endDate], (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve({results: res});
                 }
             });
         });
@@ -1599,6 +1659,50 @@ let SQL = {
                                         LEFT JOIN
                                     customer_REPLACE_USERID ON customer_REPLACE_USERID.CustomerId = fund_trns_tmp_REPLACE_USERID.customer_id
                                 WHERE_CLAUSE`,
+    CONSOLIDATED_TRANSACTION_LIST: `SELECT
+                                        fund_house_name,
+                                        SUM(cash_in) AS cash_in,
+                                        SUM(cash_out) AS cash_out,
+                                        category,
+                                        GROUP_CONCAT(remarks) as remarks,
+                                        transaction_date
+                                    FROM (
+                                        SELECT
+                                            fund_accounts.name AS fund_house_name,
+                                            account_id,
+                                            cash_in,
+                                            cash_out,
+                                            category,
+                                            remarks,
+                                            CAST(transaction_date AS DATE) AS transaction_date
+                                        FROM
+                                            fund_transactions_REPLACE_USERID
+                                                LEFT JOIN
+                                            fund_accounts ON fund_transactions_REPLACE_USERID.account_id = fund_accounts.id
+                                        WHERE
+                                            deleted = 0
+                                            AND transaction_date BETWEEN ?
+                                            AND ?) t
+                                    GROUP BY
+                                        transaction_date,
+                                        category,
+                                        account_id`,
+    CONSOLIDATED_TRANSACTION_LIST_OLD: `SELECT
+                                        fund_accounts.name AS fund_house_name,
+                                        SUM(cash_in) as cash_in,
+                                        SUM(cash_out) as cash_out,
+                                        category,
+                                        GROUP_CONCAT(remarks) as remarks
+                                    FROM
+                                        fund_transactions_REPLACE_USERID
+                                            LEFT JOIN
+                                        fund_accounts ON fund_transactions_REPLACE_USERID.account_id = fund_accounts.id
+                                    WHERE
+                                        deleted = 0
+                                        AND transaction_date BETWEEN ? AND ?
+                                    GROUP BY
+                                        category,
+                                        account_id`,    
     ADD_TAG: `UPDATE fund_transactions_REPLACE_USERID 
                 SET 
                     tag_indicator = ?
