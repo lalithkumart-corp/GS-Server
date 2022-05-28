@@ -223,6 +223,7 @@ module.exports = function(Common) {
             // await Common._createFundTrnsTempTable(userId);
             await Common._createFundTrnsProcedure(userId);
             await Common._createUdhaarTable(userId);
+            await Common._insertUdhaarDefaults(userId);
             await Common._createNotesTable(userId);
             await Common._createTriggers(SQL.TRIGGER_1, userId);
             await Common._createTriggers(SQL.TRIGGER_2, userId);
@@ -532,6 +533,22 @@ module.exports = function(Common) {
                 } else {
                     console.log(`"udhaar_${userId}" table for this user:${userId} exists already, So new table not created.`);
                     return resolve(false);
+                }
+            });
+        });
+    }
+
+    Common._insertUdhaarDefaults = (userId) => {
+        return new Promise((resolve, reject) => {
+            let sql = `INSERT IGNORE INTO udhaar_settings (user_id, bill_series, next_bill_no) VALUES (?,U,1)`
+            app.models.GsUser.dataSource.connector.query(sql, [userId], (err, resp) => {
+                if(err) {
+                    console.log(err);
+                    console.log(`Error occured while creating Udhaar setting defaults for new user : ${userId}`);
+                    return reject(err);
+                } else {
+                    console.log(`Inserted udhaar settings for th enew user: ${userId}`);
+                    return resolve(true);
                 }
             });
         });
