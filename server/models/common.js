@@ -927,7 +927,7 @@ module.exports = function(Common) {
 
     Common._coreActionApi = (apiParams) => {
         return new Promise((resolve, reject) => {
-            app.models.GsUser.dataSource.connector.query('SELECT * FROM app WHERE key=?', [apiParams.appKey], (err, res) => {
+            app.models.GsUser.dataSource.connector.query('SELECT * FROM app WHERE `key`=?', [apiParams.appKey], (err, res) => {
                 if(err){
                     return reject(err);
                 } else if(res && res.length>0) {
