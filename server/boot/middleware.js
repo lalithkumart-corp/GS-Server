@@ -21,7 +21,7 @@ const monkeyPatch = function(req, res, next) {
 
 //A middleware to track every api entry into the system
 const flclMiddleware = function(req, res, next) {
-    console.log(`-----New Req: ${req.url.substring(0, 30)}`);
+    // console.log(`-----New Req: ${req.url.substring(0, 30)}`);
     let ctx = LoopBackContext.getCurrentContext();
 
     updateContext(ctx, req);
@@ -88,7 +88,7 @@ const logBasicReqEntry = (req) => {
 
 const logResponse = (req, res, ctx) => {
     //TODO: add more context in response log
-    console.log(`-----Resp: ${req.url.substring(0, 30)}`);
+    // console.log(`-----Resp: ${req.url.substring(0, 30)}`);
     try {
         let params = {className: 'middleware', methodName: 'logResponse', isEndOfResponse: true, url: req.url};
         logger.info(params);

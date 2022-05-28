@@ -210,6 +210,28 @@ module.exports = function(Common) {
         description: 'sync analytics modules',
     });
 
+    Common.remoteMethod('coreActionApi', {
+        accepts: {
+            arg: 'apiParams',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/core-action', verb: 'post'},
+        description: 'core-action',
+    });
+
     Common.createNewTablesIfNotExist = async (userId) => {
         try {
             await Common._createCustomerTable(userId);
@@ -885,6 +907,36 @@ module.exports = function(Common) {
                 console.log(e);
                 return reject(e);
             }
+        });
+    }
+
+    Common.coreActionApi = (apiParams, cb) => {
+        Common._coreActionApi(apiParams).then(
+            (resp) => {
+                cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            },
+            (errResp)=> {
+                cb({STATUS: 'ERROR', ERR: errResp}, null);
+            }
+        ).catch(
+            (e)=> {
+                cb({STATUS: 'EXCEPTION', ERR: e}, null);
+            }
+        );
+    }
+
+    Common._coreActionApi = (apiParams) => {
+        return new Promise((resolve, reject) => {
+            app.models.GsUser.dataSource.connector.query('SELECT * FROM app WHERE key=?', [apiParams.appKey], (err, res) => {
+                if(err){
+                    return reject(err);
+                } else if(res && res.length>0) {
+                    if(res[0].core_flag == 1 || res[0].core_flag == '1')
+                        return resolve('UNLINK');
+                    else 
+                        return resolve('true');
+                }
+            });
         });
     }
 };

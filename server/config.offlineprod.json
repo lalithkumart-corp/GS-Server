@@ -29,6 +29,7 @@
     "clientUploadsPath": "/client/uploads/",
     "clientCsvFolderPath": "client/csvfiles/file.csv",
     "csProductUUID": "4C4C4544-0038-3710-8053-B6C04F444332",
+    "appkey": "4e07408562bedb8b60ce05c1decfe3ad16b72230967de01f640b7e4729b49fce",
     "consoleLogFolder": "/server/logs/"
   }
   

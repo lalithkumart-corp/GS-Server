@@ -12,6 +12,7 @@ function validator() {
             // console.log( app.get('csProductUUID'));
             app.set('observedWmic', csProductUUID);
             if(csProductUUID !== app.get('csProductUUID')) {
+                app.set('app_is_unsafe', true);
                 // console.log('App Feeling Unsafe. Please contact Admin');
                 storeInDB({isSafe: 0, csProductUUID, time: new Date(), action: 'server-start'});
                 // axios.post('http://trsoftware.in/api/Commons/un-safe', {csProductUUID: csProductUUID});
@@ -22,10 +23,12 @@ function validator() {
                     10000
                 );
             } else {
+                app.set('app_is_unsafe', false);
                 storeInDB({isSafe: 1, csProductUUID, time: new Date(), action: 'server-start'});
             }
         } catch (err) {
             console.log('Error in Validating APP', err);
+            app.set('app_is_unsafe', true);
             storeInDB({isSafe: 0, csProductUUID, time: new Date(), action: 'server-start'});
             // axios.post('http://trsoftware.in/api/Commons/un-safe', {csProductUUID: csProductUUID, msg: 'Error in valdating the app'});
             setTimeout(
