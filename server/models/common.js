@@ -935,6 +935,8 @@ module.exports = function(Common) {
                         return resolve('UNLINK');
                     else 
                         return resolve('true');
+                } else {
+                    return resolve('app_key_not_found');
                 }
             });
         });
