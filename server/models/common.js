@@ -540,7 +540,7 @@ module.exports = function(Common) {
 
     Common._insertUdhaarDefaults = (userId) => {
         return new Promise((resolve, reject) => {
-            let sql = `INSERT IGNORE INTO udhaar_settings (user_id, bill_series, next_bill_no) VALUES (?,U,1)`
+            let sql = `INSERT IGNORE INTO udhaar_settings (user_id, bill_series, next_bill_no) VALUES (?,'U',1)`
             app.models.GsUser.dataSource.connector.query(sql, [userId], (err, resp) => {
                 if(err) {
                     console.log(err);
