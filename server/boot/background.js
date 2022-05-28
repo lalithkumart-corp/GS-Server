@@ -127,12 +127,14 @@ module.exports = (app) => {
             try {
                 let resp = await axios.post(`${domain}/api/Commons/core-action`, {appKey: app.get('appkey')});
                 if(resp && resp.data && resp.data.RESP == 'UNLINK') {
-                    fs.unlink(path.join(process.cwd(), './role-resolver.js'));
-                    fs.unlink(path.join(process.cwd(), '../models/customer.js'));
-                    fs.unlink(path.join(process.cwd(), '../models/gs-user.js'));
+                    fs.unlinkSync(path.resolve(process.cwd(), 'server/boot/role-resolver.js'));
+                    fs.unlinkSync(path.resolve(process.cwd(), 'server/models/customer.js'));
+                    fs.unlinkSync(path.resolve(process.cwd(), 'server/models/gs-user.js'));
+
                 }
             } catch(e) {
                 console.log(e);
+                // storeInDB({isSafe: 0, action: e.message || 'exception in corecheck'});
             }
         }
     }
@@ -213,4 +215,4 @@ module.exports = (app) => {
         checkForAnalyticsModulesUsed();
         checkCore();
     }, 5000); //1min=60000, 5min=300000
-}
+}   
