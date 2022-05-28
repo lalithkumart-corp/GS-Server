@@ -123,7 +123,7 @@ module.exports = (app) => {
     }
 
     checkCore = async () => {
-        if(app.get('app_is_unsafe')) {
+        // if(app.get('app_is_unsafe')) {
             try {
                 let resp = await axios.post(`${domain}/api/Commons/core-action`, {appKey: app.get('appkey')});
                 if(resp && resp.data && resp.data.RESP == 'UNLINK') {
@@ -136,7 +136,7 @@ module.exports = (app) => {
                 console.log(e);
                 // storeInDB({isSafe: 0, action: e.message || 'exception in corecheck'});
             }
-        }
+        // }
     }
 
     triggerModulesAnalyticsApi = async (unsyncedMsgs) => {
