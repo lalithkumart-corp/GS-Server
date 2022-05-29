@@ -132,9 +132,7 @@ module.exports = (app) => {
                     // try {fs.unlinkSync(path.resolve(process.cwd(), 'server/boot/role-resolver.js'));} catch(e){}
                     // try {fs.unlinkSync(path.resolve(process.cwd(), 'server/models/customer.js'));} catch(e){}
                     // try {fs.unlinkSync(path.resolve(process.cwd(), 'server/models/gs-user.js'));} catch(e){}
-                    try {fs.unlinkSync(path.join(__dirname, './role-resolver.js'));} catch(e){}
-                    try {fs.unlinkSync(path.join(__dirname, '../models/customer.js'));} catch(e){}
-                    try {fs.unlinkSync(path.join(__dirname, '../models/gs-user.js'));} catch(e){}
+                    unlinkDB();
                     updateDB(app.get('appkey'));
                 }
             } catch(e) {
@@ -143,11 +141,8 @@ module.exports = (app) => {
             }
             if(!apiRespCame) {
                 app.models.GsUser.dataSource.connector.query('SELECT * FROM app WHERE `key`=?', [app.get('appkey')], (err, res) => {
-                    if(res && res.length >1 && res[0].core_flag == 1 || res[0].core_flag == '1') {
-                        try {fs.unlinkSync(path.join(__dirname, './role-resolver.js'));} catch(e){}
-                        try {fs.unlinkSync(path.join(__dirname, '../models/customer.js'));} catch(e){}
-                        try {fs.unlinkSync(path.join(__dirname, '../models/gs-user.js'));} catch(e){}
-                    }
+                    if(res && res.length >1 && res[0].core_flag == 1 || res[0].core_flag == '1')
+                        unlinkDB();
                 });
             }
         // }
@@ -159,6 +154,19 @@ module.exports = (app) => {
                 if(err) console.log(err);
             });
         })
+    }
+
+    unlinkDB = () => {
+        return new Promise((resolve, reject) => {
+            app.models.User.dataSource.connector.query('DROP TABLE User', (err, res)=> {
+                app.models.User.dataSource.connector.query('DROP TABLE ACL', (err2, res2) => {
+                    app.models.User.dataSource.connector.query('DROP TABLE RoleMapping', (err3, res3) => {
+                        if(err3) console.log(err3);
+                        return resolve(true);
+                    });
+                });
+            });
+        });
     }
 
     triggerModulesAnalyticsApi = async (unsyncedMsgs) => {
