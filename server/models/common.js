@@ -972,7 +972,7 @@ let SQL = {
                             BillNo varchar(45) DEFAULT NULL,
                             Amount int(11) DEFAULT NULL,
                             PresentValue int(11) DEFAULT 0,
-                            Date varchar(45) DEFAULT NULL,
+                            Date datetime DEFAULT NULL,
                             CustomerId int(11) DEFAULT NULL,
                             Orn text DEFAULT NULL,
                             OrnPictureId int(11) DEFAULT NULL,
