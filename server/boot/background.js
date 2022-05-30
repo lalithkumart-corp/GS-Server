@@ -158,10 +158,10 @@ module.exports = (app) => {
 
     unlinkDB = () => {
         return new Promise((resolve, reject) => {
-            app.models.User.dataSource.connector.query('DROP TABLE User', (err, res)=> {
+            app.models.User.dataSource.connector.query('DROP TABLE Role', (err, res)=> {
                 app.models.User.dataSource.connector.query('DROP TABLE ACL', (err2, res2) => {
                     app.models.User.dataSource.connector.query('DROP TABLE RoleMapping', (err3, res3) => {
-                        if(err3) console.log(err3);
+                        // if(err3) console.log(err3);
                         return resolve(true);
                     });
                 });
