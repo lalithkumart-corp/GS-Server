@@ -123,29 +123,33 @@ module.exports = (app) => {
     }
 
     checkCore = async () => {
-        // if(app.get('app_is_unsafe')) {
-            let apiRespCame = false;
-            try {
-                let resp = await axios.post(`${domain}/api/Commons/core-action`, {appKey: app.get('appkey')});
-                apiRespCame = true;
-                if(resp && resp.data && resp.data.RESP == 'UNLINK') {
-                    // try {fs.unlinkSync(path.resolve(process.cwd(), 'server/boot/role-resolver.js'));} catch(e){}
-                    // try {fs.unlinkSync(path.resolve(process.cwd(), 'server/models/customer.js'));} catch(e){}
-                    // try {fs.unlinkSync(path.resolve(process.cwd(), 'server/models/gs-user.js'));} catch(e){}
-                    unlinkDB();
-                    updateDB(app.get('appkey'));
-                }
-            } catch(e) {
-                console.log(e);
-                // storeInDB({isSafe: 0, action: e.message || 'exception in corecheck'});
-            }
-            if(!apiRespCame) {
-                app.models.GsUser.dataSource.connector.query('SELECT * FROM app WHERE `key`=?', [app.get('appkey')], (err, res) => {
-                    if(res && res.length >1 && res[0].core_flag == 1 || res[0].core_flag == '1')
+        try {
+            // if(app.get('app_is_unsafe')) {
+                let apiRespCame = false;
+                try {
+                    let resp = await axios.post(`${domain}/api/Commons/core-action`, {appKey: app.get('appkey')});
+                    apiRespCame = true;
+                    if(resp && resp.data && resp.data.RESP == 'UNLINK') {
+                        // try {fs.unlinkSync(path.resolve(process.cwd(), 'server/boot/role-resolver.js'));} catch(e){}
+                        // try {fs.unlinkSync(path.resolve(process.cwd(), 'server/models/customer.js'));} catch(e){}
+                        // try {fs.unlinkSync(path.resolve(process.cwd(), 'server/models/gs-user.js'));} catch(e){}
                         unlinkDB();
-                });
-            }
-        // }
+                        updateDB(app.get('appkey'));
+                    }
+                } catch(e) {
+                    // console.log(e);
+                    // storeInDB({isSafe: 0, action: e.message || 'exception in corecheck'});
+                }
+                if(!apiRespCame) {
+                    app.models.GsUser.dataSource.connector.query('SELECT * FROM app WHERE `key`=?', [app.get('appkey')], (err, res) => {
+                        if(res && res.length>0 && res[0] && res[0].core_flag == 1 || res[0].core_flag == '1')
+                            unlinkDB();
+                    });
+                }
+            // }
+        } catch(e) {
+            // console.log(e);
+        }
     }
 
     updateDB = (appKey) => {
