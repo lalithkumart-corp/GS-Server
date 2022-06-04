@@ -485,6 +485,9 @@ module.exports = function(FundTransaction) {
                     cb(null, {STATUS: 'SUCCESS', RESP: resp});
                 else
                     cb(null, {STATUS: 'ERROR', RESP: resp});
+            },
+            (error) => {
+                cb(null, {STATUS: 'ERROR', ERR_RESP: error});
             }
         ).catch(
             (e)=> {
@@ -571,6 +574,42 @@ module.exports = function(FundTransaction) {
 
                     let limit = params.offsetEnd - params.offsetStart;
                     limitOffsetClause = ` LIMIT ${limit} OFFSET ${params.offsetStart}`;
+                }
+                break;
+            case 'FETCH_TRANSACTION_LIST_GROUPIFIED': 
+                filters.push('deleted = 0');
+                if(params._userId)
+                    filters.push(`fund_transactions_REPLACE_USERID.user_id=${params._userId}`);
+                if(params.accounts) {
+                    let accountVal = params.accounts.map((anAccount) => `'${anAccount}'`);
+                    let joinedAccounts = accountVal.join(', ');
+                    filters.push(`fund_accounts.id in (${joinedAccounts})`);
+                }
+                if(params.category && params.category.length > 0) {
+                    let categ = params.category.map((aCategory) => `'${aCategory}'`);
+                    let joinedCategories = categ.join(', ');
+                    filters.push(`category in (${joinedCategories})`);
+                }
+                if(params.startDate && params.endDate) {
+                    let sd = params.startDate.replace('T',' ').replace('Z', '');
+                    let ed = params.endDate.replace('T',' ').replace('Z', '');
+                    filters.push(`(transaction_date BETWEEN '${sd}' AND '${ed}')`);
+                }
+
+                if(params.customerVal)
+                    filters.push(`customer_REPLACE_USERID.Name like '${params.customerVal}%'`);
+
+                if(params.remarks)
+                    filters.push(`fund_transactions_REPLACE_USERID.remarks like '%${params.remarks}%'`);
+                if(params.orderCol && params.orderBy) {
+                    if(params.orderCol == 'TRN_DATE')
+                        orderClause = ` ORDER BY transaction_date ${params.orderBy}`;
+                    else if(params.orderCol == 'CREATED_DATE')
+                        orderClause = ` ORDER BY created_date ${params.orderBy}`;
+                    else if(params.orderCol == 'MODIFIED_DATE')
+                        orderClause = ` ORDER BY modified_date ${params.orderBy}`;
+                } else {
+                    orderClause = ` ORDER BY transaction_date DESC`;
                 }
                 break;
             case 'TRANSACTION_LIST_COLLECTIONS':
@@ -788,14 +827,86 @@ module.exports = function(FundTransaction) {
 
     FundTransaction._fetchConsolTransactionsApi = (accessToken, params) => {
         return new Promise(async (resolve, reject) => {
-            let userId = await utils.getStoreOwnerUserId(accessToken);
-            let sql = SQL.CONSOLIDATED_TRANSACTION_LIST;
+            try {
+                let userId = await utils.getStoreOwnerUserId(accessToken);
+                await FundTransaction.truncateTempTable(userId);
+                await FundTransaction.cloneToTempTable(params, userId);
+                await FundTransaction.addGroupIds(params, userId);
+                let res = await FundTransaction.getListByGroups(params, userId);
+                return resolve({results: res});
+            } catch(e) {
+                console.log(e);
+                return reject(e);
+            }
+            // let sql = SQL.CONSOLIDATED_TRANSACTION_LIST;
+            // sql = sql.replace(/REPLACE_USERID/g, userId);
+            // FundTransaction.dataSource.connector.query(sql, [params.startDate, params.endDate], (err, res) => {
+            //     if(err) {
+            //         return reject(err);
+            //     } else {
+            //         return resolve({results: res});
+            //     }
+            // });
+        });
+    }
+
+    FundTransaction.truncateTempTable = (userId) => {
+        return new Promise((resolve, reject) => {
+            let sql = SQL.TRUNCATE_TRNS_TEMP_TBL;
             sql = sql.replace(/REPLACE_USERID/g, userId);
-            FundTransaction.dataSource.connector.query(sql, [params.startDate, params.endDate], (err, res) => {
+            FundTransaction.dataSource.connector.query(sql, (err, res) => {
                 if(err) {
                     return reject(err);
                 } else {
-                    return resolve({results: res});
+                    return resolve(true);
+                }
+            });
+        });
+    }
+
+    FundTransaction.cloneToTempTable = (params, userId) => {
+        return new Promise((resolve, reject) => {
+            let sql = SQL.CLONE_FUND_TRNS_TO_TEMP_TBL;
+            sql = FundTransaction._appendFilters(sql, {...params, _userId: userId}, 'FETCH_TRANSACTION_LIST_GROUPIFIED');
+            FundTransaction.dataSource.connector.query(sql, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(true);
+                }
+            });
+        });
+    }
+
+    FundTransaction.addGroupIds = (params, userId) => {
+        return new Promise((resolve, reject) => {
+            let sql = SQL.ADD_GROUP_IDS;
+            sql = sql.replace(/REPLACE_USERID/g, userId);
+            FundTransaction.dataSource.connector.query(sql, [params.groupTerms], (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(true);
+                }
+            });
+        });
+    }
+
+    FundTransaction.getListByGroups = (params, userId) => {
+        return new Promise((resolve, reject) => {
+            let sql = SQL.TRANSACTION_LIST_WITH_GROUPIFIED;
+            sql = sql.replace(/REPLACE_USERID/g, userId);
+
+            let limit = params.offsetEnd - params.offsetStart;
+            let limitOffsetClause = ` LIMIT ${limit} OFFSET ${params.offsetStart}`;
+
+            sql = sql.replace('LIMIT_OFFSET_CLAUSE', limitOffsetClause);
+            
+            FundTransaction.dataSource.connector.query(sql, [params.groupTerms], (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(res);
                 }
             });
         });
@@ -1452,6 +1563,20 @@ module.exports = function(FundTransaction) {
         });
     };
 
+    // FundTransaction.addGroupIds = (params) => {
+    //     return new Promise((resolve, reject) => {
+    //         let sql = SQL.ADD_GROUP_IDS;
+    //         sql = sql.replace(/REPLACE_USERID/g, params._userId);
+    //         FundTransaction.dataSource.connector.query(sql, [params.groupTerms], (err, res) => {
+    //             if(err) {
+    //                 return reject(err);
+    //             } else {
+    //                 return resolve(true);
+    //             }
+    //         });
+    //     });
+    // }
+
     FundTransaction.fetchRecordsFromTempTable = (params) => {
         return new Promise((resolve, reject) => {
             let sql = SQL.TRANSACTION_LIST_V2;
@@ -1650,6 +1775,36 @@ let SQL = {
                         WHERE_CLAUSE
                         ORDER_CLAUSE
                         LIMIT_OFFSET_CLAUSE`,
+    TRANSACTION_LIST_WITH_GROUPIFIED: `SELECT
+                        fund_house_name,
+                        transaction_date,
+                        category,
+                        GROUP_CONCAT(remarks) AS remarks,
+                        SUM(cash_in) AS cash_in,
+                        SUM(cash_out) AS cash_out,
+                        grp_logic,
+                        GROUP_CONCAT(CustomerName)
+                    FROM (
+                        SELECT
+                            fund_accounts.name AS fund_house_name,
+                            CAST(fund_trns_tmp_REPLACE_USERID.transaction_date AS DATE) AS transaction_date,
+                            fund_trns_tmp_REPLACE_USERID.category,
+                            fund_trns_tmp_REPLACE_USERID.remarks,
+                            fund_trns_tmp_REPLACE_USERID.cash_in,
+                            fund_trns_tmp_REPLACE_USERID.cash_out,
+                            fund_trns_tmp_REPLACE_USERID.grp_logic,
+                            customer_3.Name AS CustomerName
+                        FROM
+                            fund_trns_tmp_REPLACE_USERID
+                        LEFT JOIN fund_accounts ON fund_trns_tmp_REPLACE_USERID.account_id = fund_accounts.id
+                        LEFT JOIN customer_3 ON customer_3.CustomerId = fund_trns_tmp_REPLACE_USERID.customer_id
+                        ) t
+                    GROUP BY
+                        transaction_date,
+                        category,
+                        grp_logic,
+                        fund_house_name
+                    LIMIT_OFFSET_CLAUSE`,
     TRANSACTION_LIST_TOT_COUNT: `SELECT 
                                     Count(*) AS count
                                 FROM
@@ -1659,7 +1814,41 @@ let SQL = {
                                         LEFT JOIN
                                     customer_REPLACE_USERID ON customer_REPLACE_USERID.CustomerId = fund_trns_tmp_REPLACE_USERID.customer_id
                                 WHERE_CLAUSE`,
-    CONSOLIDATED_TRANSACTION_LIST: `SELECT
+    TRUNCATE_TRNS_TEMP_TBL: `TRUNCATE TABLE fund_trns_tmp_REPLACE_USERID`,
+    CLONE_FUND_TRNS_TO_TEMP_TBL: `INSERT INTO fund_trns_tmp_REPLACE_USERID (id, transaction_date, user_id, account_id, customer_id, gs_uid, category, remarks, deleted, cash_in, cash_out, created_date, modified_date, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi, cash_in_mode, alert, is_internal, tag_indicator)
+                                    SELECT
+                                        id,
+                                        CAST(transaction_date AS DATETIME) AS transaction_date,
+                                        user_id,
+                                        account_id,
+                                        customer_id,
+                                        gs_uid,
+                                        category,
+                                        remarks,
+                                        deleted,
+                                        cash_in,
+                                        cash_out,
+                                        created_date,
+                                        modified_date,
+                                        cash_out_mode,
+                                        cash_out_to_bank_id,
+                                        cash_out_to_bank_acc_no,
+                                        cash_out_to_bank_ifsc,
+                                        cash_out_to_upi,
+                                        cash_in_mode,
+                                        alert,
+                                        is_internal,
+                                        tag_indicator
+                                    FROM
+                                        fund_transactions_REPLACE_USERID
+                                    WHERE_CLAUSE
+                                    ORDER_CLAUSE`,
+    ADD_GROUP_IDS: `UPDATE fund_trns_tmp_REPLACE_USERID
+                        SET
+                            grp_logic=id
+                        WHERE 
+                            category NOT IN (?);`,
+    CONSOLIDATED_TRANSACTION_LIST_DEPRECATED: `SELECT
                                         fund_house_name,
                                         SUM(cash_in) AS cash_in,
                                         SUM(cash_out) AS cash_out,
@@ -1688,7 +1877,7 @@ let SQL = {
                                         category,
                                         account_id`,
     CONSOLIDATED_TRANSACTION_LIST_OLD: `SELECT
-                                        fund_accounts.name AS fund_house_name,
+                                        fund_accounts.name AS fund_house_name,  
                                         SUM(cash_in) as cash_in,
                                         SUM(cash_out) as cash_out,
                                         category,

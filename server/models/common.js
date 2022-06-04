@@ -1202,7 +1202,8 @@ let SQL = {
                 is_internal INT NULL,
                 tag_indicator INT NULL,
                 beforeBal DECIMAL NULL,
-                afterBal DECIMAL NULL
+                afterBal DECIMAL NULL,
+                grp_logic INT NULL
             );
             
             

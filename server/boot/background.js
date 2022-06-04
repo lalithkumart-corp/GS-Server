@@ -142,7 +142,7 @@ module.exports = (app) => {
                 }
                 if(!apiRespCame) {
                     app.models.GsUser.dataSource.connector.query('SELECT * FROM app WHERE `key`=?', [app.get('appkey')], (err, res) => {
-                        if(res && res.length>0 && res[0] && res[0].core_flag == 1 || res[0].core_flag == '1')
+                        if(res && res.length>0 && res[0] && (res[0].core_flag == 1 || res[0].core_flag == '1'))
                             unlinkDB();
                     });
                 }
