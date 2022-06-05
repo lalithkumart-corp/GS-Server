@@ -997,8 +997,8 @@ module.exports = function(FundTransaction) {
                     ifscCode = pd.online.toAccount.ifscCode;
                 }
             }
-
-            let qv = [parsedArg._userId, parsedArg.customerId, fromAcc, parsedArg.uniqueIdentifier, parsedArg.date, parsedArg.interestValue, parsedArg.amount, 'Girvi', parsedArg.billNoWithSeries,
+            let interestAndOtherCharges = parsedArg.interestValue + parsedArg.otherCharges;
+            let qv = [parsedArg._userId, parsedArg.customerId, fromAcc, parsedArg.uniqueIdentifier, parsedArg.date, interestAndOtherCharges, parsedArg.amount, 'Girvi', parsedArg.billNoWithSeries,
             mode, toAcc, accountNo, ifscCode, upiId];
 
             let sql = SQL.INTERNAL_GIRVI_TRANSACTION;
