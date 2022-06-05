@@ -612,6 +612,16 @@ module.exports = function(FundTransaction) {
                     orderClause = ` ORDER BY transaction_date DESC`;
                 }
                 break;
+                
+            case 'FETCH_CONSOL_LIST_FOR_BAL_SHEET':
+                filters.push('deleted = 0');
+                if(params.startDate && params.endDate) {
+                    let sd = params.startDate.replace('T',' ').replace('Z', '');
+                    let ed = params.endDate.replace('T',' ').replace('Z', '');
+                    filters.push(`(transaction_date BETWEEN '${sd}' AND '${ed}')`);
+                }
+                break;
+
             case 'TRANSACTION_LIST_COLLECTIONS':
                 filters.push('deleted = 0');
                 if(params._userId)
@@ -829,16 +839,21 @@ module.exports = function(FundTransaction) {
         return new Promise(async (resolve, reject) => {
             try {
                 let userId = await utils.getStoreOwnerUserId(accessToken);
-                await FundTransaction.truncateTempTable(userId);
-                await FundTransaction.cloneToTempTable(params, userId);
-                await FundTransaction.addGroupIds(params, userId);
-                let res = await FundTransaction.getListByGroups(params, userId);
+                let res;
+                if(params.groupTerms && params.groupTerms.indexOf('COLSOLIDATE_ALL') != -1) {
+                    res = await FundTransaction.getListForBalanceSheet(params, userId);
+                } else {
+                    await FundTransaction.truncateTempTable(userId);
+                    await FundTransaction.cloneToTempTable(params, userId);
+                    await FundTransaction.addGroupIds(params, userId);
+                    res = await FundTransaction.getListByGroups(params, userId);
+                }
                 return resolve({results: res});
             } catch(e) {
                 console.log(e);
                 return reject(e);
             }
-            // let sql = SQL.CONSOLIDATED_TRANSACTION_LIST;
+            // let sql = SQL.CONSOLIDATED_TRANSACTION_LIST_DATE_WISE;
             // sql = sql.replace(/REPLACE_USERID/g, userId);
             // FundTransaction.dataSource.connector.query(sql, [params.startDate, params.endDate], (err, res) => {
             //     if(err) {
@@ -909,6 +924,24 @@ module.exports = function(FundTransaction) {
                     return resolve(res);
                 }
             });
+        });
+    }
+
+    FundTransaction.getListForBalanceSheet = (params, userId) => {
+        return new Promise((resolve, reject) => {
+            try {
+                let sql = SQL.CONSOLIDATED_LIST_FOR_BALANCE_SHEET;
+                sql = FundTransaction._appendFilters(sql, {...params, _userId: userId}, 'FETCH_CONSOL_LIST_FOR_BAL_SHEET');
+                FundTransaction.dataSource.connector.query(sql, (err, res) => {
+                    if(err) {
+                        return reject(err);
+                    } else {
+                        return resolve(res);
+                    }
+                });
+            } catch(e) {
+                console.log(e);
+            }
         });
     }
 
@@ -1848,7 +1881,7 @@ let SQL = {
                             grp_logic=id
                         WHERE 
                             category NOT IN (?);`,
-    CONSOLIDATED_TRANSACTION_LIST_DEPRECATED: `SELECT
+    CONSOLIDATED_TRANSACTION_LIST_DATE_WISE: `SELECT
                                         fund_house_name,
                                         SUM(cash_in) AS cash_in,
                                         SUM(cash_out) AS cash_out,
@@ -1876,22 +1909,14 @@ let SQL = {
                                         transaction_date,
                                         category,
                                         account_id`,
-    CONSOLIDATED_TRANSACTION_LIST_OLD: `SELECT
-                                        fund_accounts.name AS fund_house_name,  
-                                        SUM(cash_in) as cash_in,
-                                        SUM(cash_out) as cash_out,
-                                        category,
-                                        GROUP_CONCAT(remarks) as remarks
-                                    FROM
-                                        fund_transactions_REPLACE_USERID
-                                            LEFT JOIN
-                                        fund_accounts ON fund_transactions_REPLACE_USERID.account_id = fund_accounts.id
-                                    WHERE
-                                        deleted = 0
-                                        AND transaction_date BETWEEN ? AND ?
-                                    GROUP BY
-                                        category,
-                                        account_id`,    
+    CONSOLIDATED_LIST_FOR_BALANCE_SHEET: `SELECT
+                                            category,
+                                            SUM(cash_in) AS cash_in,
+                                            SUM(cash_out) AS cash_out
+                                        FROM
+                                            fund_transactions_REPLACE_USERID
+                                        GROUP BY
+                                            category;`,
     ADD_TAG: `UPDATE fund_transactions_REPLACE_USERID 
                 SET 
                     tag_indicator = ?
