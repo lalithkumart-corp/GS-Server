@@ -997,7 +997,7 @@ module.exports = function(FundTransaction) {
                     ifscCode = pd.online.toAccount.ifscCode;
                 }
             }
-            let interestAndOtherCharges = parsedArg.interestValue + parsedArg.otherCharges;
+            let interestAndOtherCharges = parseFloat(parsedArg.interestValue) + parseFloat(parsedArg.otherCharges);
             let qv = [parsedArg._userId, parsedArg.customerId, fromAcc, parsedArg.uniqueIdentifier, parsedArg.date, interestAndOtherCharges, parsedArg.amount, 'Girvi', parsedArg.billNoWithSeries,
             mode, toAcc, accountNo, ifscCode, upiId];
 
@@ -1118,7 +1118,8 @@ module.exports = function(FundTransaction) {
                 }
             };
 
-            let qv = [parsedArg.customerId, fromAcc, parsedArg.date, parsedArg.interestValue, parsedArg.amount, parsedArg.billNoWithSeries, mode, toAcc, accountNo, ifscCode, upiId, parsedArg.uniqueIdentifier, parsedArg._userId];
+            let interestAndOtherCharges = parseFloat(parsedArg.interestValue) + parseFloat(parsedArg.otherCharges);
+            let qv = [parsedArg.customerId, fromAcc, parsedArg.date, interestAndOtherCharges, parsedArg.amount, parsedArg.billNoWithSeries, mode, toAcc, accountNo, ifscCode, upiId, parsedArg.uniqueIdentifier, parsedArg._userId];
 
             let sql = SQL.INTERNAL_GIRVI_TRANSACTION_UPDATE;
             sql = sql.replace(/REPLACE_USERID/g, parsedArg._userId);
