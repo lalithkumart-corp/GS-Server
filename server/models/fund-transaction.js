@@ -1832,11 +1832,11 @@ let SQL = {
                             fund_trns_tmp_REPLACE_USERID.cash_in,
                             fund_trns_tmp_REPLACE_USERID.cash_out,
                             fund_trns_tmp_REPLACE_USERID.grp_logic,
-                            customer_3.Name AS CustomerName
+                            customer_REPLACE_USERID.Name AS CustomerName
                         FROM
                             fund_trns_tmp_REPLACE_USERID
                         LEFT JOIN fund_accounts ON fund_trns_tmp_REPLACE_USERID.account_id = fund_accounts.id
-                        LEFT JOIN customer_3 ON customer_3.CustomerId = fund_trns_tmp_REPLACE_USERID.customer_id
+                        LEFT JOIN customer_REPLACE_USERID ON customer_REPLACE_USERID.CustomerId = fund_trns_tmp_REPLACE_USERID.customer_id
                         ) t
                     GROUP BY
                         transaction_date,
