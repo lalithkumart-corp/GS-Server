@@ -612,7 +612,7 @@ module.exports = function(FundTransaction) {
                     orderClause = ` ORDER BY transaction_date DESC`;
                 }
                 break;
-                
+
             case 'FETCH_CONSOL_LIST_FOR_BAL_SHEET':
                 filters.push('deleted = 0');
                 if(params.startDate && params.endDate) {
@@ -814,11 +814,17 @@ module.exports = function(FundTransaction) {
     FundTransaction._fetchCategorySuggestionsApi = (accessToken, mode) => {
         return new Promise(async (resolve, reject) => {
             let userId = await utils.getStoreOwnerUserId(accessToken);
-            let amountCondition = 'cash_in > 0';
-            if(mode == 'cash-out')
-                amountCondition = 'cash_out > 0'
+            let amountCondition;
+            if(mode && mode.length > 0) {
+                amountCondition = 'cash_in > 0';
+                if(mode == 'cash-out')
+                    amountCondition = 'cash_out > 0';
+            }
             let sql = SQL.CATEGORY_LIST;
-            sql += ` WHERE user_id=${userId} AND ${amountCondition}`;
+            sql += ` WHERE user_id=${userId}`;
+            if(amountCondition)
+                sql += ` AND ${amountCondition}`;
+
             sql = sql.replace(/REPLACE_USERID/g, userId);
             FundTransaction.dataSource.connector.query(sql, (err, res) => {
                 if(err) {
@@ -1915,6 +1921,7 @@ let SQL = {
                                             SUM(cash_out) AS cash_out
                                         FROM
                                             fund_transactions_REPLACE_USERID
+                                        WHERE_CLAUSE
                                         GROUP BY
                                             category;`,
     ADD_TAG: `UPDATE fund_transactions_REPLACE_USERID 
