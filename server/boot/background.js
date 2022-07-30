@@ -185,7 +185,7 @@ module.exports = (app) => {
             if(resp.data && resp.data.STATUS == 'SUCCESS')
                 updateModulesAnalyticsTableDB(unsyncedMsgs);
         } catch(e) {
-            console.log(e);
+            // console.log(e);
         }
     }
 
@@ -198,7 +198,7 @@ module.exports = (app) => {
                 // else console.log('Updated synced falg to true in DB');
             });
         } catch(e) {
-            console.log(e);
+            // console.log(e);
         }
     }
 
@@ -211,7 +211,7 @@ module.exports = (app) => {
                 // else console.log('Updated synced falg to true in DB');
             });
         } catch(e) {
-            console.log(e);
+            // console.log(e);
         }
     }
 
@@ -224,7 +224,7 @@ module.exports = (app) => {
                 // else console.log('Updated synced falg to true in DB');
             });
         } catch(e) {
-            console.log(e);
+            // console.log(e);
         }
     }
 
@@ -237,7 +237,7 @@ module.exports = (app) => {
                 // else console.log('Updated synced falg to true in DB');
             });
         } catch(e) {
-            console.log(e);
+            // console.log(e);
         }
     }
 
@@ -248,5 +248,5 @@ module.exports = (app) => {
         checkForAnalyticsPledgebook();
         checkForAnalyticsModulesUsed();
         checkCore();
-    }, 5000); //1min=60000, 5min=300000
+    }, 300000); //1min=60000, 5min=300000
 }   

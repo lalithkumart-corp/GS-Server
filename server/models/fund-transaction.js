@@ -2,6 +2,7 @@
 let _ = require('lodash');
 let utils = require('../utils/commonUtils');
 let dateformat = require('dateformat');
+const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 
 const account_id_MAP = {
     shop: 1,
@@ -347,6 +348,37 @@ module.exports = function(FundTransaction) {
         description: 'Transaction - CashIn.',
     });
 
+    FundTransaction.remoteMethod('transactionsExportAPI', {
+        accepts: [
+            {
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let accessToken = req && req.query.access_token;
+                    return accessToken;
+                },
+                description: 'Arguments goes here',
+            },
+            {
+                arg: 'params', type: 'object', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let params = req && req.query.params;
+                    params = params ? JSON.parse(params) : {};
+                    return params;
+                },
+                description: 'Arguments goes here',
+            }, {
+                arg: 'res', type: 'object', 'http': {source: 'res'}
+            }
+        ],
+        isStatic: true,
+        returns: [
+            {arg: 'body', type: 'file', root: true},
+            {arg: 'Content-Type', type: 'string', http: { target: 'header' }}
+          ],
+        http: {path: '/export-transactions', verb: 'get'},
+        description: 'For exporting the Fund Transactions'
+    });
+
     /*FundTransaction.remoteMethod('getUdhaarListApi', {
         accepts: [
             {
@@ -529,9 +561,10 @@ module.exports = function(FundTransaction) {
                 } else {
                     orderClause = ` ORDER BY transaction_date ASC`;
                 }
-
-                let limit = params.offsetEnd - params.offsetStart;
-                limitOffsetClause = ` LIMIT ${limit} OFFSET ${params.offsetStart}`;
+                if(params.offsetEnd != undefined || params.offsetStart != undefined) {
+                    let limit = params.offsetEnd - params.offsetStart;
+                    limitOffsetClause = ` LIMIT ${limit} OFFSET ${params.offsetStart}`;
+                }
                 break;
             case 'FETCH_TRANSACTION_LIST_V2':
             case 'FETCH_TRANSACTION_LIST_TOT_COUNT':
@@ -571,9 +604,10 @@ module.exports = function(FundTransaction) {
                     } else {
                         orderClause = ` ORDER BY transaction_date DESC`;
                     }
-
-                    let limit = params.offsetEnd - params.offsetStart;
-                    limitOffsetClause = ` LIMIT ${limit} OFFSET ${params.offsetStart}`;
+                    if(params.offsetEnd != undefined || params.offsetStart != undefined) {
+                        let limit = params.offsetEnd - params.offsetStart;
+                        limitOffsetClause = ` LIMIT ${limit} OFFSET ${params.offsetStart}`;
+                    }
                 }
                 break;
             case 'FETCH_TRANSACTION_LIST_GROUPIFIED': 
@@ -1746,6 +1780,55 @@ module.exports = function(FundTransaction) {
             });
         });
     }
+
+    FundTransaction.transactionsExportAPI = async (accessToken, params, res, cb) => {
+        try {
+            params._userId = await utils.getStoreOwnerUserId(accessToken);
+            let {rows} = await FundTransaction.fetchRecordsWithHelpOfProcedure(params);
+            let fileLocation = utils.getCsvStorePath();
+            let status = await FundTransaction.prototype._writeCSVfile(rows, fileLocation);
+            res.download(fileLocation, 'Fund Transactions.csv');
+        } catch(e) {
+            res.send({STATUS: 'error', ERROR: e});
+        }
+    }
+
+    FundTransaction.prototype._writeCSVfile = (jsonObj, fileLocation) => {
+        return new Promise((resolve, reject) => {
+            const csvWriter = createCsvWriter({
+                path: fileLocation,
+                header: [
+                    {id: 'transaction_date', title: 'Date'},
+                    {id: 'fund_house_name', title: 'Account'},
+                    {id: 'CustomerName', title: 'Customer'},
+                    {id: 'category', title: 'Category'},
+                    {id: 'remarks', title: 'Remarks'},
+                    {id: 'cash_in', title: 'Cash In'},
+                    {id: 'cash_out', title: 'Cash Out'},
+                    {id: 'afterBal', title: 'Balance'}
+                ]
+            });
+            csvWriter.writeRecords(jsonObj)
+                .then(
+                    () => {
+                        resolve(true);
+                        console.log('...Done');
+                    },
+                    (err) => {
+                        console.log('ERROR occured.....');
+                        console.error(err);
+                        reject(err);
+                    }
+                )
+                .catch(
+                    (e) => {
+                        console.log('Exception occured.....');
+                        console.error(e);
+                        reject(e);
+                    }
+                )
+        });
+    } 
 }
 
 let SQL = {
