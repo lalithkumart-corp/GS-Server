@@ -56,7 +56,7 @@ class DbBackup {
                 let fileName = `${this.fileName}.${this.extension}`;
                 if(fileName)
                     fileName = `${+new Date()}.${this.extension}`;
-                let filePath = `${appRootPath}/bkps/ds/`;
+                let filePath = `${process.cwd()}/bkps/ds/`;
                 let fullFilePath = filePath+fileName;
                 var wstream = fs.createWriteStream(fullFilePath);
                 
