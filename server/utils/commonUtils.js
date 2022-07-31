@@ -156,6 +156,8 @@ const constructConsoleLogFolder = () => {
 const convertDatabaseDateTimetoDateStr = (dateObj) => {
     if(typeof dateObj !== 'object')
         return dateObj;
+    if(!dateObj)
+        return;
     const twoDigitFormat = (val) => {
         val = parseInt(val);
         if(val < 10)

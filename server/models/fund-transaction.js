@@ -1793,11 +1793,24 @@ module.exports = function(FundTransaction) {
         try {
             params._userId = await utils.getStoreOwnerUserId(accessToken);
             let {rows} = await FundTransaction.fetchRecordsWithHelpOfProcedure(params);
+            rows = FundTransaction.prototype.parseRecordsObtainedFromDB(rows);
             let fileLocation = utils.getCsvStorePath();
             let status = await FundTransaction.prototype._writeCSVfile(rows, fileLocation);
             res.download(fileLocation, 'Fund Transactions.csv');
         } catch(e) {
             res.send({STATUS: 'error', ERROR: e});
+        }
+    }
+
+    FundTransaction.prototype.parseRecordsObtainedFromDB = (rows) => {
+        try {
+            return rows.map(row => {
+                row.transaction_date = utils.convertDatabaseDateTimetoDateStr(row.transaction_date)
+                return row;
+            });
+        } catch(e) {
+            console.log(e);
+            return rows;
         }
     }
 

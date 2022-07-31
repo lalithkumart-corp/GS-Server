@@ -1421,7 +1421,7 @@ module.exports = function(Pledgebook) {
                 City: aRec.City,
                 Pincode: aRec.Pincode,
                 Mobile: aRec.Mobile,
-                ClosedDate: utils.convertDatabaseDateTimetoDateStr(new Date(aRec.closed_date + ' UTC'))
+                ClosedDate: aRec.closed_date?utils.convertDatabaseDateTimetoDateStr(new Date(aRec.closed_date + ' UTC')):''
             };
             if(aRec.Status) {
                 let temp = {
