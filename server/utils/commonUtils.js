@@ -150,6 +150,33 @@ const constructConsoleLogFolder = () => {
     return consoleLogFolder;
 } 
 
+// from DB, DATETIME col values will be as "Date Obj" in db response. So, lets make it as string
+// DateTime in DB might be saved in UTC, but while retriving it from DB will be in GMT. (Ex: Pledgebbok table "Date")
+// Ex: Input: DateOBJ(Sun Jul 31 2022 12:08:11 GMT+0530 (India Standard Time)),  Output: '31-07-2022 12:08:11'
+const convertDatabaseDateTimetoDateStr = (dateObj) => {
+    if(typeof dateObj !== 'object')
+        return dateObj;
+    const twoDigitFormat = (val) => {
+        val = parseInt(val);
+        if(val < 10)
+            val = '0'+val;
+        return val;
+    };
+    let dd = twoDigitFormat(dateObj.getDate());
+    let mm = twoDigitFormat(dateObj.getMonth() + 1);        
+    let yyyy = dateObj.getFullYear();
+    let hr = twoDigitFormat(dateObj.getHours());
+    let min = twoDigitFormat(dateObj.getMinutes());
+    let sec = twoDigitFormat(dateObj.getSeconds());
+    let localDate = `${dd}-${mm}-${yyyy} ${hr}:${min}:${sec}`;
+    return localDate;
+}
+
+// if current local time is Jul 31 2022 13:00:24, then output will be '2022-07-31 07:29:15'
+const getCurrentDateTimeInUTCForDB = () => {
+    return new Date().toISOString().replace('T', ' ').slice(0,19);
+}
+
 module.exports = {
     getStoreOwnerUserId,
     executeSqlQuery,
@@ -158,5 +185,7 @@ module.exports = {
     constructImageUrl,
     getPictureUploadPath,
     getCsvStorePath,
-    constructConsoleLogFolder
+    constructConsoleLogFolder,
+    convertDatabaseDateTimetoDateStr,
+    getCurrentDateTimeInUTCForDB
 }

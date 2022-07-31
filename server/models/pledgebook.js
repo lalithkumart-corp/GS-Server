@@ -1408,7 +1408,7 @@ module.exports = function(Pledgebook) {
         let closedBillsBucket = [];
         _.each(rawData, (aRec, index) => {
             let anObj = {
-                Date: aRec.Date,
+                Date: utils.convertDatabaseDateTimetoDateStr(aRec.Date),
                 BillNo: aRec.BillNo,
                 Amount: aRec.Amount,
                 Name: aRec.Name,
@@ -1421,7 +1421,7 @@ module.exports = function(Pledgebook) {
                 City: aRec.City,
                 Pincode: aRec.Pincode,
                 Mobile: aRec.Mobile,
-                ClosedDate: aRec.closed_date
+                ClosedDate: utils.convertDatabaseDateTimetoDateStr(new Date(aRec.closed_date + ' UTC'))
             };
             if(aRec.Status) {
                 let temp = {
