@@ -353,7 +353,6 @@ module.exports = function(Stock) {
         return new Promise((resolve, reject) => {
             params._tableName = Stock._getStockTableName();
             let query = Stock._constructQuery('insert', params);
-            console.log(query);
             Stock.dataSource.connector.query(query, (err, result) => {
                 if(err) {
                     return reject(err);
@@ -460,7 +459,7 @@ module.exports = function(Stock) {
                         (
                             uid,
                             date, user_id, ornament,
-                            pr_code, pr_number,
+                            pr_code, pr_number, huid,
                             prod_id,
                             touch_id, i_touch,
                             quantity, 
@@ -478,9 +477,9 @@ module.exports = function(Stock) {
                         ) VALUES (
                             "${params._uid}",
                             "${params.date}", ${params._userId}, ${params.ornamentId},
-                            "${params.productCodeSeries}", ${params.productCodeNumber},
+                            "${params.productCodeSeries}", ${params.productCodeNumber}, "${params.productHUID}",
                             "${params.productCodeSeries}${params.productCodeNumber}",
-                            ${params.touchId}, ${params.productITouch},
+                            ${params.touchId}, ${params.productITouch},         
                             ${params.productQty},
                             ${params.productGWt}, ${params.productNWt}, ${params.productPWt},
                             ${params.productLabourCharges}, "${params.productLabourCalcUnit}", ${params.productCalcLabourAmt},
@@ -503,6 +502,7 @@ module.exports = function(Stock) {
                             ornament=${params.ornamentId},
                             pr_code="${params.productCodeSeries}",
                             pr_number="${params.productCodeNumber}",
+                            huid="${params.productHUID}",
                             prod_id="${params.productCodeSeries}${params.productCodeNumber}",
                             touch_id=${params.touchId},
                             i_touch=${params.productITouch},
@@ -834,6 +834,7 @@ let SQL = {
                     orn_list_jewellery.dimension AS Dimension,
                     STOCK_TABLE.pr_code AS ItemCode,
                     STOCK_TABLE.pr_number AS ItemCodeNumber,
+                    STOCK_TABLE.huid AS ItemHUID,
                     suppliers.name AS Supplier,
                     STOCK_TABLE.personName AS SupplierPersonName,
                     touch.purity AS PTouchValue,
@@ -900,6 +901,7 @@ let SQL = {
                                 pr_code,
                                 pr_number,
                                 prod_id,
+                                huid,
                                 i_touch,
                                 touch.purity AS pure_touch,
                                 touch.name AS touch_name,

@@ -1023,6 +1023,7 @@ let SQL = {
                     ornament int DEFAULT NULL,
                     pr_code varchar(45) DEFAULT NULL,
                     pr_number varchar(45) DEFAULT NULL,
+                    huid varchar(200) DEFAULT NULL,
                     prod_id varchar(45) DEFAULT NULL,
                     touch_id int DEFAULT NULL,
                     i_touch varchar(45) DEFAULT NULL,
