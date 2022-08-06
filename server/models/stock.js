@@ -675,7 +675,7 @@ module.exports = function(Stock) {
             let bucket = [];
             _.each(payload.apiParams.newProds, (anItem, index) => {
                 let temp = [];
-                temp.push(`"${new Date().toISOString().replace('T', ' ').slice(0,23)}"`);
+                temp.push(`"${payload.apiParams.date}"`);
                 temp.push(`"${anItem.prodId}"`);
                 temp.push(payload.apiParams.metalRate);
                 temp.push(payload.apiParams.retailRate);
@@ -973,7 +973,8 @@ let SQL = {
                             INVOICE_DETAIL_TABLE.payment_mode AS PaymentMode,
                             INVOICE_DETAIL_TABLE.paid_amt AS PaidAmt,
                             INVOICE_DETAIL_TABLE.balance_amt AS BalAmt,
-                            INVOICE_DETAIL_TABLE.ukey AS InvoiceRef
+                            INVOICE_DETAIL_TABLE.ukey AS InvoiceRef,
+                            INVOICE_DETAIL_TABLE.invoice_no AS InvoiceNo
                         FROM
                             STOCK_SOLD_TABLE
                             LEFT JOIN INVOICE_DETAIL_TABLE ON STOCK_SOLD_TABLE.invoice_ref = INVOICE_DETAIL_TABLE.ukey
