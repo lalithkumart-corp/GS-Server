@@ -17,10 +17,12 @@ module.exports = function(JwlInvoice) {
                 description: 'Arguments goes here',
             },
             {
-                arg: 'invoiceKey', type: 'string', http: (ctx) => {
+                arg: 'invoiceKeys', type: 'array', http: (ctx) => {
                     let req = ctx && ctx.req;
-                    let invoiceKey = req && req.query.invoice_key;
-                    return invoiceKey;
+                    let invoiceKeysArrStr = req && req.query.invoice_keys;
+                    let invoiceKeyArr = [];
+                    if(invoiceKeysArrStr) invoiceKeyArr = JSON.parse(invoiceKeysArrStr);
+                    return invoiceKeyArr;
                 },
                 description: 'Arguments goes here',
             }],
@@ -62,8 +64,8 @@ module.exports = function(JwlInvoice) {
             throw e;
         }
     }
-    JwlInvoice.getInvoiceDataByKey = (accessToken, invoiceKey, cb) => {
-        JwlInvoice._getInvoiceDataByKey(accessToken, invoiceKey).then(
+    JwlInvoice.getInvoiceDataByKey = (accessToken, invoiceKeys, cb) => {
+        JwlInvoice._getInvoiceDataByKey(accessToken, invoiceKeys).then(
             (resp) => {
                 if(resp)
                     cb(null, {STATUS: 'SUCCESS', RESP: resp});
@@ -77,13 +79,15 @@ module.exports = function(JwlInvoice) {
         );
     }
 
-    JwlInvoice._getInvoiceDataByKey = async (accessToken, invoiceKey) => {
+    JwlInvoice._getInvoiceDataByKey = async (accessToken, invoiceKeys) => {
         try {
             let _userId = await utils.getStoreOwnerUserId(accessToken);
             let sql = SQL.INVOICE_DATA.replace(/INVOICE_TABLE/g, `jewellery_invoice_details_${_userId}`);
-            let result = await utils.executeSqlQuery(JwlInvoice.dataSource, sql, [invoiceKey]);
-            if(result && result.length > 0)
-                return result[0].invoice_data;
+            let result = await utils.executeSqlQuery(JwlInvoice.dataSource, sql, [invoiceKeys]);
+            if(result && result.length > 0) {
+                return result.map((aDbRow) => JSON.parse(aDbRow.invoice_data));
+                // return result[0].invoice_data;
+            }
             else
                 return null;
         } catch(e) {
@@ -95,5 +99,5 @@ module.exports = function(JwlInvoice) {
 
 let SQL = {
     INSERT_INVOICE_DETAIL: `INSERT INTO INVOICE_TABLE (ukey, invoice_no, cust_id, action, paid_amt, balance_amt, raw_data, invoice_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    INVOICE_DATA: `SELECT invoice_data FROM INVOICE_TABLE WHERE ukey=?`
+    INVOICE_DATA: `SELECT invoice_data FROM INVOICE_TABLE WHERE ukey IN (?)`
 }
