@@ -206,7 +206,7 @@ module.exports = function(Stock) {
         description: 'For fetching productIds.',
     });
 
-    Stock.remoteMethod('fetchItemByProdId', {
+    Stock.remoteMethod('fetchItemsByProdIds', {
         accepts: [
             {
                 arg: 'accessToken', type: 'string', http: (ctx) => {
@@ -216,12 +216,12 @@ module.exports = function(Stock) {
                 },
                 description: 'Arguments goes here',
             }, {
-                arg: 'prodId', type: 'string', http: (ctx) => {
+                arg: 'prodIds', type: 'array', http: (ctx) => {
                     let req = ctx && ctx.req;
-                    let prodId = req && req.query.prod_id;
-                    return prodId;
+                    let prodIds = req && req.query.prod_ids;
+                    return JSON.parse(prodIds);
                 },
-                description: 'prodId Arguments goes here',
+                description: 'prodIds Arguments goes here',
         }],
         returns: {
             type: 'object',
@@ -230,7 +230,7 @@ module.exports = function(Stock) {
                 source: 'body',
             },
         },
-        http: {path: '/fetch-by-prod-id', verb: 'get'},
+        http: {path: '/fetch-by-prod-ids', verb: 'get'},
         description: 'For fetching stock item by Prod Id',
     });
 
@@ -564,24 +564,24 @@ module.exports = function(Stock) {
         });
     }
 
-    Stock.fetchItemByProdId = async (accessToken, prodId) => {
+    Stock.fetchItemsByProdIds = async (accessToken, prodIds) => {
         try {
             let _userId = await utils.getStoreOwnerUserId(accessToken);
-            let item = await Stock._fetchItemByProdId(prodId, _userId);
-            return {STATUS: 'SUCCESS', ITEM: item};
+            let itemArr = await Stock._fetchItemsByProdIds(prodIds, _userId);
+            return {STATUS: 'SUCCESS', ITEMS: itemArr};
         } catch(e) {
             return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
         }
     }
 
-    Stock._fetchItemByProdId = (prodId, _userId) => {
+    Stock._fetchItemsByProdIds = (prodIdArr, _userId) => {
         return new Promise((resolve, reject) => {
             let sql = SQL.FETCH_ITEM_BY_PRODID.replace(/STOCK_TABLE/g, `stock_${_userId}`);
-            Stock.dataSource.connector.query(sql, [prodId], (err, result) => {
+            Stock.dataSource.connector.query(sql, [prodIdArr], (err, result) => {
                 if(err) {
                     return reject(err);
                 } else {
-                    return resolve(result[0]);
+                    return resolve(result);
                 }
             });
         });
@@ -925,7 +925,7 @@ let SQL = {
                                 LEFT JOIN suppliers ON suppliers.id = STOCK_TABLE.supplierId
                                 LEFT JOIN orn_list_jewellery ON orn_list_jewellery.id = STOCK_TABLE.ornament
                                 LEFT JOIN touch ON touch.id = STOCK_TABLE.touch_id
-                            WHERE prod_id=?`,
+                            WHERE prod_id IN (?)`,
     INSERT_INTO_STOCK_SOLD: `INSERT INTO STOCK_SOLD_TABLE (
                                 date, prod_id, metal_rate, retail_rate, ornament, qty, 
                                 gross_wt, net_wt, 
