@@ -38,6 +38,39 @@ module.exports = function(JwlInvoice) {
         description: 'Jewellery Bill Invoice Date.',
     });
 
+    JwlInvoice.remoteMethod('getInvoiceRecordByKey', {
+        accepts: [
+            {
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let authToken = null;
+                    if(req && req.headers.authorization)
+                        authToken = req.headers.authorization || req.headers.Authorization;
+                    return authToken;
+                },
+                description: 'Arguments goes here',
+            },
+            {
+                arg: 'invoiceKeys', type: 'array', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let invoiceKeysArrStr = req && req.query.invoice_keys;
+                    let invoiceKeyArr = [];
+                    if(invoiceKeysArrStr) invoiceKeyArr = JSON.parse(invoiceKeysArrStr);
+                    return invoiceKeyArr;
+                },
+                description: 'Arguments goes here',
+            }],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/get-invoice-record', verb: 'get'},
+        description: 'Jewellery Bill Invoice Record.',
+    });
+
     JwlInvoice.remoteMethod('getCustomerInvoiceListApi', {
         accepts: [
             {
@@ -125,6 +158,8 @@ module.exports = function(JwlInvoice) {
             throw e;
         }
     }
+
+    //for pdf bill content
     JwlInvoice.getInvoiceDataByKey = (accessToken, invoiceKeys, cb) => {
         JwlInvoice._getInvoiceDataByKey(accessToken, invoiceKeys).then(
             (resp) => {
@@ -157,6 +192,39 @@ module.exports = function(JwlInvoice) {
         }
     }
 
+    // for customer invoice page in UI
+    JwlInvoice.getInvoiceRecordByKey = (accessToken, invoiceKeys, cb) => {
+        JwlInvoice._getInvoiceRecordByKey(accessToken, invoiceKeys).then(
+            (resp) => {
+                if(resp)
+                    cb(null, {STATUS: 'SUCCESS', RESP: resp});
+                else
+                    cb(null, {STATUS: 'ERROR', RESP: resp});
+            }
+        ).catch(
+            (e)=> {
+                cb({STATUS: 'EXCEPTION', ERR: e}, null);
+            }
+        );
+    }
+
+    JwlInvoice._getInvoiceRecordByKey = async (accessToken, invoiceKeys) => {
+        try {
+            let _userId = await utils.getStoreOwnerUserId(accessToken);
+            let sql = SQL.INVOICE_RECORD.replace(/INVOICE_TABLE/g, `jewellery_invoice_details_${_userId}`);
+            let result = await utils.executeSqlQuery(JwlInvoice.dataSource, sql, [invoiceKeys]);
+            if(result && result.length > 0) {
+                // return result.map((aDbRow) => JSON.parse(aDbRow.raw_data));
+                return result;
+            }
+            else
+                return null;
+        } catch(e) {
+            console.log(e);
+            throw e;
+        }
+    }
+
     JwlInvoice.getCustomerInvoiceListApi = async (accessToken, filters) => {
         try {
             let params = { filters };
@@ -171,7 +239,7 @@ module.exports = function(JwlInvoice) {
     JwlInvoice._fetchJwlCustInvoiceList = (params) => {
         return new Promise( (resolve, reject) => {
             let sql = SQL.INVOICE_LIST;
-            // sql += Stock._getFilterQueryPart(params);
+            sql = JwlInvoice._injectFilterQuerypart(sql, params, 'list');
             sql = sql.replace(/STOCK_SOLD_TABLE/g, `stock_sold_${params._userId}`);
             sql = sql.replace(/INVOICE_TABLE/g, `jewellery_invoice_details_${params._userId}`);
             sql = sql.replace(/REPLACE_USERID/g,  params._userId);
@@ -199,7 +267,7 @@ module.exports = function(JwlInvoice) {
     JwlInvoice._fetchJwlCustInvoiceListCount = (params) => {
         return new Promise( (resolve, reject) => {
             let sql = SQL.INVOICE_LIST_TOTALS;
-            // sql += Stock._getFilterQueryPart(params);
+            sql = JwlInvoice._injectFilterQuerypart(sql, params, 'count');
             // sql = sql.replace(/STOCK_SOLD_TABLE/g, `stock_sold_${params._userId}`);
             sql = sql.replace(/INVOICE_TABLE/g, `jewellery_invoice_details_${params._userId}`);
             sql = sql.replace(/REPLACE_USERID/g,  params._userId);
@@ -211,12 +279,23 @@ module.exports = function(JwlInvoice) {
                 }
             });
         });
-    } 
+    }
+
+    JwlInvoice._injectFilterQuerypart = (sql, params) => {
+        let {filters} = params;
+        let whereConditionList = [];
+        if(filters.date && filters.date.startDate)
+            whereConditionList.push(`i.created_date BETWEEN "${filters.date.startDate}" AND "${filters.date.endDate}"`);
+        if(whereConditionList.length > 0)
+            sql += ` WHERE ${whereConditionList.join(' AND ')}`
+        return sql;
+    }
 }
 
 let SQL = {
     INSERT_INVOICE_DETAIL: `INSERT INTO INVOICE_TABLE (ukey, invoice_no, cust_id, action, paid_amt, balance_amt, raw_data, invoice_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-    INVOICE_DATA: `SELECT invoice_data FROM INVOICE_TABLE WHERE ukey IN (?)`,
+    INVOICE_DATA: `SELECT invoice_data FROM INVOICE_TABLE WHERE ukey IN (?)`, // for pdf invoice
+    INVOICE_RECORD: `SELECT * FROM INVOICE_TABLE WHERE ukey IN (?)`,
     INVOICE_LIST: `SELECT i.*, c.*,
                     (select group_concat(prod_id) as prdId from STOCK_SOLD_TABLE as s where s.invoice_ref=i.ukey group by s.invoice_ref) as prod_ids
                         FROM INVOICE_TABLE as i

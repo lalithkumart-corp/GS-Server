@@ -212,6 +212,8 @@ module.exports = function(Stock) {
                 arg: 'accessToken', type: 'string', http: (ctx) => {
                     let req = ctx && ctx.req;
                     let access_token = req && req.query.access_token;
+                    if(!access_token && req && req.headers.authorization)
+                        access_token = req.headers.authorization || req.headers.Authorization;
                     return access_token;
                 },
                 description: 'Arguments goes here',

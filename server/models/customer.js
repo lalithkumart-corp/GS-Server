@@ -51,6 +51,37 @@ module.exports = function(Customer) {
         description: 'Updated the customer general information'
     });
 
+    Customer.remoteMethod('fetchByCustIdApiHanlder', {
+        accepts: [
+            {
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let authToken = null;
+                    if(req && req.headers.authorization)
+                        authToken = req.headers.authorization || req.headers.Authorization;
+                    return authToken;
+                },
+                description: 'Arguments goes here',
+            }, {
+                arg: 'custIdArr', type: 'array', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let custIdArr = req && req.query.custIdArr;
+                    custIdArr = custIdArr ? JSON.parse(custIdArr) : [];
+                    return custIdArr;
+                },
+                description: 'Arguments goes here',
+        }],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            },
+        },
+        http: {path: '/fetch-by-custid', verb: 'get'},
+        description: 'For fetching customer detail.',
+    });
+
     Customer.remoteMethod('getMetaData', {
         accepts: [
             {
@@ -493,6 +524,9 @@ module.exports = function(Customer) {
             case 'update-primary-mobile':
                 sql = `UPDATE customer_REPLACE_USERID SET Mobile=? WHERE CustomerId=?`;
                 break;
+            case 'customer-obj':
+                sql = SQL.CUST_BY_ID;
+                break;
         }
         return sql;
     }
@@ -925,6 +959,32 @@ module.exports = function(Customer) {
             });
         });
     }
+
+    Customer.fetchByCustIdApiHanlder = (accessToken, custIdArr, cb) => {
+        Customer._fetchByCustIdApiHanlder(accessToken, {custIdArr}).then((resp) => {
+            if(resp)
+                cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            else
+                cb(null, {STATUS: 'ERROR', RESP: resp});
+        }).catch((e)=>{
+            cb({STATUS: 'EXCEPTION', ERR: e}, null);
+        });
+    }
+
+    Customer._fetchByCustIdApiHanlder = (accessToken, params) => {
+        return new Promise(async (resolve, reject) => {
+            params.userId = await utils.getStoreOwnerUserId(accessToken);
+            let query = Customer.getQuery('customer-obj', params);
+            query = query.replace(/REPLACE_USERID/g, params.userId);
+            Customer.dataSource.connector.query(query, [params.custIdArr.join(',')], (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(res);
+                }
+            });
+        });
+    }
 };
 
 let SQL = {
@@ -1023,6 +1083,7 @@ let SQL = {
                             Pincode=?, Mobile=?, SecMobile=?,
                             OtherDetails=?, HashKey=?, ModifiedAt=?
                         WHERE
-                            CustomerId=?
-    `
+                            CustomerId=?`,
+    CUST_BY_ID: `SELECT * FROM customer_REPLACE_USERID WHERE CustomerId IN (?)`
+
 }
