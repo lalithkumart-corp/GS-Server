@@ -108,9 +108,9 @@ module.exports = function(LoanBillTemplate) {
             apiParams._userId = await utils.getStoreOwnerUserId(apiParams.accessToken);
             let records = await LoanBillTemplate.find({where: {userId: apiParams._userId}});
             if(records && records.length > 0)
-                await LoanBillTemplate.updateAll({userId: apiParams._userId}, {header: JSON.stringify(apiParams.headerSettings), bodyTemplate: apiParams.bodyTemplateId});
+                await LoanBillTemplate.updateAll({userId: apiParams._userId}, {header: JSON.stringify(apiParams.headerSettings), bodyTemplate: apiParams.bodyTemplateId, other: JSON.stringify(apiParams.other)});
             else
-                await LoanBillTemplate.create({userId: apiParams._userId, header: JSON.stringify(apiParams.headerSettings)});
+                await LoanBillTemplate.create({userId: apiParams._userId, header: JSON.stringify(apiParams.headerSettings), other: JSON.stringify(apiParams.other) });
             return true;
         } catch(e) {
             console.log(e);

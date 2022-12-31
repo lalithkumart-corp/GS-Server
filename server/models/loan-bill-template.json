@@ -53,6 +53,16 @@
         "dataScale": null,
         "nullable": "Y"
       }
+    },
+    "other": {
+      "type": "string",
+      "mysql": {
+        "columnName": "other",
+        "dataType": "text",
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
     }
   },
   "validations": [],
