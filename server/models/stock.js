@@ -596,11 +596,11 @@ module.exports = function(Stock) {
             data._uniqString = (Date.now() + Math.random()).toString(36).replace('.', '');
             let isAvl = await Stock.checkItemAvlQty(data.apiParams.newProds);
             if(!isAvl)
-                throw 'Please check item quantity';
+                throw new Error('Please check item quantity. Item might have been already sold. Please check "Sold Out Items" stock list');
             // let invoiceDetailResp = await Stock.insertInvoiceData(data);
             let invoiceDetailResp = await Stock.app.models.JewelleryInvoice.prototype.insertInvoiceData(data);
             if(!invoiceDetailResp)
-                throw 'Invoice creation failed. Please check Logs.';
+                throw new Error('Invoice creation failed. Please check Logs.');
             
             await Stock.insertInSellingDetail(data);
             await Stock.updateQtyInStockTable(data);
@@ -740,7 +740,7 @@ module.exports = function(Stock) {
     Stock.insertIntoOldOrnamentsTable = async (data) => {
         try {
             let sql = SQL.INSERT_INTO_OLD_ITEM_STOCK;
-            sql.replace(/OLD_ITEMS_STOCK_TABLE/g, `old_items_stock_${params._userId}`);
+            sql = sql.replace(/OLD_ITEMS_STOCK_TABLE/g, `old_items_stock_${data._userId}`);
             let oldOrnaments = data.apiParams.oldOrnaments;
             let queryParams = [oldOrnaments.itemType, oldOrnaments.grossWt, oldOrnaments.netWt, oldOrnaments.wastageVal, oldOrnaments.pricePerGram, oldOrnaments.netAmount, data._uniqString];
             await utils.executeSqlQuery(Stock.dataSource, sql, queryParams);
