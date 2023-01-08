@@ -131,6 +131,39 @@ module.exports = function(JwlInvoice) {
         description: 'Jewellery - Customer Invoice List count',
     });
 
+    JwlInvoice.remoteMethod('deleteInvoice', {
+        accepts: [
+            {
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let authToken = null;
+                    if(req && req.headers.authorization)
+                        authToken = req.headers.authorization || req.headers.Authorization;
+                    return authToken;
+                },
+                description: 'Arguments goes here',
+            },
+            {
+                arg: 'params',
+                type: 'object',
+                default: {
+                    
+                },
+                http: {
+                    source: 'body',
+                },
+        }],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/delete', verb: 'del'},
+        description: 'Delete an Invoice'
+    });
+
     JwlInvoice.prototype.insertInvoiceData = async (payload) => {
         try {
             let invoiceNoFull = payload.apiParams.invoiceNo;
@@ -284,11 +317,54 @@ module.exports = function(JwlInvoice) {
     JwlInvoice._injectFilterQuerypart = (sql, params) => {
         let {filters} = params;
         let whereConditionList = [];
+        if(!filters.include_archived)
+            whereConditionList.push('i.archived=0');
         if(filters.date && filters.date.startDate)
             whereConditionList.push(`i.created_date BETWEEN "${filters.date.startDate}" AND "${filters.date.endDate}"`);
         if(whereConditionList.length > 0)
             sql += ` WHERE ${whereConditionList.join(' AND ')}`
         return sql;
+    }
+    
+    JwlInvoice.deleteInvoice = async (accessToken, params) => {
+        try {
+            let userId = await utils.getStoreOwnerUserId(accessToken);
+            let invoiceRef = params.invoiceRef;
+            let soldItemDetails = await JwlInvoice.app.models.Stock._fetchSoldItemsByInvoiceId(userId, invoiceRef);
+            if(soldItemDetails && soldItemDetails.length>0) {
+                for(let i=0; i<soldItemDetails.length; i++) {
+                    let anItem = soldItemDetails[i];
+                    let itemDetail = {
+                        prodId: anItem.prod_id,
+                        qty: anItem.qty,
+                        grossWt: anItem.gross_wt,
+                        netWt: anItem.net_wt,
+                        pureWt: anItem.pure_wt
+                    }
+                   await JwlInvoice.app.models.Stock._putBackFromInvoice(userId, itemDetail);
+                }
+                await JwlInvoice.app.models.Stock._archiveSoldItemByInvoiceRef(userId, invoiceRef);
+                await JwlInvoice.app.models.Stock._archiveOldOrnamentRecByInvoiceRef(userId, invoiceRef);
+                await JwlInvoice._archiveByInvoiceRef(userId, invoiceRef);
+            } else {
+                throw new Error("Items not found in DB to update back the qty and weight");
+            }
+            return { STATUS: 'SUCCESS', MSG: 'Archived the invoice and updated QTY and WT of specific item in stock table.'};
+        } catch(e) {
+            return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
+        }
+    }
+
+    JwlInvoice._archiveByInvoiceRef = async (userId, invoiceRef) => {
+        try {
+            let sql = SQL.MARK_ARCHIVED;
+            sql = sql.replace(/INVOICE_TABLE/g, `jewellery_invoice_details_${userId}`);
+            await utils.executeSqlQuery(JwlInvoice.dataSource, sql, [invoiceRef]);
+            return true;
+        } catch(e) {
+            console.log(e);
+            return null;
+        }
     }
 }
 
@@ -303,5 +379,6 @@ let SQL = {
     INVOICE_LIST_TOTALS: `SELECT count(*) as totalInvoiceList
                     from 
                         INVOICE_TABLE as i 
-                        LEFT JOIN customer_REPLACE_USERID as c ON i.cust_id = c.CustomerId`
+                        LEFT JOIN customer_REPLACE_USERID as c ON i.cust_id = c.CustomerId`,
+    MARK_ARCHIVED: `UPDATE INVOICE_TABLE SET archived=1 where ukey=?`
 }

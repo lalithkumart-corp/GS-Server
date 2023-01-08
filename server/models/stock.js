@@ -685,7 +685,7 @@ module.exports = function(Stock) {
                 temp.push(anItem.qty);
                 temp.push(anItem.grossWt || 0);
                 temp.push(anItem.netWt || 0);
-                
+                temp.push(anItem.pureWt || 0);
                 temp.push(anItem.wastagePercent || 0);
                 temp.push(anItem.wastageVal || 0);
                 temp.push(anItem.makingCharge || 0);
@@ -740,6 +740,7 @@ module.exports = function(Stock) {
     Stock.insertIntoOldOrnamentsTable = async (data) => {
         try {
             let sql = SQL.INSERT_INTO_OLD_ITEM_STOCK;
+            sql.replace(/OLD_ITEMS_STOCK_TABLE/g, `old_items_stock_${params._userId}`);
             let oldOrnaments = data.apiParams.oldOrnaments;
             let queryParams = [oldOrnaments.itemType, oldOrnaments.grossWt, oldOrnaments.netWt, oldOrnaments.wastageVal, oldOrnaments.pricePerGram, oldOrnaments.netAmount, data._uniqString];
             await utils.executeSqlQuery(Stock.dataSource, sql, queryParams);
@@ -781,6 +782,8 @@ module.exports = function(Stock) {
         let sql = '';
         let filterList = [];
         if(params.filters && params.filters) {
+            if(!params.filters.include_archived)
+                filterList.push(`(STOCK_SOLD_TABLE.archived=0)`);
             if(params.filters.date)
                 filterList.push(`(STOCK_SOLD_TABLE.date BETWEEN '${params.filters.date.startDate}' AND '${params.filters.date.endDate}')`);
         }
@@ -812,6 +815,67 @@ module.exports = function(Stock) {
             return {STATUS: 'SUCCESS', COUNT: count};
         } catch(e) {
             return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
+        }
+    }
+
+    Stock._fetchSoldItemsByInvoiceId = async (userId, invoiceId) => {
+        try {
+            let sql = SQL.FETCH_SOLD_ITEMS_BY_INVOICE_ID;
+            sql = sql.replace(/STOCK_SOLD_TABLE/g, `stock_sold_${userId}`);
+            let res = await utils.executeSqlQuery(Stock.dataSource, sql, [invoiceId]);
+            return res;
+        } catch(e) {
+            console.log(e);
+            return null;
+        }
+    }
+
+    // When invoice gets deleted, then add the qty and weight back for the specific item in table
+    Stock._putBackFromInvoice = async (userId, itemDetail) => {
+        try {
+            let queryParams = [
+                itemDetail.qty,
+                itemDetail.grossWt,
+                itemDetail.netWt,
+                itemDetail.pureWt,
+                itemDetail.qty,
+                itemDetail.grossWt,
+                itemDetail.netWt,
+                itemDetail.pureWt,
+                new Date().toISOString().replace('T',' ').replace('Z', ''),
+                itemDetail.prodId
+            ]
+            let sql = SQL.UPDATE_STOCK_ITEM_QTY;
+            sql = sql.replace(/STOCK_TABLE/g, `stock_${userId}`);
+            let res = await utils.executeSqlQuery(Stock.dataSource, sql, queryParams);
+            return res;
+        } catch(e) {
+            console.log(e);
+            return null;
+        }
+    }
+
+    Stock._archiveSoldItemByInvoiceRef = async (userId, invoiceRef) => {
+        try {
+            let sql = SQL.MARK_ARCHIVED_SOLD_STOCK_TABLE_ITEM;
+            sql = sql.replace(/STOCK_SOLD_TABLE/g, `stock_sold_${userId}`);
+            await utils.executeSqlQuery(Stock.dataSource, sql, [invoiceRef]);
+            return true;
+        } catch(e) {
+            console.log(e);
+            return null;
+        }
+    }
+
+    Stock._archiveOldOrnamentRecByInvoiceRef = async (userId, invoiceRef) => {
+        try {
+            let sql = SQL.MARK_ARCHIVED_OLD_ORN_TABLE_ITEM;
+            sql = sql.replace(/OLD_ITEMS_STOCK_TABLE/g, `old_items_stock_${userId}`);
+            await utils.executeSqlQuery(Stock.dataSource, sql, [invoiceRef]);
+            return true;
+        } catch(e) {
+            console.log(e);
+            return null;
         }
     }
 };
@@ -930,13 +994,13 @@ let SQL = {
                             WHERE prod_id IN (?)`,
     INSERT_INTO_STOCK_SOLD: `INSERT INTO STOCK_SOLD_TABLE (
                                 date, prod_id, metal_rate, retail_rate, ornament, qty, 
-                                gross_wt, net_wt, 
+                                gross_wt, net_wt, pure_wt,
                                 wastage, wastage_val, labour,
                                 cgst_percent, sgst_percent, discount, total,
                                 invoice_ref
                             ) 
                             VALUES `,
-    INSERT_INTO_OLD_ITEM_STOCK: `INSERT INTO old_items_stock_1 (item_type, gross_wt, net_wt, wastage_val, applied_retail_rate, price, invoice_ref)
+    INSERT_INTO_OLD_ITEM_STOCK: `INSERT INTO OLD_ITEMS_STOCK_TABLE (item_type, gross_wt, net_wt, wastage_val, applied_retail_rate, price, invoice_ref)
                             VALUES(?,?,?,?,?,?,?)`,
     INSERT_INVOICE_DETAIL: `INSERT INTO INVOICE_TABLE (ukey, invoice_no, cust_id, action, paid_amt, balance_amt, payment_mode, raw_payment_data, raw_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     FETCH_SOLD_OUT_ITEMS_COUNT: `SELECT
@@ -981,5 +1045,18 @@ let SQL = {
                             STOCK_SOLD_TABLE
                             LEFT JOIN INVOICE_DETAIL_TABLE ON STOCK_SOLD_TABLE.invoice_ref = INVOICE_DETAIL_TABLE.ukey
                             LEFT JOIN customer_REPLACE_USERID ON INVOICE_DETAIL_TABLE.cust_id = customer_REPLACE_USERID.CustomerId
-                            LEFT JOIN orn_list_jewellery ON STOCK_SOLD_TABLE.ornament = orn_list_jewellery.id`
+                            LEFT JOIN orn_list_jewellery ON STOCK_SOLD_TABLE.ornament = orn_list_jewellery.id`,
+    FETCH_SOLD_ITEMS_BY_INVOICE_ID: `SELECT * FROM STOCK_SOLD_TABLE WHERE invoice_ref=?`,
+    UPDATE_STOCK_ITEM_QTY: `UPDATE STOCK_TABLE SET sold_qty=sold_qty-?,
+                                        sold_n_wt=sold_n_wt-?,
+                                        sold_g_wt=sold_g_wt-?,
+                                        sold_p_wt=sold_p_wt-?,
+                                        avl_qty=avl_qty+?,
+                                        avl_n_wt=avl_n_wt+?,
+                                        avl_g_wt=avl_g_wt+?,
+                                        avl_p_wt=avl_p_wt+?,
+                                        modified_date=?
+                                    WHERE prod_id=?`,
+    MARK_ARCHIVED_SOLD_STOCK_TABLE_ITEM: `UPDATE STOCK_SOLD_TABLE SET archived=1 where invoice_ref=?`,
+    MARK_ARCHIVED_OLD_ORN_TABLE_ITEM: `UPDATE OLD_ITEMS_STOCK_TABLE SET archived=1 where invoice_ref=?`
 }
