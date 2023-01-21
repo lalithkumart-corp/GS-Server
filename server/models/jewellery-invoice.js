@@ -174,6 +174,7 @@ module.exports = function(JwlInvoice) {
                 apiData.invoiceData = 'Look into invoice_data column';
             let sql = SQL.INSERT_INVOICE_DETAIL.replace(/INVOICE_TABLE/g, `jewellery_invoice_details_${payload._userId}`);
             let queryVal = [
+                    payload.apiParams.date,
                     payload._uniqString,
                     invoiceNoFull,
                     payload.apiParams.customerId,
@@ -320,7 +321,7 @@ module.exports = function(JwlInvoice) {
         if(!filters.include_archived)
             whereConditionList.push('i.archived=0');
         if(filters.date && filters.date.startDate)
-            whereConditionList.push(`i.created_date BETWEEN "${filters.date.startDate}" AND "${filters.date.endDate}"`);
+            whereConditionList.push(`i.invoice_date BETWEEN "${filters.date.startDate}" AND "${filters.date.endDate}"`);
         if(whereConditionList.length > 0)
             sql += ` WHERE ${whereConditionList.join(' AND ')}`
         return sql;
@@ -369,7 +370,7 @@ module.exports = function(JwlInvoice) {
 }
 
 let SQL = {
-    INSERT_INVOICE_DETAIL: `INSERT INTO INVOICE_TABLE (ukey, invoice_no, cust_id, action, paid_amt, balance_amt, raw_data, invoice_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    INSERT_INVOICE_DETAIL: `INSERT INTO INVOICE_TABLE (invoice_date, ukey, invoice_no, cust_id, action, paid_amt, balance_amt, raw_data, invoice_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     INVOICE_DATA: `SELECT invoice_data FROM INVOICE_TABLE WHERE ukey IN (?)`, // for pdf invoice
     INVOICE_RECORD: `SELECT * FROM INVOICE_TABLE WHERE ukey IN (?)`,
     INVOICE_LIST: `SELECT i.*, c.*,

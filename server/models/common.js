@@ -1114,6 +1114,7 @@ let SQL = {
                     )`,
     INVOICE_DETAIL: `CREATE TABLE jewellery_invoice_details_REPLACE_USERID (
                         id int NOT NULL AUTO_INCREMENT,
+                        invoice_date datetime DEFAULT CURRENT_TIMESTAMP,
                         ukey varchar(45) DEFAULT NULL,
                         invoice_no varchar(45) DEFAULT NULL,
                         cust_id int DEFAULT NULL,
