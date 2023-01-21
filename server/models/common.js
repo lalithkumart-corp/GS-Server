@@ -1018,6 +1018,7 @@ let SQL = {
                                         ) ENGINE=InnoDB DEFAULT CHARSET=latin1`,
     STOCK_TABLE: `CREATE TABLE stock_REPLACE_USERID (
                     id int NOT NULL AUTO_INCREMENT,
+                    uid varchar(45) NOT NULL,
                     date datetime DEFAULT CURRENT_TIMESTAMP,
                     user_id int DEFAULT NULL,
                     ornament int DEFAULT NULL,
@@ -1058,6 +1059,7 @@ let SQL = {
                     created_date datetime DEFAULT CURRENT_TIMESTAMP,
                     modified_date datetime DEFAULT CURRENT_TIMESTAMP,
                     PRIMARY KEY (id),
+                    UNIQUE KEY uid_UNIQUE (uid),
                     UNIQUE KEY prod_id_UNIQUE (prod_id),
                     KEY touch_idx (touch_id),
                     KEY supplier_idx (supplierId),
@@ -1068,7 +1070,7 @@ let SQL = {
                 )`,
     STOCK_SOLD_TABLE: `CREATE TABLE stock_sold_REPLACE_USERID (
                     id int NOT NULL AUTO_INCREMENT,
-                    uid VARCHAR(45) NOT NULL,
+                    stock_tbl_uid VARCHAR(45) DEFAULT NULL,
                     date datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
                     prod_id varchar(45) DEFAULT NULL,
                     metal_rate int DEFAULT NULL,
@@ -1113,6 +1115,7 @@ let SQL = {
     INVOICE_DETAIL: `CREATE TABLE jewellery_invoice_details_REPLACE_USERID (
                         id int NOT NULL AUTO_INCREMENT,
                         ukey varchar(45) DEFAULT NULL,
+                        invoice_no varchar(45) DEFAULT NULL,
                         cust_id int DEFAULT NULL,
                         action varchar(45) DEFAULT NULL,
                         paid_amt float DEFAULT NULL,

@@ -594,7 +594,7 @@ module.exports = function(Stock) {
             console.log(data);
             data._userId = await utils.getStoreOwnerUserId(data.accessToken);
             data._uniqString = (Date.now() + Math.random()).toString(36).replace('.', '');
-            let isAvl = await Stock.checkItemAvlQty(data.apiParams.newProds);
+            let isAvl = await Stock.checkItemAvlQty(data.apiParams.newProds, data._userId);
             if(!isAvl)
                 throw new Error('Please check item quantity. Item might have been already sold. Please check "Sold Out Items" stock list');
             // let invoiceDetailResp = await Stock.insertInvoiceData(data);
@@ -617,7 +617,7 @@ module.exports = function(Stock) {
         }
     }
 
-    Stock.checkItemAvlQty = async (items) => {
+    Stock.checkItemAvlQty = async (items, userId) => {
         try {
             let flag = true;
             let groupObj = {};
@@ -629,7 +629,7 @@ module.exports = function(Stock) {
             });
 
             //check in Database
-            let sql = `SELECT * FROM stock_1 WHERE `;
+            let sql = `SELECT * FROM stock_${userId} WHERE `;
             let bucket = [];
             _.each(groupObj, (val, index) => {
                 bucket.push(`(prod_id='${index}' AND avl_qty>=${val})`);
