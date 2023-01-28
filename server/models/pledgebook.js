@@ -119,6 +119,38 @@ module.exports = function(Pledgebook) {
         description: 'For fetching pending bills.',
     });
 
+    Pledgebook.remoteMethod('billRenewalApiHandler', {
+        accepts: [
+            {
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let accessToken;
+                    if(req && req.headers.authorization)
+                        accessToken = req.headers.authorization;
+                    return accessToken;
+                },
+                description: 'Arguments goes here',
+            },{
+                arg: 'payload',
+                type: 'object',
+                default: {
+                    
+                },
+                http: {
+                    source: 'body',
+                },
+        }],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/renew-loan-bill', verb: 'post'},
+        description: 'Bill Renewal'
+    });
+
     Pledgebook.remoteMethod('redeemPendingBillAPIHandler', {
         accepts: {
             arg: 'data',
@@ -1764,6 +1796,77 @@ module.exports = function(Pledgebook) {
             });
         });
     }
+
+    Pledgebook.billRenewalApiHandler = async (accessToken, payload) => {
+        try {
+            let _userId = await utils.getStoreOwnerUserId(accessToken);
+            let pledgebookTableName = await Pledgebook.getPledgebookTableName(_userId);
+            let rawPledgebookRecord = await Pledgebook._getRawPledgebookBillFromDB(pledgebookTableName, payload.redeemParams.pledgeBookUID);
+            if(!rawPledgebookRecord)
+                throw `Loan Bill ${payload.newBillParams.billSeries} ${payload.newBillParams.billNo} Not found in DB`;
+
+            //Redeem the Bill
+            let res = await Pledgebook.redeemPendingBillAPIHandler({_userId, requestParams: [payload.redeemParams], accessToken});
+            if(res.STATUS == 'error')
+                throw `Error while closing the bill`;
+
+            // Insert in Pledgebook Table
+            let params = Pledgebook._constructRenewBillPayload(rawPledgebookRecord, payload.newBillParams);
+            await Pledgebook.saveBillDetails(params, pledgebookTableName);
+
+            //Update PledgebookSettings table for LastBillNo
+            await Pledgebook.app.models.PledgebookSettings.updateLastBillDetail(params);
+
+            //Insert In FundTransaction table
+            params._userId = _userId;
+            params.paymentDetails = payload.newBillParams.paymentDetails;
+            Pledgebook.app.models.FundTransaction.prototype.add({parsedArg: params, pledgebookTableName}, 'pledgebook');
+
+            return {STATUS: 'success', RESPONSE: {}, STATUS_MSG: ''};
+        } catch(e) {
+            console.log(e);
+            return {STATUS: 'error', ERROR: e, MESSAGE: (e?e.message:'')};
+        }
+    }
+
+    Pledgebook._getRawPledgebookBillFromDB = (pledgebookTableName, pledgebookUID) => {
+        return new Promise(async (resolve, reject) => {
+            let theQuery = SQL.RAW_PLEDGEBOOK_RECORD.replace(/PLEDGEBOOK_TABLE_NAME/g, pledgebookTableName);
+            Pledgebook.dataSource.connector.query(theQuery, [pledgebookUID], (err, res) => {
+                if(err) {
+                    console.log(err);
+                    return resolve(null);
+                } else {
+                    return resolve(res[0]);
+                }
+            });
+        });
+    }
+
+    Pledgebook._constructRenewBillPayload = (existingBillFromDB, newBillParams) => {
+        let billNoWithSeries = newBillParams.billNo;
+        if(newBillParams.billSeries) billNoWithSeries = newBillParams.billSeries+"."+newBillParams.billNo;
+        let params = {
+            uniqueIdentifier: (+ new Date()),
+            billNo: newBillParams.billNo,
+            billNoWithSeries: billNoWithSeries,
+            amount: newBillParams.amount,
+            presentValue: existingBillFromDB.PresentValue,
+            date: newBillParams.date,
+            customerId: existingBillFromDB.CustomerId,
+            orn: existingBillFromDB.Orn,
+            billRemarks: newBillParams.billRemarks,
+            ornPicture: {id: existingBillFromDB.OrnPictureId},
+            ornCategory: existingBillFromDB.OrnCategory,
+            totalWeight: existingBillFromDB.TotalWeight,
+            interestPercent: newBillParams.interestPercent,
+            interestValue: newBillParams.interestValue,
+            otherCharges: 0,
+            landedCost: newBillParams.landedCost,
+            paymentMode: newBillParams.paymentMode
+        }
+        return params;
+    }
 };
 
 let SQL = {
@@ -1832,5 +1935,7 @@ let SQL = {
       FROM 
         PLEDGEBOOK_CLOSED_TABLE_NAME 
       WHERE 
-        pledgebook_uid IN (?)`
+        pledgebook_uid IN (?)`,
+    RAW_PLEDGEBOOK_RECORD: `SELECT * FROM PLEDGEBOOK_TABLE_NAME WHERE 
+        UniqueIdentifier=?`
 }
