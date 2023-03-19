@@ -1851,7 +1851,7 @@ module.exports = function(Pledgebook) {
             billNo: newBillParams.billNo,
             billNoWithSeries: billNoWithSeries,
             amount: newBillParams.amount,
-            presentValue: existingBillFromDB.PresentValue,
+            presentValue: newBillParams.amount+100, //existingBillFromDB.PresentValue,
             date: newBillParams.date,
             customerId: existingBillFromDB.CustomerId,
             orn: existingBillFromDB.Orn,
