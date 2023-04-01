@@ -76,7 +76,7 @@ module.exports = function(Image) {
         try {
             let uploadedDetail = await Image.upload(req, res);
             let filePathWithName = uploadedDetail.path + uploadedDetail.options.localFile;
-            let base64ImgContent = new Buffer(fs.readFileSync(filePathWithName)).toString("base64");
+            let base64ImgContent = Buffer.alloc(fs.readFileSync(filePathWithName)).toString("base64");
             let picture;
             if(req.body.storeAs == 'BASE64') {
                 let hashKey = Image.generateHashKey({format: uploadedDetail.mimeType, value: base64ImgContent});

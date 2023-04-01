@@ -11,10 +11,10 @@ let domain = 'http://trsoftware.in';
 
 module.exports = (app) => {
     checkForAppUsageEvents = () => {
-        let sql = `SELECT * FROM analytics_app_usage WHERE synced = 0`;
+        let sql = `SELECT * FROM analytics_app_usage WHERE synced = 0 limit 50`;
         app.models.User.dataSource.connector.query(sql, (err, res) => {
             if(err) {
-                console.log(err);
+                // console.log(err);
                 logger.error(GsErrorCtrl.create({className: 'Background', methodName: 'checkForAppUsageEvents', cause: err, message: 'Exceptoin from query', appendChildMsg: true}));
             } else {
                 if(res && res.length > 0) {
@@ -26,10 +26,10 @@ module.exports = (app) => {
     }
 
     checkForAppLoginEvents = () => {
-        let sql = `SELECT * FROM analytics_app_login WHERE synced = 0`;
+        let sql = `SELECT * FROM analytics_app_login WHERE synced = 0 limit 50`;
         app.models.User.dataSource.connector.query(sql, (err, res) => {
             if(err) {
-                console.log(err);
+                // console.log(err);
                 logger.error(GsErrorCtrl.create({className: 'Background', methodName: 'checkForAppLoginEvents', cause: err, message: 'Exceptoin from query', appendChildMsg: true}));
             } else {
                 if(res && res.length > 0) {
@@ -41,10 +41,10 @@ module.exports = (app) => {
     }
 
     checkForAnalyticsPledgebook = () => {
-        let sql = `SELECT * FROM analytics_pledgebook WHERE is_sy = 0`;
+        let sql = `SELECT * FROM analytics_pledgebook WHERE is_sy = 0 limit 50`;
         app.models.User.dataSource.connector.query(sql, (err, res) => {
             if(err) {
-                console.log(err);
+                // console.log(err);
                 logger.error(GsErrorCtrl.create({className: 'Background', methodName: 'checkForAnalyticsPledgebook', cause: err, message: 'Exceptoin from query', appendChildMsg: true}));
             } else {
                 if(res && res.length > 0) {
@@ -56,10 +56,10 @@ module.exports = (app) => {
     }
 
     checkForAnalyticsModulesUsed = () => {
-        let sql = `SELECT * FROM analytics_module_used WHERE is_sy = 0`;
+        let sql = `SELECT * FROM analytics_module_used WHERE is_sy = 0 limit 50`;
         app.models.User.dataSource.connector.query(sql, (err, res) => {
             if(err) {
-                console.log(err);
+                // console.log(err);
                 logger.error(GsErrorCtrl.create({className: 'Background', methodName: 'checkForAnalyticsModulesUsed', cause: err, message: 'Exceptoin from query', appendChildMsg: true}));
             } else {
                 if(res && res.length > 0) {
@@ -84,7 +84,7 @@ module.exports = (app) => {
             if(resp.data && resp.data.STATUS == 'SUCCESS')
                 updateAppUsageTableDB(unsyncedMsgs);
         } catch(e) {
-            console.log(e);
+            // console.log(e);
         }
     }
 
@@ -101,7 +101,7 @@ module.exports = (app) => {
             if(resp.data && resp.data.STATUS == 'SUCCESS')
                 updateAppLoginTableDB(unsyncedMsgs);
         } catch(e) {
-            console.log(e);
+            // console.log(e);
         }
     }
 
@@ -118,7 +118,7 @@ module.exports = (app) => {
             if(resp.data && resp.data.STATUS == 'SUCCESS')
                 updatePledgebookAnalyticsTableDB(unsyncedMsgs);
         } catch(e) {
-            console.log(e);
+            // console.log(e);
         }
     }
 
@@ -155,7 +155,7 @@ module.exports = (app) => {
     updateDB = (appKey) => {
         return new Promise((resolve, reject) => {
             app.models.User.dataSource.connector.query('UPDATE app SET core_flag=1 WHERE `key`=?', [appKey], (err, res) => {
-                if(err) console.log(err);
+                // if(err) console.log(err);
             });
         })
     }

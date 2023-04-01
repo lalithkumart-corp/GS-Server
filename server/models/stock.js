@@ -48,6 +48,8 @@ module.exports = function(Stock) {
             }
             if(params.filters.prodId)
                 filterList.push(`STOCK_TABLE.prod_id like '${params.filters.prodId.replace('-','')}%'`);
+            if(params.filters.huid)
+                filterList.push(`STOCK_TABLE.huid like '${params.filters.huid}%'`);
             if(params.filters.supplier)
                 filterList.push(`suppliers.name like '${params.filters.supplier}%'`);
             if(params.filters.itemName)
@@ -679,6 +681,7 @@ module.exports = function(Stock) {
                 let temp = [];
                 temp.push(`"${payload.apiParams.date}"`);
                 temp.push(`"${anItem.prodId}"`);
+                temp.push(`"${anItem.huid}"`);
                 temp.push(payload.apiParams.metalRate);
                 temp.push(payload.apiParams.retailRate);
                 temp.push(anItem.ornamentId);
@@ -786,6 +789,20 @@ module.exports = function(Stock) {
                 filterList.push(`(STOCK_SOLD_TABLE.archived=0)`);
             if(params.filters.date)
                 filterList.push(`(STOCK_SOLD_TABLE.date BETWEEN '${params.filters.date.startDate}' AND '${params.filters.date.endDate}')`);
+            if(params.filters.invoiceNo)
+                filterList.push(`(INVOICE_DETAIL_TABLE.invoice_no like '${params.filters.invoiceNo}%')`);
+            if(params.filters.customer)
+                filterList.push(`(customer_REPLACE_USERID.Name like '${params.filters.customer}%')`);
+            if(params.filters.prodId)
+                filterList.push(`(STOCK_SOLD_TABLE.prod_id like '${params.filters.prodId}%')`);
+            if(params.filters.prodHuid)
+                filterList.push(`(STOCK_SOLD_TABLE.huid like '${params.filters.prodHuid}%')`);
+            if(params.filters.itemName)
+                filterList.push(`(orn_list_jewellery.item_name like '${params.filters.itemName}%')`);
+            if(params.filters.itemCategory)
+                filterList.push(`(orn_list_jewellery.item_category like '${params.filters.itemCategory}%')`);
+            if(params.filters.itemSubCategory)
+                filterList.push(`(orn_list_jewellery.item_subcategory like '${params.filters.itemSubCategory}%')`);
         }
         if(filterList.length)
             sql = ` WHERE ${filterList.join(' AND ')}`;
@@ -993,7 +1010,7 @@ let SQL = {
                                 LEFT JOIN touch ON touch.id = STOCK_TABLE.touch_id
                             WHERE prod_id IN (?)`,
     INSERT_INTO_STOCK_SOLD: `INSERT INTO STOCK_SOLD_TABLE (
-                                date, prod_id, metal_rate, retail_rate, ornament, qty, 
+                                date, prod_id, huid, metal_rate, retail_rate, ornament, qty, 
                                 gross_wt, net_wt, pure_wt,
                                 wastage, wastage_val, labour,
                                 cgst_percent, sgst_percent, discount, total,
@@ -1019,6 +1036,7 @@ let SQL = {
                             customer_REPLACE_USERID.Mobile AS Mobile,
                             customer_REPLACE_USERID.SecMobile AS SecMobile,
                             prod_id AS ProdId,
+                            huid AS ProdHuid,
                             metal_rate AS MetalRate,
                             retail_rate AS RetailRate,
                             orn_list_jewellery.metal as metal,

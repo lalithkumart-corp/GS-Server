@@ -146,5 +146,13 @@
   "UdhaarSettings": {
     "dataSource": "developmentdb",
     "public": true
+  },
+  "JewelleryTagSetting": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "JewelleryTagAvlTemplate": {
+    "dataSource": "developmentdb",
+    "public": true
   }
 }

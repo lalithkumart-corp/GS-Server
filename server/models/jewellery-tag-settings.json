@@ -1,0 +1,67 @@
+{
+    "name": "JewelleryTagSetting",
+    "plural": "JewelleryTagSettings",
+    "base": "PersistedModel",
+    "idInjection": true,
+    "options": {
+      "validateUpsert": true,
+      "mysql": {
+        "schema": "developmentdb",
+        "table": "jewellery_tag_settings"
+      }
+    },
+    "properties": {
+      "id": {
+        "type": "number",
+        "id": true,
+        "mysql": {
+          "columnName": "id",
+          "dataType": "int",
+          "dataLength": 22,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "userId": {
+        "type": "number",
+        "required": true,
+        "mysql": {
+          "columnName": "user_id",
+          "dataType": "int",
+          "dataLength": 11,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "N"
+        }
+      },
+      "selectedTagId": {
+        "type": "number",
+        "required": false,
+        "mysql": {
+          "columnName": "selected_tag_template_id",
+          "dataType": "int",
+          "dataLength": 22,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "customization": {
+        "type": "any",
+        "required": false,
+        "mysql": {
+          "columnName": "customization",
+          "dataType": "text",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      }
+    },
+    "validations": [],
+    "relations": {},
+    "acls": [],
+    "methods": {}
+  }
+  

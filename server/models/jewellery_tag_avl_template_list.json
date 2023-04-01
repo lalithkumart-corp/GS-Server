@@ -1,0 +1,56 @@
+{
+    "name": "JewelleryTagAvlTemplate",
+    "plural": "JewelleryTagAvlTemplates",
+    "base": "PersistedModel",
+    "idInjection": true,
+    "options": {
+      "validateUpsert": true,
+      "mysql": {
+        "schema": "developmentdb",
+        "table": "jewellery_tag_avl_template_list"
+      }
+    },
+    "properties": {
+      "id": {
+        "type": "number",
+        "id": true,
+        "mysql": {
+          "columnName": "id",
+          "dataType": "int",
+          "dataLength": 22,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
+      "templateId": {
+        "type": "number",
+        "required": true,
+        "mysql": {
+          "columnName": "template_id",
+          "dataType": "int",
+          "dataLength": 11,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "N"
+        }
+      },
+      "screenshotUrl": {
+        "type": "any",
+        "required": true,
+        "mysql": {
+          "columnName": "screenshot_url",
+          "dataType": "text",
+          "dataLength": 500,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      }
+    },
+    "validations": [],
+    "relations": {},
+    "acls": [],
+    "methods": {}
+  }
+  
