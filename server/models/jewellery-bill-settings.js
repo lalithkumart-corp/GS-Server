@@ -157,10 +157,10 @@ module.exports = function(JewelleryBillSettings) {
                     updateParams.customCss = JSON.stringify(apiParams.customCss);
                 if(apiParams.selectedTemplate)
                     updateParams.selectedTemplate = apiParams.selectedTemplate;
-                if(apiParams.billSeries)
-                    updateParams.billSeries = apiParams.billSeries;
-                if(apiParams.billNo)
-                    updateParams.billNo = apiParams.billNo;
+                
+                updateParams.billSeries = apiParams.billSeries;
+                
+                updateParams.billNo = apiParams.billNo;
 
                 await JewelleryBillSettings.updateAll({userId: apiParams._userId, category: apiParams.category}, updateParams);
             }else

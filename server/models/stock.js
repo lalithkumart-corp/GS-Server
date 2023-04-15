@@ -208,6 +208,37 @@ module.exports = function(Stock) {
         description: 'For fetching productIds.',
     });
 
+    Stock.remoteMethod('fetchAutosuggestionsApi', {
+        accepts: [
+            {
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let access_token;
+                    if(req && req.headers.authorization)
+                        access_token = req.headers.authorization;
+                    return access_token;
+                },
+                description: 'Arguments goes here',
+            }, {
+                arg: 'filters', type: 'object', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let filters = req && req.query.filters;
+                    filters = filters ? JSON.parse(filters) : {};
+                    return filters;
+                },
+                description: 'filters Arguments goes here',
+        }],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            },
+        },
+        http: {path: '/fetch-billing-auto-suggestions', verb: 'get'},
+        description: 'For fetching productIds and Huids list for autosiggestions.',
+    });
+
     Stock.remoteMethod('fetchItemsByProdIds', {
         accepts: [
             {
@@ -236,6 +267,43 @@ module.exports = function(Stock) {
         },
         http: {path: '/fetch-by-prod-ids', verb: 'get'},
         description: 'For fetching stock item by Prod Id',
+    });
+
+    Stock.remoteMethod('fetchItemsByIds', {
+        accepts: [
+            {
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let access_token;
+                    if(req && req.headers.authorization)
+                        access_token = req.headers.authorization;
+                    return access_token;
+                },
+                description: 'Arguments goes here',
+            }, {
+                arg: 'ids', type: 'array', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let ids = req && req.query.ids;
+                    return JSON.parse(ids);
+                },
+                description: 'prodIds Arguments goes here',
+            }, {
+                arg: 'identifier', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let identifier = req && req.query.identifier;
+                    return identifier;
+                },
+                description: 'Identifier - Prod Ids or Huids',
+        }],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            },
+        },
+        http: {path: '/fetch-by-ids', verb: 'get'},
+        description: 'For fetching stock item by ProdID or Huid',
     });
 
     Stock.remoteMethod('fetchSoldOutItemList', {
@@ -568,6 +636,36 @@ module.exports = function(Stock) {
         });
     }
 
+    Stock.fetchAutosuggestionsApi = async (accessToken, filters) => {
+        try {
+            let params = {filters};
+            params._userId = await utils.getStoreOwnerUserId(accessToken);
+            let obj = await Stock._fetchAutosuggestions(params);
+            return {STATUS: 'SUCCESS', PROD_ID_LIST: obj.prodIds, HUID_LIST: obj.huids};
+        } catch(e) {
+            return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
+        }
+    }
+
+    Stock._fetchAutosuggestions = (params) => {
+        return new Promise((resolve, reject) => {
+            let sql = SQL.FETCH_AUTOSUGGESTIONS.replace('STOCK_TABLE', `stock_${params._userId}`);
+            Stock.dataSource.connector.query(sql, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    let prodIds = [];
+                    let huids = [];
+                    _.each(res, (row, index) => {
+                        prodIds.push(row.prod_id);
+                        if(row.huid) huids.push(row.huid);
+                    });
+                    return resolve({prodIds, huids});
+                }
+            });
+        });
+    }
+
     Stock.fetchItemsByProdIds = async (accessToken, prodIds) => {
         try {
             let _userId = await utils.getStoreOwnerUserId(accessToken);
@@ -582,6 +680,31 @@ module.exports = function(Stock) {
         return new Promise((resolve, reject) => {
             let sql = SQL.FETCH_ITEM_BY_PRODID.replace(/STOCK_TABLE/g, `stock_${_userId}`);
             Stock.dataSource.connector.query(sql, [prodIdArr], (err, result) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(result);
+                }
+            });
+        });
+    }
+    
+    Stock.fetchItemsByIds = async (accessToken, ids, identifier) => {
+        try {
+            let _userId = await utils.getStoreOwnerUserId(accessToken);
+            let itemArr = await Stock._fetchItemsByIds(ids, identifier, _userId);
+            return {STATUS: 'SUCCESS', ITEMS: itemArr};
+        } catch(e) {
+            return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
+        }
+    }
+
+    Stock._fetchItemsByIds = (ids, identifier, _userId) => {
+        return new Promise((resolve, reject) => {
+            let sql;
+            if(identifier == 'prodid') sql = SQL.FETCH_ITEM_BY_PRODID.replace(/STOCK_TABLE/g, `stock_${_userId}`);
+            else if(identifier == 'huid') sql = SQL.FETCH_ITEM_BY_HUID.replace(/STOCK_TABLE/g, `stock_${_userId}`);
+            Stock.dataSource.connector.query(sql, [ids], (err, result) => {
                 if(err) {
                     return reject(err);
                 } else {
@@ -979,6 +1102,7 @@ let SQL = {
                     LEFT JOIN touch ON stock.touch_id = touch.id
                 `,
     FETCH_PRODUCT_IDS: `SELECT prod_id from STOCK_TABLE WHERE avl_qty <> 0`,
+    FETCH_AUTOSUGGESTIONS: `SELECT prod_id, huid from STOCK_TABLE WHERE avl_qty <> 0`,
     FETCH_ITEM_BY_PRODID: `SELECT
                                 STOCK_TABLE.id,
                                 pr_code,
@@ -1009,6 +1133,36 @@ let SQL = {
                                 LEFT JOIN orn_list_jewellery ON orn_list_jewellery.id = STOCK_TABLE.ornament
                                 LEFT JOIN touch ON touch.id = STOCK_TABLE.touch_id
                             WHERE prod_id IN (?)`,
+    FETCH_ITEM_BY_HUID: `SELECT
+                            STOCK_TABLE.id,
+                            pr_code,
+                            pr_number,
+                            prod_id,
+                            huid,
+                            i_touch,
+                            touch.purity AS pure_touch,
+                            touch.name AS touch_name,
+                            quantity, avl_qty, sold_qty,
+                            gross_wt, net_wt, pure_wt,
+                            avl_g_wt, avl_n_wt, avl_p_wt,
+                            sold_g_wt, sold_n_wt, sold_p_wt,
+                            labour_charge, labour_charge_unit, calc_labour_amt,
+                            metal_rate, amount,
+                            cgst_percent, cgst_amt, sgst_amt, sgst_percent,
+                            total,
+                            suppliers.name,
+                            ornament,
+                            orn_list_jewellery.metal as metal,
+                            orn_list_jewellery.item_name as item_name,
+                            orn_list_jewellery.item_category as item_category,
+                            orn_list_jewellery.item_subcategory as item_subcategory,
+                            orn_list_jewellery.dimension as dimension
+                        FROM
+                            STOCK_TABLE
+                            LEFT JOIN suppliers ON suppliers.id = STOCK_TABLE.supplierId
+                            LEFT JOIN orn_list_jewellery ON orn_list_jewellery.id = STOCK_TABLE.ornament
+                            LEFT JOIN touch ON touch.id = STOCK_TABLE.touch_id
+                        WHERE huid IN (?)`,
     INSERT_INTO_STOCK_SOLD: `INSERT INTO STOCK_SOLD_TABLE (
                                 date, prod_id, huid, metal_rate, retail_rate, ornament, qty, 
                                 gross_wt, net_wt, pure_wt,
