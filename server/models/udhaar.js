@@ -188,7 +188,9 @@ module.exports = function(Udhaar) {
             let billNo = apiParams.billNo;
             if(apiParams.billSeries)
                 billNo = apiParams.billSeries + '.' + apiParams.billNo;
-            let queryValues = [apiParams._uniqId, billNo, apiParams.amount, dateformat(apiParams.udhaarCreationDate, 'yyyy-mm-dd HH:MM:ss', true), apiParams.accountId, apiParams.customerId, apiParams.notes];
+            apiParams._billNo = billNo;
+            let queryValues = [apiParams._uniqId, billNo, apiParams.amount, dateformat(apiParams.udhaarCreationDate, 'yyyy-mm-dd HH:MM:ss', true), apiParams.accountId, apiParams.customerId, apiParams.notes,
+                                apiParams.interestPct, apiParams.interestVal, apiParams.landedCost];
             Udhaar.dataSource.connector.query(sql, queryValues, async (err, res) => {
                 if(err){
                     reject(err);
@@ -219,7 +221,8 @@ module.exports = function(Udhaar) {
             if(apiParams.billSeries)
                 billNo = apiParams.billSeries + '.' + apiParams.billNo;
             apiParams.modifiedDate = new Date().toISOString().replace('T', ' ').slice(0,23);
-            let queryValues = [billNo, apiParams.amount, dateformat(apiParams.udhaarCreationDate, 'yyyy-mm-dd HH:MM:ss', true), apiParams.accountId, apiParams.customerId, apiParams.notes, apiParams.modifiedDate, apiParams.udhaarUid];
+            let queryValues = [billNo, apiParams.amount, dateformat(apiParams.udhaarCreationDate, 'yyyy-mm-dd HH:MM:ss', true), apiParams.accountId, apiParams.customerId, apiParams.notes,
+                                apiParams.interestPct, apiParams.interestVal, apiParams.landedCost, apiParams.modifiedDate, apiParams.udhaarUid];
             Udhaar.dataSource.connector.query(sql, queryValues, async (err, res) => {
                 if(err){
                     reject(err);
@@ -396,6 +399,9 @@ module.exports = function(Udhaar) {
                     udhaarNotes: res[0].udhaarNotes,
                     udhaarStatus: res[0].udhaarStatus,
                     udhaarTrashedFlag: res[0].udhaarTrashedFlag,
+                    udhaarInterestPct: res[0].udhaarInterestPct,
+                    udhaarInterestVal: res[0].udhaarInterestVal,
+                    udhaarInterestPct: res[0].udhaarInterestPct,
                     customerInfo: {
                         customerId: res[0].customerId,
                         customerName: res[0].customerName,
@@ -485,8 +491,8 @@ module.exports = function(Udhaar) {
 }
 
 let SQL = {
-    CREATE_UDHAAR: `INSERT INTO udhaar_REPLACE_USERID (unique_identifier, bill_no, amount, date, account_id, customer_id, notes)
-                        VALUES(?,?,?,?,?,?,?)`,
+    CREATE_UDHAAR: `INSERT INTO udhaar_REPLACE_USERID (unique_identifier, bill_no, amount, date, account_id, customer_id, notes, interest_pct, interest_val, landed_cost)
+                        VALUES(?,?,?,?,?,?,?,?,?,?)`,
     UPDATE_UDHAAR: `UPDATE
                         udhaar_REPLACE_USERID
                             SET
@@ -496,6 +502,9 @@ let SQL = {
                         account_id=?,
                         customer_id=?,
                         notes=?,
+                        interest_pct=?,
+                        interest_val=?,
+                        landed_cost=?,
                         modified_date=?
                             WHERE
                         unique_identifier=?`,
@@ -506,7 +515,10 @@ let SQL = {
                                 udhaar_REPLACE_USERID.date AS udhaarDate,
                                 udhaar_REPLACE_USERID.account_id AS udhaarAccId,
                                 udhaar_REPLACE_USERID.notes AS udhaarNotes,
-                                udhaar_REPLACE_USERID.trashed AS udhaarTrashedFlag
+                                udhaar_REPLACE_USERID.trashed AS udhaarTrashedFlag,
+                                udhaar_REPLACE_USERID.interest_pct AS udhaarInterestPct,
+                                udhaar_REPLACE_USERID.interest_val AS udhaarInterestVal,
+                                udhaar_REPLACE_USERID.landed_cost AS udhaarLandedCost
                             FROM
                                 udhaar_REPLACE_USERID
                                     LEFT JOIN
@@ -520,6 +532,9 @@ let SQL = {
                                 udhaar_REPLACE_USERID.date AS udhaarDate,
                                 udhaar_REPLACE_USERID.account_id AS udhaarAccId,
                                 udhaar_REPLACE_USERID.notes AS udhaarNotes,
+                                udhaar_REPLACE_USERID.interest_pct AS udhaarInterestPct,
+                                udhaar_REPLACE_USERID.interest_val AS udhaarInterestVal,
+                                udhaar_REPLACE_USERID.landed_cost AS udhaarLandedCost,
                                 udhaar_REPLACE_USERID.trashed AS udhaarTrashedFlag,
                                 customer_REPLACE_USERID.Name AS customerName,
                                 customer_REPLACE_USERID.GaurdianName AS guardianName,
@@ -551,6 +566,9 @@ let SQL = {
                         udhaar_REPLACE_USERID.notes AS udhaarNotes,
                         udhaar_REPLACE_USERID.status AS udhaarStatus,
                         udhaar_REPLACE_USERID.trashed AS udhaarTrashedFlag,
+                        udhaar_REPLACE_USERID.interest_pct AS udhaarInterestPct,
+                        udhaar_REPLACE_USERID.interest_val AS udhaarInterestVal,
+                        udhaar_REPLACE_USERID.landed_cost AS udhaarLandedCost,
                         fund_transactions_REPLACE_USERID.id AS fundTrnsId,
                         fund_transactions_REPLACE_USERID.account_id AS udhaarAccId,
                         fund_transactions_REPLACE_USERID.transaction_date AS fundTrnsDate,

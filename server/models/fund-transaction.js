@@ -1095,7 +1095,8 @@ module.exports = function(FundTransaction) {
         return new Promise((resolve, reject) => {
             let destAccDetail = params.destinationAccountDetail;
             let currentTImeInUTCTimezone = utils.getCurrentDateTimeInUTCForDB();
-            let qv = [params._userId, params.customerId, params.accountId, params._uniqId, dateformat(params.udhaarCreationDate, 'yyyy-mm-dd HH:MM:ss', true), 0, params.amount, 'Udhaar', params.notes,
+            let interestAndOtherCharges = parseFloat(params.interestVal);
+            let qv = [params._userId, params.customerId, params.accountId, params._uniqId, dateformat(params.udhaarCreationDate, 'yyyy-mm-dd HH:MM:ss', true), interestAndOtherCharges, params.amount, 'Udhaar', params._billNo,
             params.paymentMode, destAccDetail.toAccountId, destAccDetail.accNo, destAccDetail.ifscCode, destAccDetail.upiId, currentTImeInUTCTimezone, currentTImeInUTCTimezone];
 
             let sql = SQL.INTERNAL_UDHAAR_TRANSACTION;
@@ -1216,7 +1217,8 @@ module.exports = function(FundTransaction) {
         return new Promise((resolve, reject) => {
             let destAccDetail = params.destinationAccountDetail;
             let currentTImeInUTCTimezone = utils.getCurrentDateTimeInUTCForDB();
-            let qv = [params.customerId, params.accountId, dateformat(params.udhaarCreationDate, 'yyyy-mm-dd HH:MM:ss', true), 0, params.amount, params.notes,
+            let interestAndOtherCharges = parseFloat(params.interestVal);
+            let qv = [params.customerId, params.accountId, dateformat(params.udhaarCreationDate, 'yyyy-mm-dd HH:MM:ss', true), interestAndOtherCharges, params.amount, params._billNo,
             params.paymentMode, destAccDetail.toAccountId, destAccDetail.accNo, destAccDetail.ifscCode, destAccDetail.upiId, currentTImeInUTCTimezone, params.udhaarUid, params._userId];
 
             let sql = SQL.INTERNAL_UDHAAR_TRANSACTION_UPDATE;

@@ -282,6 +282,7 @@ module.exports = function(Customer) {
                 name: params.cname,
                 imageId: (params.userPicture)?(params.userPicture.id):null,
                 gaurdianName: params.gaurdianName,
+                gaurdianRelationship: params.gaurdianRelationship,
                 address: params.address,
                 place: params.place,
                 city: params.city,
@@ -294,7 +295,7 @@ module.exports = function(Customer) {
             // Customer.create(dbInputValues, (err, result) => {
             let qv = [
                 dbInputValues.userId, dbInputValues.name,
-                dbInputValues.gaurdianName, dbInputValues.imageId,
+                dbInputValues.gaurdianName, dbInputValues.gaurdianRelationship, dbInputValues.imageId,
                 dbInputValues.address, dbInputValues.place,
                 dbInputValues.city, dbInputValues.pincode,
                 dbInputValues.mobile, JSON.stringify(dbInputValues.otherDetails),
@@ -438,8 +439,8 @@ module.exports = function(Customer) {
             if(obj.userImagePath)
                 obj.userImagePath = utils.constructImageUrl(obj.userImagePath); //`http://${app.get('domain')}:${app.get('port')}${aRes.userImagePath.replace('client', '')}`;
 
-            obj.mobile = ''+aRes.mobile;
-            obj.pincode = ''+aRes.pincode;
+            obj.mobile = aRes.mobile?aRes.mobile.toString():null;
+            obj.pincode = aRes.pincode?aRes.pincode.toString():null;
 
             formatted.push(obj);
         });
@@ -1072,9 +1073,9 @@ let SQL = {
                             LIMIT_OFFSET_CLAUSE`,
     INSERT_NEW_CUSTOMER: `INSERT INTO 
                                 customer_REPLACE_USERID 
-                                (UserID, Name, GaurdianName, ImageId, Address, Place, City, Pincode, Mobile, OtherDetails, HashKey, CreatedAt, ModifiedAt)
+                                (UserID, Name, GaurdianName, GuardianRelation, ImageId, Address, Place, City, Pincode, Mobile, OtherDetails, HashKey, CreatedAt, ModifiedAt)
                             VALUES
-                                (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+                                (?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     UPDATE_CUSTOMER: `UPDATE 
                             customer_REPLACE_USERID
                         SET

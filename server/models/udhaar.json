@@ -75,6 +75,39 @@
           "nullable": "Y"
         }
       },
+      "interestPct": {
+        "type": "number",
+        "mysql": {
+          "columnName": "interest_pct",
+          "dataType": "float",    
+          "dataLength": 11,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "N"
+        }
+      },
+      "interestVal": {
+        "type": "number",
+        "mysql": {
+          "columnName": "interest_val",
+          "dataType": "float",    
+          "dataLength": 11,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "N"
+        }
+      },
+      "landedCost": {
+        "type": "number",
+        "mysql": {
+          "columnName": "landed_cost",
+          "dataType": "float",    
+          "dataLength": 11,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "N"
+        }
+      },
       "trashed": {
         "type": "number",
         "mysql": {
