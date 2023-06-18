@@ -154,5 +154,9 @@
   "JewelleryTagAvlTemplate": {
     "dataSource": "developmentdb",
     "public": true
+  },
+  "Analytics": {
+    "dataSource": "developmentdb",
+    "public": true
   }
 }
