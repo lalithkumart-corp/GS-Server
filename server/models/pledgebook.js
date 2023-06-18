@@ -226,24 +226,43 @@ module.exports = function(Pledgebook) {
                 },
                 description: 'Arguments goes here',
             },
+            // {
+            //     arg: 'billNoArray', type: 'array', http: (ctx) => {
+            //         let req = ctx && ctx.req;
+            //         let billNoArray = req && req.query.bill_nos;
+            //         return JSON.parse(billNoArray);
+            //     },
+            //     description: 'For fetching the bill data based on bill Number'
+            // },
             {
-                arg: 'billNoArray', type: 'array', http: (ctx) => {
+                arg: 'billNoWithUUIDArray', type: 'array', http: (ctx) => {
                     let req = ctx && ctx.req;
-                    let billNoArray = req && req.query.bill_nos;
-                    return JSON.parse(billNoArray);
+                    let billNoWithUuid = req && req.query.bill_no_with_uuid;
+                    return JSON.parse(billNoWithUuid);
                 },
                 description: 'For fetching the bill data based on bill Number'
             },
-        {
-            arg: 'fetchOnlyPending', type: 'string', http: (ctx) => {
-                let req = ctx && ctx.req;
-                let fetchOnlyPending = req && req.query.fetch_only_pending;
-                if(typeof fetchOnlyPending == 'undefined')
-                    fetchOnlyPending = false;
-                return fetchOnlyPending;
+            {
+                arg: 'fetchOnlyPending', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let fetchOnlyPending = req && req.query.fetch_only_pending;
+                    if(typeof fetchOnlyPending == 'undefined')
+                        fetchOnlyPending = false;
+                    return fetchOnlyPending;
+                },
+                description: 'Fetch bill only if its in pending state'
             },
-            description: 'Fetch bill only if its in pending state'
-        }],
+            {
+                arg: 'fetchFundTrns', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let fetchFundTrns = req && req.query.fetch_fund_trns;
+                    if(typeof fetchFundTrns == 'undefined')
+                        fetchFundTrns = false;
+                    return fetchFundTrns;
+                },
+                description: 'Fetch cash transaction details associated with this bill.'
+            },
+        ],
         returns: {
             type: 'object',
             root: true,
@@ -949,7 +968,7 @@ module.exports = function(Pledgebook) {
                 //query += `SET SQL_SAFE_UPDATES = 1;`;
                 break;
             case 'pendingBillNumbers':
-                query = `SELECT BillNo from ${pledgebookTableName} where Status=1`;
+                query = `SELECT BillNo, UniqueIdentifier from ${pledgebookTableName} where Status=1`;
                 break;
             case 'billDetails':                
                 query = `SELECT                         
@@ -985,7 +1004,7 @@ module.exports = function(Pledgebook) {
                                 LEFT JOIN
                             orn_images ON ${pledgebookTableName}.OrnPictureId = orn_images.Id
                                 LEFT JOIN
-                            fund_transactions_REPLACE_USERID ON ${pledgebookTableName}.UniqueIdentifier = fund_transactions_REPLACE_USERID.gs_uid
+                            fund_transactions_REPLACE_USERID ON (${pledgebookTableName}.UniqueIdentifier = fund_transactions_REPLACE_USERID.gs_uid AND fund_transactions_REPLACE_USERID.is_internal = 1)
                                 LEFT JOIN
                             fund_accounts ON fund_transactions_REPLACE_USERID.account_id = fund_accounts.id
                                 LEFT JOIN
@@ -1185,7 +1204,7 @@ module.exports = function(Pledgebook) {
                 } else {
                     let theBuffer = [];
                     _.each(result, (anResultItem, index) => {
-                        theBuffer.push(anResultItem.BillNo);
+                        theBuffer.push(anResultItem);
                     });
                     resolve(theBuffer);
                 }                    
@@ -1193,20 +1212,26 @@ module.exports = function(Pledgebook) {
         });
     }
 
-    Pledgebook.getBillDetailsAPIHandler = async (accessToken, billNoArray, fetchOnlyPending, cb) => {
+    Pledgebook.getBillDetailsAPIHandler = async (accessToken, billNoWithUUIDArray, fetchOnlyPending, fetchFundTrns, cb) => {
         try {            
             if(!accessToken)
                 throw 'Access Token is missing';
-            let billDetails = await Pledgebook._getBillDetails(accessToken, billNoArray, fetchOnlyPending);
+            let billDetails = await Pledgebook._getBillDetails(accessToken, billNoWithUUIDArray, fetchOnlyPending, fetchFundTrns);
             return {STATUS: 'SUCCESS', billDetails};
         } catch(e) {
             return { STATUS: 'ERROR', MESSAGE: e}
         }
     }
 
-    Pledgebook._getBillDetails = (accessToken, billNoArray, fetchOnlyPending) => {
+    Pledgebook._getBillDetails = (accessToken, billNoWithUUIDArray, fetchOnlyPending, fetchFundTrns) => {
         return new Promise ( async (resolve, reject) => {
             let _userId = await utils.getStoreOwnerUserId(accessToken);
+            let res;
+            if(fetchFundTrns) {
+                let uuidArray = billNoWithUUIDArray.map((anObj) => anObj.uuid);
+                res = await Pledgebook.app.models.FundTransaction._fetchTransactionsByBillIdApi(accessToken, uuidArray);
+            }
+            let billNoArray = billNoWithUUIDArray.map((anObj) => anObj.billNo);
             let pledgebookTableName = await Pledgebook.getPledgebookTableName(_userId);
             let query = Pledgebook.getQuery('billDetails', billNoArray, pledgebookTableName);
             if(fetchOnlyPending)
@@ -1216,10 +1241,14 @@ module.exports = function(Pledgebook) {
                 if(err) {
                     reject(err);
                 } else {
-                    _.each(result, (aRec, index) => {
-                        aRec.UserImagePath = utils.constructImageUrl(aRec.UserImagePath); // aRec.UserImagePath = `http://${app.get('domain')}:${app.get('port')}${aRec.UserImagePath.replace('client', '')}`;
-                    });                    
-                    resolve(result);
+                    if(result.length > 0) {
+                        _.each(result, (aRec, index) => {
+                            aRec.UserImagePath = utils.constructImageUrl(aRec.UserImagePath); // aRec.UserImagePath = `http://${app.get('domain')}:${app.get('port')}${aRec.UserImagePath.replace('client', '')}`;
+                        });                    
+                        resolve({...result[0], fundTrns: res});
+                    } else {
+                        resolve(null);
+                    }
                 }
             });            
         });
