@@ -153,7 +153,7 @@ const constructConsoleLogFolder = () => {
 // from DB, DATETIME col values will be as "Date Obj" in db response. So, lets make it as string
 // DateTime in DB might be saved in UTC, but while retriving it from DB will be in GMT. (Ex: Pledgebbok table "Date")
 // Ex: Input: DateOBJ(Sun Jul 31 2022 12:08:11 GMT+0530 (India Standard Time)),  Output: '31-07-2022 12:08:11'
-const convertDatabaseDateTimetoDateStr = (dateObj) => {
+const convertDatabaseDateTimetoDateStr = (dateObj, options) => {
     if(typeof dateObj !== 'object')
         return dateObj;
     if(!dateObj)
@@ -171,6 +171,8 @@ const convertDatabaseDateTimetoDateStr = (dateObj) => {
     let min = twoDigitFormat(dateObj.getMinutes());
     let sec = twoDigitFormat(dateObj.getSeconds());
     let localDate = `${dd}-${mm}-${yyyy} ${hr}:${min}:${sec}`;
+    if(options && options.skipTime)
+        localDate = `${dd}-${mm}-${yyyy}`;
     return localDate;
 }
 

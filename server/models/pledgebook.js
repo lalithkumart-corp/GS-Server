@@ -5,7 +5,9 @@ let _ = require('lodash');
 const createCsvWriter = require('csv-writer').createObjectCsvWriter;
 const createCsvStringifier = require('csv-writer').createObjectCsvStringifier;
 let path = require('path');
-
+const ANALYTICS = {
+    TOP_CUSTOMERS_LIMIT: 2
+}
 const PAYMENT_MODE = {
     'cash': 1,
     'cheque': 2,
@@ -452,6 +454,140 @@ module.exports = function(Pledgebook) {
         http: {path: '/delete-bills', verb: 'del'},
         description: 'Delete Bills in Pledgebook'
     });
+
+    Pledgebook.remoteMethod('fetchAnalyticsData', {
+        accepts: [{
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let accessToken;
+                    if(req && req.headers.authorization)
+                        accessToken = req.headers.authorization;
+                    return accessToken;
+                },
+                description: 'Accesstoken',
+            },
+            {
+                arg: 'groupBy', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let groupBy = req && req.query.groupBy;
+                    return groupBy;
+                },
+                description: 'groupBy',
+            },
+            {
+                arg: 'visualizationKey', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let visualizationKey = req && req.query.visualization_key;
+                    return visualizationKey;
+                },
+                description: 'visualizationKey',
+            },
+            {
+                arg: 'topCustomerMetric', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let topCustomerMetric = req && req.query.top_customer_metric;
+                    return topCustomerMetric;
+                },
+                description: 'topCustomerMetric',
+            },
+            {
+                arg: 'startDate', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let dt = req && req.query.start_date;
+                    return dt;
+                },
+                description: 'Start Date',
+            },
+            {
+                arg: 'endDate', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let dt = req && req.query.end_date;
+                    return dt;
+                },
+                description: 'End Date',
+            },
+        ],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            }
+        },
+        http: {path: '/analytics-data', verb: 'get'},
+        description: ''
+    });
+
+    Pledgebook.remoteMethod('fetchAnalyticsDataByCustomerWise', {
+        accepts: [{
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let accessToken;
+                    if(req && req.headers.authorization)
+                        accessToken = req.headers.authorization;
+                    return accessToken;
+                },
+                description: 'Accesstoken',
+            },
+            {
+                arg: 'topCustomerMetric', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let topCustomerMetric = req && req.query.top_customer_metric;
+                    return topCustomerMetric;
+                },
+                description: 'topCustomerMetric',
+            },
+            {
+                arg: 'billStatus', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let billStatus = req && req.query.bill_status;
+                    return billStatus;
+                },
+                description: 'billStatus',
+            },
+            {
+                arg: 'startDate', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let dt = req && req.query.start_date;
+                    return dt;
+                },
+                description: 'Start Date',
+            },
+            {
+                arg: 'endDate', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let dt = req && req.query.end_date;
+                    return dt;
+                },
+                description: 'End Date',
+            },
+            {
+                arg: 'limit', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let limit = req && req.query.limit;
+                    return limit;
+                },
+                description: 'Limit',
+            },
+            {
+                arg: 'offset', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let offset = req && req.query.offset;
+                    return offset;
+                },
+                description: 'Offset',
+            },
+        ],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body',
+            }
+        },
+        http: {path: '/analytics-data/group-by-customer', verb: 'get'},
+        description: ''
+    })
 
     Pledgebook.insertNewBillAPIHandler = async (data, cb) => {
         try {
@@ -1896,6 +2032,180 @@ module.exports = function(Pledgebook) {
         }
         return params;
     }
+
+    Pledgebook.fetchAnalyticsData = async (accessToken, groupBy, visualizationKey, topCustomerMetric, startDate, endDate) => {
+        try {
+            let _userId = await utils.getStoreOwnerUserId(accessToken, groupBy);
+            if(!['date', 'month', 'year'].includes(groupBy)) throw 'Invalid Group by value. Should be either MONTH or YEAR. REceived: '+ groupBy;
+            let obj = await Pledgebook._fetchAnalyticsDataDB(_userId, groupBy, visualizationKey, topCustomerMetric, startDate, endDate);
+            return {STATUS: 'success', RESPONSE: obj, STATUS_MSG: ''};
+        } catch(e) {
+            console.log(e);
+            return {STATUS: 'error', ERROR: e, MESSAGE: (e?e.message:'')};
+        }
+    }
+
+    Pledgebook._fetchAnalyticsDataDB = async (_userId, groupBy, visualizationKey, topCustomerMetric, sd, ed) => {
+        try {
+            let responses = await Promise.all([
+                // Pledgebook._fetchCustomerWiseData(_userId, groupBy, visualizationKey, topCustomerMetric, sd, ed),
+                // Pledgebook._fetchCustomerWiseData(_userId, groupBy, visualizationKey, topCustomerMetric, sd, ed, {getAllBills: true}),
+                Pledgebook._fetchBillsCount(_userId, groupBy, visualizationKey, sd, ed)
+            ]);
+            return {
+                topCustomers: [], //[...responses[0], ...responses[1]],
+                billsCount: responses[0]
+            };
+        } catch(e) {
+            throw e;
+        }
+    }
+
+    Pledgebook._fetchCustomerWiseData = (_userId, groupBy, visualizationKey, topCustomerMetric, sd, ed, options) => {
+        return new Promise((resolve, reject) => {
+            options = options || {};
+            let theQuery = SQL[`P_B_TOP5_CUSTOMER_BY_${groupBy.toUpperCase()}`].replace(/REPLACE_USERID/g, _userId);
+            
+            let groupByClause = 'GROUP BY p_b.CustomerId, year(p_b.Date)';
+            let conditionalStatusCol = '';
+            if(!options.getAllBills) {
+                conditionalStatusCol = 'p_b.Status as status,';
+                groupByClause += ', p_b.Status';
+            }
+
+            theQuery = theQuery.replace(/CONDITIONAL_STATUS_COL/g, conditionalStatusCol);
+
+            if(groupBy == 'month') {
+                theQuery = theQuery.replace(/GROUP_BY_CLAUSE/g, `${groupByClause}, month(p_b.Date)`);
+            } else if(groupBy == 'year') {
+                theQuery = theQuery.replace(/GROUP_BY_CLAUSE/g, groupByClause);
+            }
+
+            if(topCustomerMetric == 'billCount') theQuery = theQuery.replace(/ORDER_CLAUSE/g, 'ORDER BY billCount desc');
+            else if(topCustomerMetric == 'interestCollectedAmt') theQuery = theQuery.replace(/ORDER_CLAUSE/g, 'ORDER BY interestCollectedAmt desc');
+
+            theQuery = theQuery.replace(/TOP_CUSTOMERS_LIMIT/g, ANALYTICS.TOP_CUSTOMERS_LIMIT);
+
+            Pledgebook.dataSource.connector.query(theQuery, [sd, ed], (err, res) => {
+                if(err) {
+                    console.log(err);
+                    return resolve(null);
+                } else {
+                    if(options.getAllBills) {
+                        _.each(res, (obj, index) => {
+                            obj.status = 'all';
+                        })
+                    }
+                    return resolve(res);
+                }
+            });
+        });
+    }
+    Pledgebook._fetchBillsCount = (_userId, groupBy, visualizationKey, sd, ed) => {
+        return new Promise((resolve, reject) => {            
+            let theQuery = SQL.P_B_BILLS_BY_DT.replace(/REPLACE_USERID/g, _userId);
+            if(groupBy == 'date') {
+                theQuery = theQuery.replace(/GROUP_BY_CLAUSE/g,`GROUP BY p_b.Status, date(p_b.Date)`);
+            } else if(groupBy == 'month') {
+                theQuery = theQuery.replace(/GROUP_BY_CLAUSE/g,`GROUP BY p_b.Status, year(p_b.Date), month(p_b.Date)`);
+            } else if(groupBy == 'year') {
+                theQuery = theQuery.replace(/GROUP_BY_CLAUSE/g,`GROUP BY p_b.Status, year(p_b.Date)`);
+            }
+            Pledgebook.dataSource.connector.query(theQuery, [sd, ed], (err, res) => {
+                if(err) {
+                    console.log(err);
+                    return resolve(null);
+                } else {
+                    let mergedData = {};
+                    _.each(res, (val, index) => {
+                        let key = '';
+                        if(groupBy == "date") key = `${val.date.toLocaleDateString()}`;
+                        else if(groupBy == 'month') key = `${val.year}_${val.month}`;
+                        else if(groupBy == 'year') key = `${val.year}`;
+                        mergedData[key] = mergedData[key] || {...val, amount: 0, bills: 0, interestCollectedAmt: 0};
+                        mergedData[key].status = 'all';
+                        mergedData[key].amount += val.amount;
+                        mergedData[key].bills += val.bills;
+                        mergedData[key].interestCollectedAmt += val.interestCollectedAmt;
+                        mergedData[key].xAxisName = groupBy == 'date'?`${val.date.toLocaleDateString()}`:groupBy == 'month'?`${val.year}/${val.month}`:val.year;
+                        val.xAxisName = groupBy == 'date'?`${val.date.toLocaleDateString()}`:groupBy == 'month'?`${val.year}/${val.month}`:val.year;
+                        if(val.status == 1) {
+                            mergedData[key].bills_pending = val.bills;
+                            mergedData[key].amount_pending = val.amount;
+                            mergedData[key].interestCollectedAmt_pending = val.interestCollectedAmt;
+                        } else {
+                            mergedData[key].bills_closed = val.bills;
+                            mergedData[key].amount_closed = val.amount;
+                            mergedData[key].interestCollectedAmt_closed = val.interestCollectedAmt;
+                        }
+                    });
+                    return resolve([...res, ...Object.values(mergedData)]);
+                }
+            });
+        });
+    }
+
+    Pledgebook.fetchAnalyticsDataByCustomerWise = async (accessToken, topCustomerMetric, billStatus, startDate, endDate, limit, offset) => {
+        try {
+            let _userId = await utils.getStoreOwnerUserId(accessToken);
+            let respObj = await Pledgebook._fetchAnalyticsDataByCustomerWise(_userId, topCustomerMetric, billStatus, startDate, endDate, limit, offset);
+            return {STATUS: 'success', RESPONSE: respObj, STATUS_MSG: ''};
+        } catch(e) {
+            console.log(e);
+            return {STATUS: 'error', ERROR: e, MESSAGE: (e?e.message:'')};
+        }
+    }
+
+    Pledgebook._fetchAnalyticsDataByCustomerWise = async (_userId, topCustomerMetric, billStatus, sd, ed, limit, offset) => {
+        try {
+            let theQuery = SQL.P_B_BILLS_BY_CUSTOMER.replace(/REPLACE_USERID/g, _userId);
+            let orderClause = 'ORDER BY BillsCount DESC';
+            if(topCustomerMetric == 'interestCollectedAmt')
+                orderClause = 'ORDER BY InterestCollected DESC';
+            theQuery = theQuery.replace(/ORDER_CLAUSE/, orderClause);
+        
+            let whereCondition = "";
+            if(billStatus == "pending") {
+                whereCondition = 'AND p_b.Status=1';
+            } else if(billStatus == "closed") {
+                whereCondition = 'AND p_b.Status=0';
+            }
+            theQuery = theQuery.replace(/WHERE_CONDITION/g, whereCondition);
+
+            let promise1 = new Promise((resolve, reject) => {
+                Pledgebook.dataSource.connector.query(theQuery, [sd, ed, parseInt(limit), parseInt(offset)], (err, res) => {
+                    if(err) {
+                        console.log(err);
+                        return reject(err);
+                    } else {
+                        return resolve(res);
+                    }
+                });
+            });
+            let cntQuery = SQL.P_B_BILLS_BY_CUSTOMER_CNT.replace(/REPLACE_USERID/g, _userId);
+            let promise2 = new Promise((resolve, reject) => {
+                Pledgebook.dataSource.connector.query(cntQuery, [sd, ed], (err, res) => {
+                    if(err) {
+                        console.log(err);
+                        return reject(err);
+                    } else {
+                        return resolve(res);
+                    }
+                });
+            });
+
+            let results = await Promise.all([promise1, promise2]);
+            _.each(results[0], (aRow, index) => {
+                aRow.UserImagePath = utils.constructImageUrl(aRow.UserImagePath);
+            })
+            return {
+                rows: results[0],
+                totalCnt: results[1][0].cnt
+            }
+        } catch(e) {
+
+        }
+    }
 };
 
 let SQL = {
@@ -1966,5 +2276,124 @@ let SQL = {
       WHERE 
         pledgebook_uid IN (?)`,
     RAW_PLEDGEBOOK_RECORD: `SELECT * FROM PLEDGEBOOK_TABLE_NAME WHERE 
-        UniqueIdentifier=?`
+        UniqueIdentifier=?`,
+    P_B_TOP5_CUSTOMER_BY_MONTH: `select * from (
+            SELECT 
+                    row_number() OVER (partition by p_b.Status, year(p_b.Date), month(p_b.Date) ORDER BY COUNT(*) desc) as rowNo,
+                    year(p_b.Date) as year,
+                    month(p_b.Date) as month,
+                    Name as custName,
+                    p_b.CustomerId as customerId,
+                    Mobile as mobile,
+                    COUNT(BillNo) AS billCount,
+                    SUM(Amount) AS amt,
+                    CONDITIONAL_STATUS_COL
+                    sum(COALESCE(p_b.IntVal,0) + COALESCE(p_b_c.interest_amt,0)) as interestCollectedAmt
+                FROM
+                    pledgebook_REPLACE_USERID p_b
+                        LEFT JOIN
+                    customer_REPLACE_USERID ON customer_REPLACE_USERID.CustomerId = p_b.CustomerId
+                        left join
+                    pledgebook_closed_bills_REPLACE_USERID p_b_c on p_b.UniqueIdentifier=p_b_c.pledgebook_uid
+                WHERE
+                    p_b.Date BETWEEN ? and ?
+                GROUP_BY_CLAUSE
+                ORDER_CLAUSE
+                ) A where rowNo <= TOP_CUSTOMERS_LIMIT`,
+    P_B_TOP5_CUSTOMER_BY_YEAR: `select * from (
+        SELECT 
+                row_number() OVER (partition by p_b.Status, year(p_b.Date) ORDER BY COUNT(*) desc) as rowNo,
+                year(p_b.Date) as year,
+                Name as custName,
+                p_b.CustomerId as customerId,
+                Mobile as mobile,
+                COUNT(BillNo) AS billCount,
+                SUM(Amount) AS amt,
+                CONDITIONAL_STATUS_COL
+                sum(COALESCE(p_b.IntVal,0) + COALESCE(p_b_c.interest_amt,0)) as interestCollectedAmt
+            FROM
+                pledgebook_REPLACE_USERID p_b
+                    LEFT JOIN
+                customer_REPLACE_USERID ON customer_REPLACE_USERID.CustomerId = p_b.CustomerId
+                    left join
+                pledgebook_closed_bills_REPLACE_USERID p_b_c on p_b.UniqueIdentifier=p_b_c.pledgebook_uid
+            WHERE
+                p_b.Date BETWEEN ? and ?
+            GROUP_BY_CLAUSE
+            ORDER_CLAUSE
+            ) A where rowNo <= TOP_CUSTOMERS_LIMIT`,
+    P_B_BILLS_BY_DT: `SELECT 
+            year(p_b.Date) as year,
+            month(p_b.Date) as month,
+            date(p_b.Date) as date,
+            COUNT(BillNo) AS bills,
+            SUM(Amount) AS amount,
+            p_b.Status as status,
+            sum(COALESCE(p_b.IntVal,0) + COALESCE(p_b_c.interest_amt,0)) as interestCollectedAmt
+        FROM
+            pledgebook_REPLACE_USERID p_b
+                LEFT JOIN
+            customer_REPLACE_USERID ON customer_REPLACE_USERID.CustomerId = p_b.CustomerId
+                left join
+            pledgebook_closed_bills_REPLACE_USERID p_b_c on p_b.UniqueIdentifier=p_b_c.pledgebook_uid
+        WHERE
+            p_b.Date BETWEEN ? and ?
+        GROUP_BY_CLAUSE`,
+    P_B_BILLS_BY_YEAR: `SELECT 
+            year(p_b.Date) as year,
+            COUNT(BillNo) AS bills,
+            SUM(Amount) AS amount,
+            p_b.Status as status,
+            sum(COALESCE(p_b.IntVal,0) + COALESCE(p_b_c.interest_amt,0)) as interestCollectedAmt
+        FROM
+            pledgebook_1 p_b
+                LEFT JOIN
+            customer_REPLACE_USERID ON customer_REPLACE_USERID.CustomerId = p_b.CustomerId
+                left join
+            pledgebook_closed_bills_1 p_b_c on p_b.UniqueIdentifier=p_b_c.pledgebook_uid
+        WHERE
+            p_b.Date BETWEEN ? and ?
+        GROUP_BY_CLAUSE`,
+    P_B_BILLS_BY_CUSTOMER: ` 
+                SELECT 
+                    cust.Name,
+                    cust.GaurdianName,
+                    cust.Address,
+                    cust.City,
+                    cust.Mobile,
+                    cust.Place,
+                    cust.Pincode, 
+                    image.Path as UserImagePath,
+                    sum(p_b.Amount) as PledgedAmt,
+                    sum(COALESCE(p_b.IntVal,0) + COALESCE(p_b_c.interest_amt,0)- COALESCE(p_b_c.discount_amt,0)) as InterestCollected,
+                    count(*) as BillsCount,
+                    SUM(CASE WHEN P_b.Status = 1 THEN 1 ELSE 0 END) AS PendingBills,
+                    SUM(CASE WHEN p_b.Status = 0 THEN 1 ELSE 0 END) AS ClosedBills
+                FROM
+                    pledgebook_REPLACE_USERID p_b
+                        LEFT JOIN
+                    pledgebook_closed_bills_REPLACE_USERID p_b_c ON p_b.UniqueIdentifier = p_b_c.pledgebook_uid
+                        LEFT JOIN 
+                    customer_REPLACE_USERID cust ON cust.CustomerId = p_b.CustomerId
+                        LEFT JOIN
+                    image ON cust.ImageId = image.Id
+                WHERE 
+                    p_b.Date BETWEEN ? and ?
+                    WHERE_CONDITION
+                GROUP BY 
+                    cust.CustomerId
+                ORDER_CLAUSE
+                LIMIT ? OFFSET ?`,
+    P_B_BILLS_BY_CUSTOMER_CNT: `SELECT count(*) as cnt from (
+        SELECT 
+            count(*) as BillsCount
+        FROM
+            pledgebook_REPLACE_USERID p_b
+            LEFT JOIN
+            customer_REPLACE_USERID cust ON cust.CustomerId = p_b.CustomerId
+        WHERE 
+            p_b.Date BETWEEN ? and ?
+        GROUP BY 
+            cust.CustomerId
+            ) A`
 }
