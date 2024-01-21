@@ -2277,51 +2277,6 @@ let SQL = {
         pledgebook_uid IN (?)`,
     RAW_PLEDGEBOOK_RECORD: `SELECT * FROM PLEDGEBOOK_TABLE_NAME WHERE 
         UniqueIdentifier=?`,
-    P_B_TOP5_CUSTOMER_BY_MONTH: `select * from (
-            SELECT 
-                    row_number() OVER (partition by p_b.Status, year(p_b.Date), month(p_b.Date) ORDER BY COUNT(*) desc) as rowNo,
-                    year(p_b.Date) as year,
-                    month(p_b.Date) as month,
-                    Name as custName,
-                    p_b.CustomerId as customerId,
-                    Mobile as mobile,
-                    COUNT(BillNo) AS billCount,
-                    SUM(Amount) AS amt,
-                    CONDITIONAL_STATUS_COL
-                    sum(COALESCE(p_b.IntVal,0) + COALESCE(p_b_c.interest_amt,0)) as interestCollectedAmt
-                FROM
-                    pledgebook_REPLACE_USERID p_b
-                        LEFT JOIN
-                    customer_REPLACE_USERID ON customer_REPLACE_USERID.CustomerId = p_b.CustomerId
-                        left join
-                    pledgebook_closed_bills_REPLACE_USERID p_b_c on p_b.UniqueIdentifier=p_b_c.pledgebook_uid
-                WHERE
-                    p_b.Date BETWEEN ? and ?
-                GROUP_BY_CLAUSE
-                ORDER_CLAUSE
-                ) A where rowNo <= TOP_CUSTOMERS_LIMIT`,
-    P_B_TOP5_CUSTOMER_BY_YEAR: `select * from (
-        SELECT 
-                row_number() OVER (partition by p_b.Status, year(p_b.Date) ORDER BY COUNT(*) desc) as rowNo,
-                year(p_b.Date) as year,
-                Name as custName,
-                p_b.CustomerId as customerId,
-                Mobile as mobile,
-                COUNT(BillNo) AS billCount,
-                SUM(Amount) AS amt,
-                CONDITIONAL_STATUS_COL
-                sum(COALESCE(p_b.IntVal,0) + COALESCE(p_b_c.interest_amt,0)) as interestCollectedAmt
-            FROM
-                pledgebook_REPLACE_USERID p_b
-                    LEFT JOIN
-                customer_REPLACE_USERID ON customer_REPLACE_USERID.CustomerId = p_b.CustomerId
-                    left join
-                pledgebook_closed_bills_REPLACE_USERID p_b_c on p_b.UniqueIdentifier=p_b_c.pledgebook_uid
-            WHERE
-                p_b.Date BETWEEN ? and ?
-            GROUP_BY_CLAUSE
-            ORDER_CLAUSE
-            ) A where rowNo <= TOP_CUSTOMERS_LIMIT`,
     P_B_BILLS_BY_DT: `SELECT 
             year(p_b.Date) as year,
             month(p_b.Date) as month,
@@ -2336,21 +2291,6 @@ let SQL = {
             customer_REPLACE_USERID ON customer_REPLACE_USERID.CustomerId = p_b.CustomerId
                 left join
             pledgebook_closed_bills_REPLACE_USERID p_b_c on p_b.UniqueIdentifier=p_b_c.pledgebook_uid
-        WHERE
-            p_b.Date BETWEEN ? and ?
-        GROUP_BY_CLAUSE`,
-    P_B_BILLS_BY_YEAR: `SELECT 
-            year(p_b.Date) as year,
-            COUNT(BillNo) AS bills,
-            SUM(Amount) AS amount,
-            p_b.Status as status,
-            sum(COALESCE(p_b.IntVal,0) + COALESCE(p_b_c.interest_amt,0)) as interestCollectedAmt
-        FROM
-            pledgebook_1 p_b
-                LEFT JOIN
-            customer_REPLACE_USERID ON customer_REPLACE_USERID.CustomerId = p_b.CustomerId
-                left join
-            pledgebook_closed_bills_1 p_b_c on p_b.UniqueIdentifier=p_b_c.pledgebook_uid
         WHERE
             p_b.Date BETWEEN ? and ?
         GROUP_BY_CLAUSE`,
