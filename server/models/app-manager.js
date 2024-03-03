@@ -75,9 +75,14 @@ module.exports = function(ApplicationManager) {
             let status = 0;
             let userId = await utils.getStoreOwnerUserId(accessToken);
             let appRow = await ApplicationManager.findByUserId(userId);
-            if(appRow)
+            let daysToExpire;
+            if(appRow) {
                 status = appRow.status;
-            return { STATUS: 'SUCCESS', isActive: status };
+                let validTillDate = moment(appRow.validTillDate);
+                let todaysDate = moment();
+                daysToExpire = validTillDate.diff(todaysDate, 'days');
+            }
+            return { STATUS: 'SUCCESS', isActive: status, daysToExpire};
         } catch(e) {
             console.log(e);
             return { STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
