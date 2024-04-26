@@ -1,0 +1,65 @@
+{
+  "name": "CustomerAttachment",
+  "base": "PersistedModel",
+  "idInjection": true,
+  "options": {
+    "validateUpsert": true,
+    "mysql": {
+      "schema": "developmentdb",
+      "table": "customer_attachment"
+    }
+  },
+  "properties": {
+    "id": {
+      "type": "number",
+      "length": 11,
+      "mysql": {
+        "columnName": "CustomerAttachmentId",
+        "dataType": "int",
+        "dataLength": 11,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "userId": {
+      "type": "int",
+      "length": 11,
+      "mysql": {
+        "columnName": "UserId",
+        "dataType": "varchar",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "customerId": {
+      "type": "int",
+      "length": 11,
+      "mysql": {
+        "columnName": "CustomerId",
+        "dataType": "varchar",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    },
+    "imageId": {
+      "type": "number",
+      "mysql": {
+        "columnName": "ImageId",
+        "dataType": "int",
+        "dataLength": 11,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
+    }
+  },
+  "validations": [],
+  "relations": {},
+  "acls": [],
+  "methods": {}
+}

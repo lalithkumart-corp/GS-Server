@@ -17,7 +17,8 @@ module.exports = function(Image) {
                     storageMode: 'PATH',
                     path: uploadedDetail.path,
                     format: uploadedDetail.format,
-                    options: {originalName: uploadedDetail.fileName}
+                    options: {originalName: uploadedDetail.fileName},
+                    caption: picData.caption || ''
                 }
             } else {
                 let hashKey = Image.generateHashKey(picData);
@@ -26,13 +27,18 @@ module.exports = function(Image) {
                         hashKey: hashKey,
                         value: picData.pic,
                         format: picData.format,
-                        storageMode: 'BLOB'
-                    };                   
+                        storageMode: 'BLOB',
+                        caption: picData.caption || ''
+                    };
                 }
             }
 
             if(picData.imgCategory == 'ORN') {
                 let resp = await Image.app.models.OrnImage.saveImage(picture);
+                imageStatus.ID = resp.id;
+                imageStatus.URL = resp.url;
+            } else if (picData.imgCategory == 'CUSTOMER_ATTACHMENT') {
+                let resp = await Image.app.models.CustomerAttachmentImage.saveImage(picture);
                 imageStatus.ID = resp.id;
                 imageStatus.URL = resp.url;
             } else {
@@ -75,27 +81,33 @@ module.exports = function(Image) {
         let imageStatus = {STATUS: 'SUCCESS'};
         try {
             let uploadedDetail = await Image.upload(req, res);
-            let filePathWithName = uploadedDetail.path + uploadedDetail.options.localFile;
-            let base64ImgContent = Buffer.alloc(fs.readFileSync(filePathWithName)).toString("base64");
+            let filePathWithName = uploadedDetail.path + uploadedDetail.options.localFile;            
             let picture;
             if(req.body.storeAs == 'BASE64') {
+                let base64ImgContent = Buffer.from(fs.readFileSync(filePathWithName)).toString("base64");
                 let hashKey = Image.generateHashKey({format: uploadedDetail.mimeType, value: base64ImgContent});
                 picture = {
                     hashKey: hashKey,
                     storageMode: 'BLOB',
                     value: base64ImgContent,
-                    format: uploadedDetail.options.mimeType
+                    format: uploadedDetail.options.mimeType,
+                    caption: picData.caption || ''
                 }                
             } else {
                 picture = {
                     path: filePathWithName,
                     storageMode: 'PATH',
                     format: uploadedDetail.options.mimeType,
-                    options: {originalName: uploadedDetail.options.originalName}
+                    options: {originalName: uploadedDetail.options.originalName},
+                    caption: picData.caption || ''
                 };                
             }
             if(req.body.imgCategory == 'ORN') {
                 let resp = await Image.app.models.OrnImage.saveImage(picture);
+                imageStatus.ID = resp.id;
+                imageStatus.URL = resp.url;
+            } else if (req.body.imgCategory == 'CUSTOMER_ATTACHMENT') {
+                let resp = await Image.app.models.CustomerAttachmentImage.saveImage(picture);
                 imageStatus.ID = resp.id;
                 imageStatus.URL = resp.url;
             } else {
@@ -149,6 +161,9 @@ module.exports = function(Image) {
             if(data.imgCategory == 'ORN'){
                 imageRec = await Image.app.models.OrnImage.getImage(data.imageId);
                 await Image.app.models.OrnImage.delImage(imageRec);
+            } else if(data.imgCategory == 'CUSTOMER_ATTACHMENT') {
+                imageRec = await Image.app.models.CustomerAttachmentImage.getImage(data.imageId);
+                await Image.app.models.CustomerAttachmentImage.delImage(imageRec);
             } else {
                 imageRec = await Image.getImage(data.imageId);
                 await Image.delImage(imageRec);

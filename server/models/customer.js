@@ -108,6 +108,7 @@ module.exports = function(Customer) {
                     let cname = null;
                     let fgname = null;
                     let hashKey = null;
+                    let mobile = null;
                     let onlyIsActive = false;
                     try {
                         offsetStart = req && req.query.offsetStart || 0;
@@ -118,6 +119,7 @@ module.exports = function(Customer) {
                             cname = filters.cname || null;
                             fgname = filters.fgname || null;
                             hashKey = filters.hashKey || null;
+                            mobile = filters.mobile || null;
                             onlyIsActive = filters.onlyIsActive;
                         }
                     } catch(e) {
@@ -129,6 +131,7 @@ module.exports = function(Customer) {
                         cname: cname,
                         fgname: fgname,
                         hashKey: hashKey,
+                        mobile: mobile,
                         onlyIsActive: onlyIsActive
                     }
                 }
@@ -282,7 +285,7 @@ module.exports = function(Customer) {
                 name: params.cname,
                 imageId: (params.userPicture)?(params.userPicture.id):null,
                 gaurdianName: params.gaurdianName,
-                gaurdianRelationship: params.gaurdianRelationship,
+                guardianRelation: params.guardianRelation,
                 address: params.address,
                 place: params.place,
                 city: params.city,
@@ -295,7 +298,7 @@ module.exports = function(Customer) {
             // Customer.create(dbInputValues, (err, result) => {
             let qv = [
                 dbInputValues.userId, dbInputValues.name,
-                dbInputValues.gaurdianName, dbInputValues.gaurdianRelationship, dbInputValues.imageId,
+                dbInputValues.gaurdianName, dbInputValues.guardianRelation, dbInputValues.imageId,
                 dbInputValues.address, dbInputValues.place,
                 dbInputValues.city, dbInputValues.pincode,
                 dbInputValues.mobile, JSON.stringify(dbInputValues.otherDetails),
@@ -421,6 +424,7 @@ module.exports = function(Customer) {
             obj.city = aRes.city;
             obj.customerId = aRes.customerId;
             obj.custStatus = aRes.custStatus;
+            obj.guardianRelation = aRes.guardianRelation;
             obj.gaurdianName = aRes.gaurdianName;
             obj.hashKey = aRes.hashKey;
             obj.imageTableId = aRes.imageTableId;
@@ -459,6 +463,7 @@ module.exports = function(Customer) {
                             customer_REPLACE_USERID.CustomerId AS customerId,
                             customer_REPLACE_USERID.UserId AS userId,
                             customer_REPLACE_USERID.Name AS name,
+                            customer_REPLACE_USERID.GuardianRelation AS guardianRelation,
                             customer_REPLACE_USERID.GaurdianName AS gaurdianName,
                             customer_REPLACE_USERID.Address AS address,
                             customer_REPLACE_USERID.Place AS place,
@@ -537,6 +542,8 @@ module.exports = function(Customer) {
         let filters = [];
         if(params.userId)
             filters.push(`customer_REPLACE_USERID.UserId=${params.userId}`);
+        if(params.customerIdArr && params.customerIdArr.length>0)
+            filters.push(`customer_REPLACE_USERID.CustomerId IN (${params.customerIdArr.join(',')})`);
         if(params.cname)
             filters.push(`customer_REPLACE_USERID.Name LIKE '${params.cname}%'`);
         if(params.fgname)
@@ -549,6 +556,8 @@ module.exports = function(Customer) {
             filters.push(`customer_REPLACE_USERID.hashKey = '${params.customerHashKey}'`);
         if(params.customerId)
             filters.push(`customer_REPLACE_USERID.customerId = ${params.customerId}`);
+        if(params.mobile)
+            filters.push(`customer_REPLACE_USERID.Mobile LIKE '${params.mobile}%'`);
         if(filters.length)
             whereCondition = ` WHERE ${filters.join(' AND ')}`;
         return whereCondition;
@@ -690,7 +699,8 @@ module.exports = function(Customer) {
             let query = SQL.UPDATE_CUSTOMER;
             query = query.replace(/REPLACE_USERID/g, params._userId);
             let qv = [
-                params.cname, params.gaurdianName,
+                params.cname, 
+                params.guardianRelation, params.gaurdianName,
                 params.picture.id, params.address,
                 params.place, params.city,
                 params.pinCode, params.mobile, params.secMobile,
@@ -949,12 +959,15 @@ module.exports = function(Customer) {
     Customer._getCustomerBasicListApi = (accessToken, params) => {
         return new Promise(async (resolve, reject) => {
             params.userId = await utils.getStoreOwnerUserId(accessToken);
-            let query = Customer.getQuery('customer-list-basic', params);
+            let query = Customer.getQuery('customer-list-detailed', params);
             query = query.replace(/REPLACE_USERID/g, params.userId);
             Customer.dataSource.connector.query(query, (err, res) => {
                 if(err) {
                     return reject(err);
                 } else {
+                    _.each(res, (aRec, index) => {
+                        aRec.userImagePath = utils.constructImageUrl(aRec.userImagePath);
+                    })
                     return resolve(res);
                 }
             });
@@ -1016,6 +1029,7 @@ let SQL = {
                         customer_REPLACE_USERID.CustomerId AS customerId,
                         customer_REPLACE_USERID.UserId AS userId,
                         customer_REPLACE_USERID.Name AS name,
+                        customer_REPLACE_USERID.GuardianRelation as guardianRelation,
                         customer_REPLACE_USERID.GaurdianName AS gaurdianName,
                         customer_REPLACE_USERID.Address AS address,
                         customer_REPLACE_USERID.Place AS place,
@@ -1033,6 +1047,7 @@ let SQL = {
                         customer_REPLACE_USERID.CustomerId AS customerId,
                         customer_REPLACE_USERID.UserId AS userId,
                         customer_REPLACE_USERID.Name AS name,
+                        customer_REPLACE_USERID.GuardianRelation as guardianRelation,
                         customer_REPLACE_USERID.GaurdianName AS gaurdianName,
                         customer_REPLACE_USERID.Address AS address,
                         customer_REPLACE_USERID.Place AS place,
@@ -1050,6 +1065,7 @@ let SQL = {
                                 customer_REPLACE_USERID.CustomerId AS customerId,
                                 customer_REPLACE_USERID.UserId AS userId,
                                 customer_REPLACE_USERID.Name AS name,
+                                customer_REPLACE_USERID.GuardianRelation as guardianRelation,
                                 customer_REPLACE_USERID.GaurdianName AS gaurdianName,
                                 customer_REPLACE_USERID.Address AS address,
                                 customer_REPLACE_USERID.Place AS place,
@@ -1079,7 +1095,7 @@ let SQL = {
     UPDATE_CUSTOMER: `UPDATE 
                             customer_REPLACE_USERID
                         SET
-                            Name=?, gaurdianName=?, ImageId=?,
+                            Name=?, GuardianRelation=?, gaurdianName=?, ImageId=?,
                             Address=?, Place=?, City=?, 
                             Pincode=?, Mobile=?, SecMobile=?,
                             OtherDetails=?, HashKey=?, ModifiedAt=?

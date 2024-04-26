@@ -677,10 +677,13 @@ module.exports = function(Pledgebook) {
                 params.paymentMode,
                 1,
                 JSON.stringify({}), 
+                params.pledgedForCustomerId,
+                params.secJewelRedeemerCustomerId,
                 params.expiryDate,
                 params.createdDate,
                 params.modifiedDate,
             ];
+            //
             let query = Pledgebook.getQuery('insert', dbInputValues, pledgebookTableName);
             Pledgebook.dataSource.connector.query(query, dbInputValues, (err, result) => {
                 if(err) {
@@ -909,8 +912,9 @@ module.exports = function(Pledgebook) {
                                 OrnPictureId,
                                 OrnCategory, TotalWeight,
                                 IntPercent, IntVal, OtherCharges, LandedCost, PaymentMode,
-                                Status, History, ExpiryDate,
-                                CreatedDate, ModifiedDate) 
+                                Status, History, 
+                                PledgedFor, SecJewelRedemeer,
+                                ExpiryDate, CreatedDate, ModifiedDate) 
                             VALUES
                                 (?, ?,
                                 ?, ?, 
@@ -919,8 +923,9 @@ module.exports = function(Pledgebook) {
                                 ?,
                                 ?, ?,
                                 ?, ?, ?, ?, ?,
-                                ?, ?, ?,
-                                ?, ?);`
+                                ?, ?,
+                                ?, ?, 
+                                ?, ?, ?);`
                 break;
             case 'normal':
                 query = `SELECT                         
@@ -1170,6 +1175,8 @@ module.exports = function(Pledgebook) {
                             IntVal=?,
                             OtherCharges=?,
                             LandedCost=?,
+                            PledgedFor=?, 
+                            SecJewelRedemeer=?,
                             ExpiryDate=?,
                             PaymentMode=?,
                             ModifiedDate=?
@@ -1511,6 +1518,8 @@ module.exports = function(Pledgebook) {
                 parsedArg.interestValue,
                 parsedArg.otherCharges,
                 parsedArg.landedCost,
+                parsedArg.pledgedForCustomerId,
+                parsedArg.secJewelRedeemerCustomerId,
                 parsedArg.expiryDate,
                 parsedArg.paymentMode,
                 parsedArg.modifiedDate,
