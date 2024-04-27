@@ -114,6 +114,9 @@ module.exports = function(UserPreference) {
             val.bill_create_pincode_default = params.pincode;
         if(typeof params.auto_print_receipt !== "undefined")
             val.auto_print_receipt = params.auto_print_receipt;
+        
+        val.bill_create_alert_offline_date = (typeof params.alertOfflineDate !== 'undefined')?params.alertOfflineDate:false;
+
         return val;
     }
 
@@ -134,7 +137,7 @@ module.exports = function(UserPreference) {
                             }
                         });
                     } else {
-                        UserPreference.create({userId: params._userId, bill_create_place_default: params.place, bill_create_city_default: params.city, bill_create_pincode_default: params.pincode, auto_print_receipt: false}, (err, res) => {
+                        UserPreference.create({userId: params._userId, bill_create_place_default: params.place, bill_create_city_default: params.city, bill_create_pincode_default: params.pincode, auto_print_receipt: false, bill_create_alert_offline_date: params.alertOfflineDate}, (err, res) => {
                             if(err) {
                                 let gsError = GsErrorCtrl.create({className: 'UserPreference', methodName: '_insertOrUpdate', message: 'Error occured while creating the defaults in DB', cause: err});
                                 return reject(gsError);

@@ -86,6 +86,17 @@
         "dataScale": null,
         "nullable": "Y"
       }
+    },
+    "bill_create_alert_offline_date": {
+      "type": "string",
+      "mysql": {
+        "columnName": "bill_create_alert_offline_date",
+        "dataType": "varchar",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
     }
   },
   "validations": [],

@@ -178,6 +178,28 @@ module.exports = function(Customer) {
         description: 'For fetching customer list.',
     });
 
+    Customer.remoteMethod('updateBlackListAPI', {
+        accepts: {
+            arg: 'data',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/update-blacklist', verb: 'post'},
+        description: 'Updating the customer blacklist'
+    });
+
 
     Customer.createCustomerAPIHandler = async (data) => {
         try {
@@ -424,6 +446,7 @@ module.exports = function(Customer) {
             obj.city = aRes.city;
             obj.customerId = aRes.customerId;
             obj.custStatus = aRes.custStatus;
+            obj.isBlacklisted = aRes.isBlacklisted;
             obj.guardianRelation = aRes.guardianRelation;
             obj.gaurdianName = aRes.gaurdianName;
             obj.hashKey = aRes.hashKey;
@@ -474,6 +497,7 @@ module.exports = function(Customer) {
                             customer_REPLACE_USERID.SecMobile AS secMobile,
                             customer_REPLACE_USERID.OtherDetails AS otherDetails,
                             customer_REPLACE_USERID.CustStatus AS custStatus,
+                            customer_REPLACE_USERID.IsBlacklisted AS isBlacklisted,
                             image.Id AS imageTableId,
                             image.Path AS userImagePath,
                             image.Format AS userImageFormat,
@@ -533,6 +557,9 @@ module.exports = function(Customer) {
             case 'customer-obj':
                 sql = SQL.CUST_BY_ID;
                 break;
+            case 'blacklist-update':
+                sql = `UPDATE customer_REPLACE_USERID SET IsBlacklisted = ${params.isBlacklisted} WHERE CustomerId = '${params.custId}' AND UserId=${params.userId}`;
+                break;
         }
         return sql;
     }
@@ -552,6 +579,8 @@ module.exports = function(Customer) {
             filters.push(`customer_REPLACE_USERID.HashKey = '${params.hashKey}'`);
         if(params.onlyIsActive)
             filters.push(`customer_REPLACE_USERID.CustStatus = 1`);
+        if(params.ecludeBlacklistedCustomer)
+            filters.push(`customer_REPLACE_USERID.IsBlacklisted = 0`);
         if(params.customerHashKey)
             filters.push(`customer_REPLACE_USERID.hashKey = '${params.customerHashKey}'`);
         if(params.customerId)
@@ -999,6 +1028,44 @@ module.exports = function(Customer) {
             });
         });
     }
+
+    Customer.updateBlackListAPI = async (data) => {
+        try {
+            let _userId = await utils.getStoreOwnerUserId(data.accessToken);
+            let isBlacklistCustomer = data.isBlacklistCustomer?true:false;
+            await Customer._updateBlackListAPI(data.custId, _userId, isBlacklistCustomer);
+            return {
+                STATUS: 'success',
+                MSG: `Successfully ${isBlacklistCustomer?'added customer to blacklist':'removed customer from blacklist'}`
+            }
+        } catch(e) {
+            console.log(e);
+            return {
+                STATUS: 'error',
+                MSG: e.message || 'Error while updating the blacklist',
+                ERROR: e
+            }
+        }
+    }
+
+    Customer._updateBlackListAPI = async (custId, userId, isBlacklisted) => {
+        return new Promise( (resolve, reject) => {
+            let params = {
+                custId: custId,
+                userId: userId,
+                isBlacklisted: isBlacklisted
+            }
+            let query = Customer.getQuery('blacklist-update', params);
+            query = query.replace(/REPLACE_USERID/g, userId);
+            Customer.dataSource.connector.query(query, (err1, res1) => {
+                if(err1) {
+                    reject(err1);
+                } else {
+                    resolve(true);
+                }
+            });
+        });        
+    }
 };
 
 let SQL = {
@@ -1022,7 +1089,8 @@ let SQL = {
                         customer_REPLACE_USERID.Mobile AS mobile,
                         customer_REPLACE_USERID.HashKey AS hashKey,
                         customer_REPLACE_USERID.SecMobile AS secMobile,
-                        customer_REPLACE_USERID.CustStatus AS custStatus
+                        customer_REPLACE_USERID.CustStatus AS custStatus,
+                        customer_REPLACE_USERID.IsBlacklisted AS isBlacklisted
                     FROM 
                         customer_REPLACE_USERID`,
     CUSTOMER_BY_HASHKEY: `SELECT 
@@ -1038,7 +1106,8 @@ let SQL = {
                         customer_REPLACE_USERID.Mobile AS mobile,
                         customer_REPLACE_USERID.HashKey AS hashKey,
                         customer_REPLACE_USERID.SecMobile AS secMobile,
-                        customer_REPLACE_USERID.CustStatus AS custStatus
+                        customer_REPLACE_USERID.CustStatus AS custStatus,
+                        customer_REPLACE_USERID.IsBlacklisted AS isBlacklisted
                     FROM 
                         customer_REPLACE_USERID 
                     WHERE
@@ -1056,7 +1125,8 @@ let SQL = {
                         customer_REPLACE_USERID.Mobile AS mobile,
                         customer_REPLACE_USERID.HashKey AS hashKey,
                         customer_REPLACE_USERID.SecMobile AS secMobile,
-                        customer_REPLACE_USERID.CustStatus AS custStatus
+                        customer_REPLACE_USERID.CustStatus AS custStatus,
+                        customer_REPLACE_USERID.IsBlacklisted AS isBlacklisted
                     FROM customer_REPLACE_USERID
                     WHERE_CLAUSE
                     ORDER BY customer_REPLACE_USERID.Name ASC
@@ -1076,6 +1146,7 @@ let SQL = {
                                 customer_REPLACE_USERID.SecMobile AS secMobile,
                                 customer_REPLACE_USERID.OtherDetails AS otherDetails,
                                 customer_REPLACE_USERID.CustStatus AS custStatus,
+                                customer_REPLACE_USERID.IsBlacklisted AS isBlacklisted,
                                 image.Id AS imageTableId,
                                 image.Path AS userImagePath,
                                 image.Format AS userImageFormat,

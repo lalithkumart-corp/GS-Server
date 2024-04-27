@@ -158,5 +158,13 @@
   "Analytics": {
     "dataSource": "developmentdb",
     "public": true
+  },
+  "CustomerAttachmentImage": {
+    "dataSource": "developmentdb",
+    "public": true
+  },
+  "CustomerAttachment": {
+    "dataSource": "developmentdb",
+    "public": true
   }
 }

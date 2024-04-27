@@ -235,6 +235,7 @@ module.exports = function(Common) {
     Common.createNewTablesIfNotExist = async (userId) => {
         try {
             await Common._createCustomerTable(userId);
+            await Common._createCustomerAttachmentsTable(userId);
             await Common._createPledgebookTable(userId);
             await Common._createPledgebookClosingBillTable(userId);
             await Common._createStockTable(userId);
@@ -286,6 +287,32 @@ module.exports = function(Common) {
                     return reject(error);
                 } else {
                     console.log(`"customer_${userId}" table for this user:${userId} exists already, So new table not created.`);
+                    return resolve(false);
+                }
+            });
+        });
+    }
+
+    Common._createCustomerAttachmentsTable = (userId) => {
+        return new Promise( (resolve, reject) => {
+            let simpleSql = `SELECT * FROM customer_attachments_${userId} LIMIT 1`;
+            app.models.GsUser.dataSource.connector.query(simpleSql, (error, result) => {
+                if(error && error.code == "ER_NO_SUCH_TABLE") {
+                    let sql = SQL.CUSTOMER_ATTACHMENTS_TABLE.replace(/REPLACE_USERID/g, userId);
+                    app.models.GsUser.dataSource.connector.query(sql, (err, resp) => {
+                        if(err) {
+                            console.log(err);
+                            console.log(`Error occured while creating a new "customer_attachments_${userId}" table for the user: ${userId}`);
+                            return reject(err);
+                        } else {
+                            console.log(`New "customer_attachments_${userId}" table created!`);
+                            return resolve(true);
+                        }
+                    });
+                } else if(error) {
+                    return reject(error);
+                } else {
+                    console.log(`"customer_attachments_${userId}" table for this user:${userId} exists already, So new table not created.`);
                     return resolve(false);
                 }
             });
@@ -963,10 +990,21 @@ let SQL = {
         Notes text,
         HashKey varchar(45) DEFAULT NULL,
         CustStatus int DEFAULT '1',
+        IsBlacklisted int DEFAULT 0,
         CreatedAt datetime DEFAULT NULL,
         ModifiedAt datetime DEFAULT NULL,
         PRIMARY KEY (CustomerId)
       )`,
+    CUSTOMER_ATTACHMENTS_TABLE: `
+        CREATE TABLE customer_attachments_REPLACE_USERID (
+            CustomerAttachmentId INT NOT NULL AUTO_INCREMENT,
+            UserId INT NOT NULL,
+            CustomerId INT NOT NULL,
+            ImageId INT NOT NULL,
+            CreatedDate DATETIME NULL DEFAULT CURRENT_TIMESTAMP,
+            ModifiedDate DATETIME NULL DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (CustomerAttachmentId)
+        )`,
     PLEDGEBOOK_TABLE: `CREATE TABLE pledgebook_REPLACE_USERID (
                             UniqueIdentifier varchar(45),
                             BillNo varchar(45) DEFAULT NULL,
@@ -984,6 +1022,8 @@ let SQL = {
                             LandedCost FLOAT NULL DEFAULT 0,
                             PaymentMode int(11) DEFAULT 1,
                             Remarks text,
+                            PledgedFor int DEFAULT NULL,
+                            SecJewelRedemeer int DEFAULT NULL,
                             Status int(11) NOT NULL DEFAULT 1,
                             closedBillReference varchar(45) DEFAULT NULL,
                             History text,
