@@ -16,6 +16,7 @@ const getmac = require('getmac');
 let path = require('path');
 let consoleLogHandler = require('./components/logger/consoleLogHandler');
 let appValidator = require('./appValidator');
+const { encrypt } = require('./utils/commonUtils');
 // let os = require('os');
 // console.log(Object.keys(os.networkInterfaces()));
 
@@ -68,6 +69,15 @@ app.start = function() {
     consoleLogHandler.consoleLogHandler(loggerInstance);
     // testUpload();
     new SocketClass(server);
+    /*
+    let rr = new Date();
+    // let password = app.get('csProductUUID') + app.get('encpwd') + rr.getFullYear()+rr.getMonth()+rr.getHours();
+    let password = `4C4C4544-0038-3710-8053-B6C04F444332A(*&nlk)[._` + rr.getFullYear()+rr.getMonth()+rr.getHours();
+    let encted = encrypt(JSON.stringify({expiryDate: '2026-10-10 00:00:00'}), password);
+    console.log(password)
+    console.log(encted);
+    */
+
     return server;
 };
 

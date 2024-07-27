@@ -2303,6 +2303,37 @@ let SQL = {
         WHERE
             p_b.Date BETWEEN ? and ?
         GROUP_BY_CLAUSE`,
+    P_B_BILLS_BY_MNTH: `SELECT 
+            year(p_b.Date) as year,
+            month(p_b.Date) as month,
+            COUNT(BillNo) AS bills,
+            SUM(Amount) AS amount,
+            p_b.Status as status,
+            sum(COALESCE(p_b.IntVal,0) + COALESCE(p_b_c.interest_amt,0)) as interestCollectedAmt
+        FROM
+            pledgebook_REPLACE_USERID p_b
+                LEFT JOIN
+            customer_REPLACE_USERID ON customer_REPLACE_USERID.CustomerId = p_b.CustomerId
+                left join
+            pledgebook_closed_bills_REPLACE_USERID p_b_c on p_b.UniqueIdentifier=p_b_c.pledgebook_uid
+        WHERE
+            p_b.Date BETWEEN ? and ?
+        GROUP_BY_CLAUSE`,
+    P_B_BILLS_BY_YR: `SELECT 
+            year(p_b.Date) as year,
+            COUNT(BillNo) AS bills,
+            SUM(Amount) AS amount,
+            p_b.Status as status,
+            sum(COALESCE(p_b.IntVal,0) + COALESCE(p_b_c.interest_amt,0)) as interestCollectedAmt
+        FROM
+            pledgebook_REPLACE_USERID p_b
+                LEFT JOIN
+            customer_REPLACE_USERID ON customer_REPLACE_USERID.CustomerId = p_b.CustomerId
+                left join
+            pledgebook_closed_bills_REPLACE_USERID p_b_c on p_b.UniqueIdentifier=p_b_c.pledgebook_uid
+        WHERE
+            p_b.Date BETWEEN ? and ?
+        GROUP_BY_CLAUSE`,
     P_B_BILLS_BY_CUSTOMER: ` 
                 SELECT 
                     cust.Name,

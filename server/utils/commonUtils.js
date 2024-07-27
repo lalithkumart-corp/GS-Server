@@ -1,6 +1,7 @@
 let app = require('../server.js')
 let admin = require('../firebase-service');
 let path = require('path');
+const crypto = require('crypto');
 
 // Getting userId ie., Store owner's user id
 const getStoreOwnerUserId = (accessToken) => {
@@ -181,6 +182,22 @@ const getCurrentDateTimeInUTCForDB = () => {
     return new Date().toISOString().replace('T', ' ').slice(0,19);
 }
 
+// Encryption function
+const encrypt = (text, password) => {
+    const cipher = crypto.createCipher('aes-256-cbc', password);
+    let encrypted = cipher.update(text, 'utf8', 'hex');
+    encrypted += cipher.final('hex');
+    return encrypted;
+}
+
+// Decryption function
+const decrypt = (encryptedText, password) => {
+    const decipher = crypto.createDecipher('aes-256-cbc', password);
+    let decrypted = decipher.update(encryptedText, 'hex', 'utf8');
+    decrypted += decipher.final('utf8');
+    return decrypted;
+}
+
 module.exports = {
     getStoreOwnerUserId,
     executeSqlQuery,
@@ -191,5 +208,7 @@ module.exports = {
     getCsvStorePath,
     constructConsoleLogFolder,
     convertDatabaseDateTimetoDateStr,
-    getCurrentDateTimeInUTCForDB
+    getCurrentDateTimeInUTCForDB,
+    encrypt,
+    decrypt
 }
