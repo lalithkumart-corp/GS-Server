@@ -680,6 +680,9 @@ module.exports = function(Pledgebook) {
                 params.pledgedForCustomerId,
                 params.secJewelRedeemerCustomerId,
                 params.expiryDate,
+                params.isRenewalBill || 0,
+                params.isRenewalOfBillNo || '',
+                params.isRenewalOfUID || '',
                 params.createdDate,
                 params.modifiedDate,
             ];
@@ -805,7 +808,12 @@ module.exports = function(Pledgebook) {
             params._pledgebookTableName = await Pledgebook.getPledgebookTableName(params._userId);
             params._pledgebookClosedBillTableName = await Pledgebook.getPledgebookClosedTableName(params._userId);
             params._status = 0;
-            await Pledgebook.updatePledgebookBillStatus(params);
+            if(data.requestParams[0].isRenewal) {
+                await Pledgebook.updatePledgebookBillDetails(params);
+            } else {
+                await Pledgebook.updatePledgebookBillStatus(params);
+            }
+            
             Pledgebook.app.models.FundTransaction.prototype.add(params, 'redeem');
             return {STATUS: 'success', RESPONSE: {}, STATUS_MSG: ''};
         } catch(e) {
@@ -831,7 +839,26 @@ module.exports = function(Pledgebook) {
                 }
             });
         });        
-    }    
+    }
+
+    Pledgebook.updatePledgebookBillDetails = (params) => {
+        return new Promise( (resolve, reject) => {
+            let query = Pledgebook.getQuery('renewal-details-update', params, params._pledgebookTableName);
+            Pledgebook.dataSource.connector.query(query, async (err, result) => {
+                if (err) {
+                    console.log(err);
+                    return reject(err);
+                } else {
+                    if(result.affectedRows > 0) {
+                        await Pledgebook._insertRowInClosedBillList(params);
+                        return resolve(true);
+                    } else {
+                        return reject({msg: 'Not Inserted record in bill closing table'});
+                    }
+                }
+            });
+        });        
+    }
 
     Pledgebook._insertRowInClosedBillList = (params) => {
         return new Promise( (resolve, reject) => {
@@ -862,7 +889,7 @@ module.exports = function(Pledgebook) {
 
     Pledgebook.reOpenBill = (params) => {
         return new Promise( (resolve, reject) => {
-            let query = Pledgebook.getQuery('redeem-status-update', params, params._pledgebookTableName);
+            let query = Pledgebook.getQuery('reopen-status-update', params, params._pledgebookTableName);
             Pledgebook.dataSource.connector.query(query, async (err, result) => {
                 if (err) {
                     return reject(err);
@@ -914,7 +941,9 @@ module.exports = function(Pledgebook) {
                                 IntPercent, IntVal, OtherCharges, LandedCost, PaymentMode,
                                 Status, History, 
                                 PledgedFor, SecJewelRedemeer,
-                                ExpiryDate, CreatedDate, ModifiedDate) 
+                                ExpiryDate, 
+                                IsRenewalBill, IsRenewalOfBillNo, IsRenewalOfUID,
+                                CreatedDate, ModifiedDate) 
                             VALUES
                                 (?, ?,
                                 ?, ?, 
@@ -925,7 +954,9 @@ module.exports = function(Pledgebook) {
                                 ?, ?, ?, ?, ?,
                                 ?, ?,
                                 ?, ?, 
-                                ?, ?, ?);`
+                                ?, 
+                                ?, ?, ?,
+                                ?, ?);`
                 break;
             case 'normal':
                 query = `SELECT                         
@@ -1077,6 +1108,14 @@ module.exports = function(Pledgebook) {
                             WHERE Id IN (${params.ids.join(', ')})`;
                     */
                 }
+                break;
+            case 'reopen-status-update':
+                if(params.data.length == 1) {
+                    query = `UPDATE ${pledgebookTableName} SET Status= ${params._status}, Renewed=0, RenewedNewBillNo='', RenewedNewUID='' WHERE UniqueIdentifier = ${params.data[0].pledgeBookUID}`; 
+                }
+                break;
+            case 'renewal-details-update':
+                query = `UPDATE ${pledgebookTableName} SET Status= ${params._status}, Renewed=1, RenewedNewBillNo='${params.data[0].redemmedNewBillNo}', RenewedNewUID='${params.data[0].redeemedNewBillUid}' WHERE UniqueIdentifier = ${params.data[0].pledgeBookUID}`; 
                 break;
             case 'redeem-insert':
                 query = ''; //`SET SQL_SAFE_UPDATES = 0;`;
@@ -1973,6 +2012,27 @@ module.exports = function(Pledgebook) {
 
     Pledgebook.billRenewalApiHandler = async (accessToken, payload) => {
         try {
+            //validate payment arguments
+            // if(!payload.paymentDetails)
+            //     throw 'Payment mode is not found. Please select any payment mode option';
+            // let pd = payload.paymentDetails;
+            // let mode = pd.mode;
+            // if((mode == '' || mode == null)) {
+            //     console.log('Payment mode is null');
+            //     throw 'Payment mode is null';
+            // }
+            // if(pd.mode == 'cash' && (pd.cash.fromAccountId == null || pd.cash.fromAccountId == '')) {
+            //     console.log('Payment mode is cash, but account id is null');
+            //     throw 'Payment option invalid';
+            // } else if(pd.mode == 'cheque' && (pd.cheque.fromAccountId == null || pd.cheque.fromAccountId == '')) {
+            //     console.log('Payment mode is cheque, but account id is null');
+            //     throw 'Payment option invalid';
+            // } else if(pd.mode == 'online' && (pd.online.fromAccountId == null || pd.online.fromAccountId == '')) {
+            //     console.log('Payment mode is online, but account id is null');
+            //     throw 'Payment option invalid';
+            // }
+            
+
             let _userId = await utils.getStoreOwnerUserId(accessToken);
             let pledgebookTableName = await Pledgebook.getPledgebookTableName(_userId);
             let rawPledgebookRecord = await Pledgebook._getRawPledgebookBillFromDB(pledgebookTableName, payload.redeemParams.pledgeBookUID);
@@ -2021,7 +2081,7 @@ module.exports = function(Pledgebook) {
         let billNoWithSeries = newBillParams.billNo;
         if(newBillParams.billSeries) billNoWithSeries = newBillParams.billSeries+"."+newBillParams.billNo;
         let params = {
-            uniqueIdentifier: (+ new Date()),
+            uniqueIdentifier: newBillParams.uniqueIdentifier,
             billNo: newBillParams.billNo,
             billNoWithSeries: billNoWithSeries,
             amount: newBillParams.amount,
@@ -2037,7 +2097,12 @@ module.exports = function(Pledgebook) {
             interestValue: newBillParams.interestValue,
             otherCharges: 0,
             landedCost: newBillParams.landedCost,
-            paymentMode: newBillParams.paymentMode
+            paymentMode: PAYMENT_MODE[newBillParams.paymentMode] || 1,
+            isRenewalBill: true,
+            isRenewalOfBillNo: newBillParams.isRenewalOfBillNo,
+            isRenewalOfUID: newBillParams.isRenewalOfUID,
+            createdDate: utils.getCurrentDateTimeInUTCForDB(),
+            modifiedDate: utils.getCurrentDateTimeInUTCForDB()
         }
         return params;
     }
@@ -2112,12 +2177,15 @@ module.exports = function(Pledgebook) {
     }
     Pledgebook._fetchBillsCount = (_userId, groupBy, visualizationKey, sd, ed) => {
         return new Promise((resolve, reject) => {            
-            let theQuery = SQL.P_B_BILLS_BY_DT.replace(/REPLACE_USERID/g, _userId);
+            let theQuery = '';
             if(groupBy == 'date') {
-                theQuery = theQuery.replace(/GROUP_BY_CLAUSE/g,`GROUP BY p_b.Status, date(p_b.Date)`);
+                theQuery = SQL.P_B_BILLS_BY_DT.replace(/REPLACE_USERID/g, _userId);
+                theQuery = theQuery.replace(/GROUP_BY_CLAUSE/g,`GROUP BY p_b.Status,  year(p_b.Date), month(p_b.Date), date(p_b.Date)`);
             } else if(groupBy == 'month') {
+                theQuery = SQL.P_B_BILLS_BY_MNTH.replace(/REPLACE_USERID/g, _userId);
                 theQuery = theQuery.replace(/GROUP_BY_CLAUSE/g,`GROUP BY p_b.Status, year(p_b.Date), month(p_b.Date)`);
             } else if(groupBy == 'year') {
+                theQuery = SQL.P_B_BILLS_BY_YR.replace(/REPLACE_USERID/g, _userId);
                 theQuery = theQuery.replace(/GROUP_BY_CLAUSE/g,`GROUP BY p_b.Status, year(p_b.Date)`);
             }
             Pledgebook.dataSource.connector.query(theQuery, [sd, ed], (err, res) => {

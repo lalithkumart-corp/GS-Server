@@ -1031,6 +1031,12 @@ let SQL = {
                             Alert int(11) DEFAULT NULL,
                             Archived int(11) DEFAULT 0,
                             Trashed int(11) DEFAULT 0,
+                            IsRenewalBill int(11) DEFAULT 0,
+                            IsRenewalOfBillNo varchar(45) DEFAULT NULL,
+                            IsRenewalOfUID varchar(45) DEFAULT NULL,
+                            Renewed int(11) DEFAULT 0,
+                            RenewedNewBillNo varchar(45) DEFAULT NULL,
+                            RenewedNewUID varchar(45) DEFAULT NULL,
                             CreatedDate datetime DEFAULT NULL,
                             ModifiedDate datetime DEFAULT NULL,
                             PRIMARY KEY (UniqueIdentifier)
