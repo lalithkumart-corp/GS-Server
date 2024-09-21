@@ -322,6 +322,12 @@ module.exports = function(JwlInvoice) {
             whereConditionList.push('i.archived=0');
         if(filters.date && filters.date.startDate)
             whereConditionList.push(`i.invoice_date BETWEEN "${filters.date.startDate}" AND "${filters.date.endDate}"`);
+        if(filters.invoiceNo)
+            whereConditionList.push(`i.invoice_no LIKE "${filters.invoiceNo}%"`);
+        if(filters.custName)
+            whereConditionList.push(`c.Name LIKE "${filters.custName}%"`);
+        if(filters.prodId)
+            whereConditionList.push(`prod_ids LIKE "%${filters.prodId}%"`);
         if(whereConditionList.length > 0)
             sql += ` WHERE ${whereConditionList.join(' AND ')}`
         return sql;

@@ -175,10 +175,10 @@ module.exports = function(ApplicationManager) {
                         const decryptedMessage = utils.decrypt(apiParams.activationKey, password);
                         let decryptedObj = JSON.parse(decryptedMessage);
                         if(!decryptedObj.expiryDate)
-                            return reject('License Invalid - Code 1');
+                            return reject('License Invalid - Code 1'); // If expiry date argument is not present in license key 
                         await ApplicationManager.activate(apiParams._userId, {status: 1, usedTrialOffer: 1, validTillDate: decryptedObj.expiryDate, modifiedDate: today});
                     } catch(e) {
-                        return reject('License Invalid - Code 2');
+                        return reject('License Invalid - Code 2'); // If license key is not the proper/right one
                     }
                 }
                 return resolve(true);

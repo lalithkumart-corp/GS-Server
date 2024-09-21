@@ -91,7 +91,7 @@ module.exports = function(Image) {
                     storageMode: 'BLOB',
                     value: base64ImgContent,
                     format: uploadedDetail.options.mimeType,
-                    caption: picData.caption || ''
+                    caption: req.body.caption || '', //reference error
                 }                
             } else {
                 picture = {
@@ -99,7 +99,7 @@ module.exports = function(Image) {
                     storageMode: 'PATH',
                     format: uploadedDetail.options.mimeType,
                     options: {originalName: uploadedDetail.options.originalName},
-                    caption: picData.caption || ''
+                    caption: req.body.caption || ''
                 };                
             }
             if(req.body.imgCategory == 'ORN') {
