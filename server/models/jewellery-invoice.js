@@ -274,8 +274,8 @@ module.exports = function(JwlInvoice) {
         return new Promise( (resolve, reject) => {
             let sql = SQL.INVOICE_LIST;
             sql = JwlInvoice._injectFilterQuerypart(sql, params, 'list');
-            sql = sql.replace(/STOCK_SOLD_TABLE/g, `stock_sold_${params._userId}`);
-            sql = sql.replace(/INVOICE_TABLE/g, `jewellery_invoice_details_${params._userId}`);
+            // sql = sql.replace(/STOCK_SOLD_TABLE/g, `stock_sold_${params._userId}`);
+            // sql = sql.replace(/INVOICE_TABLE/g, `jewellery_invoice_details_${params._userId}`);
             sql = sql.replace(/REPLACE_USERID/g,  params._userId);
             JwlInvoice.dataSource.connector.query(sql, (err, res) => {
                 if(err) {
@@ -301,9 +301,10 @@ module.exports = function(JwlInvoice) {
     JwlInvoice._fetchJwlCustInvoiceListCount = (params) => {
         return new Promise( (resolve, reject) => {
             let sql = SQL.INVOICE_LIST_TOTALS;
+            params.filters.fetchTotalCount = true;
             sql = JwlInvoice._injectFilterQuerypart(sql, params, 'count');
             // sql = sql.replace(/STOCK_SOLD_TABLE/g, `stock_sold_${params._userId}`);
-            sql = sql.replace(/INVOICE_TABLE/g, `jewellery_invoice_details_${params._userId}`);
+            // sql = sql.replace(/INVOICE_TABLE/g, `jewellery_invoice_details_${params._userId}`);
             sql = sql.replace(/REPLACE_USERID/g,  params._userId);
             JwlInvoice.dataSource.connector.query(sql, (err, res) => {
                 if(err) {
@@ -316,6 +317,7 @@ module.exports = function(JwlInvoice) {
     }
 
     JwlInvoice._injectFilterQuerypart = (sql, params) => {
+        let whereClause = '';
         let {filters} = params;
         let whereConditionList = [];
         if(!filters.include_archived)
@@ -326,10 +328,27 @@ module.exports = function(JwlInvoice) {
             whereConditionList.push(`i.invoice_no LIKE "${filters.invoiceNo}%"`);
         if(filters.custName)
             whereConditionList.push(`c.Name LIKE "${filters.custName}%"`);
+        if(filters.custGarudianName)
+            whereConditionList.push(`c.GaurdianName LIKE "${filters.custGarudianName}%"`);
+        if(filters.custAddr)
+            whereConditionList.push(`c.Address LIKE "${filters.custAddr}%"`);
+        
         if(filters.prodId)
-            whereConditionList.push(`prod_ids LIKE "%${filters.prodId}%"`);
+            whereConditionList.push(`s.prod_id LIKE "${filters.prodId.toUpperCase()}%"`);
+
+        if(filters.huid) 
+            whereConditionList.push(`s.huid LIKE "${filters.huid.toUpperCase()}%"`);
+
         if(whereConditionList.length > 0)
-            sql += ` WHERE ${whereConditionList.join(' AND ')}`
+            whereClause = ` WHERE ${whereConditionList.join(' AND ')}`
+        
+        sql = sql.replace(/WHERE_CLAUSE/g, whereClause);
+        
+        if(!filters.fetchTotalCount) {
+            sql += ' ORDER BY i.invoice_date DESC';   
+            sql += ` LIMIT ${filters.offsetEnd-filters.offsetStart} OFFSET ${filters.offsetStart}`;
+        }
+
         return sql;
     }
     
@@ -379,13 +398,61 @@ let SQL = {
     INSERT_INVOICE_DETAIL: `INSERT INTO INVOICE_TABLE (invoice_date, ukey, invoice_no, cust_id, action, paid_amt, balance_amt, raw_data, invoice_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     INVOICE_DATA: `SELECT invoice_data FROM INVOICE_TABLE WHERE ukey IN (?)`, // for pdf invoice
     INVOICE_RECORD: `SELECT * FROM INVOICE_TABLE WHERE ukey IN (?)`,
-    INVOICE_LIST: `SELECT i.*, c.*,
+    INVOICE_LIST_OLD: `SELECT i.*, c.*,
                     (select group_concat(prod_id) as prdId from STOCK_SOLD_TABLE as s where s.invoice_ref=i.ukey group by s.invoice_ref) as prod_ids
                         FROM INVOICE_TABLE as i
                     LEFT JOIN customer_REPLACE_USERID as c ON i.cust_id = c.CustomerId`,
-    INVOICE_LIST_TOTALS: `SELECT count(*) as totalInvoiceList
+    INVOICE_LIST: `select 
+                        i.invoice_date,
+                        i.ukey,
+                        i.invoice_no,
+                        i.cust_id,
+                        i.paid_amt,
+                        i.balance_amt,
+                        i.payment_mode,
+                        i.created_date,
+                        i.modified_date,
+                        c.Name,
+                        c.GaurdianName,
+                        c.Address,
+                        c.Mobile,
+                        GROUP_CONCAT(s.prod_id) as prod_ids,
+                        GROUP_CONCAT(s.huid) as huids
+                    from
+                        jewellery_invoice_details_REPLACE_USERID AS i
+                            LEFT JOIN
+                        customer_REPLACE_USERID AS c ON i.cust_id = c.CustomerId
+                            LEFT JOIN
+                        stock_sold_REPLACE_USERID AS s ON s.invoice_ref = i.ukey
+                        WHERE_CLAUSE
+                        GROUP BY i.invoice_date, i.ukey, i.invoice_no, i.cust_id, i.paid_amt, i.balance_amt, i.payment_mode, i.created_date, i.modified_date, c.Name, c.GaurdianName, c.Address, c.Mobile`,
+    INVOICE_LIST_TOTALS_OLD: `SELECT count(*) as totalInvoiceList
                     from 
                         INVOICE_TABLE as i 
                         LEFT JOIN customer_REPLACE_USERID as c ON i.cust_id = c.CustomerId`,
+    INVOICE_LIST_TOTALS: `select count(*) as totalInvoiceList from (select 
+                        i.invoice_date,
+                        i.ukey,
+                        i.invoice_no,
+                        i.cust_id,
+                        i.paid_amt,
+                        i.balance_amt,
+                        i.payment_mode,
+                        i.created_date,
+                        i.modified_date,
+                        c.Name,
+                        c.GaurdianName,
+                        c.Address,
+                        c.Mobile,
+                        GROUP_CONCAT(s.prod_id) as prod_ids,
+                        GROUP_CONCAT(s.huid) as huids
+                    from
+                        jewellery_invoice_details_REPLACE_USERID AS i
+                            LEFT JOIN
+                        customer_REPLACE_USERID AS c ON i.cust_id = c.CustomerId
+                            LEFT JOIN
+                        stock_sold_REPLACE_USERID AS s ON s.invoice_ref = i.ukey
+                        WHERE_CLAUSE
+                        GROUP BY i.invoice_date, i.ukey, i.invoice_no, i.cust_id, i.paid_amt, i.balance_amt, i.payment_mode, i.created_date, i.modified_date, c.Name, c.GaurdianName, c.Address, c.Mobile) A`,
     MARK_ARCHIVED: `UPDATE INVOICE_TABLE SET archived=1 where ukey=?`
 }

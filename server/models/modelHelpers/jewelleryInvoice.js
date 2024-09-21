@@ -26,11 +26,15 @@ class JewelleryInvoiceHelper {
                 paidAmt: aRow.paid_amt,
                 balanceAmt: aRow.balance_amt,
                 paymentMode: aRow.payment_mode,
+                invoiceDate: aRow.invoice_date,
                 createdDate: aRow.created_date,
                 modifiedDate: aRow.modified_date,
                 prodIds: aRow.prod_ids,
+                huids: aRow.huids,
                 customerName: aRow.Name,
+                customerGaurdianName: aRow.GaurdianName,
                 customerMobile: aRow.Mobile,
+                customerAddr: aRow.Address,
             });
         });
         return arr;
