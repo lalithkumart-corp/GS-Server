@@ -50,18 +50,20 @@ module.exports = function(Analytics) {
     }
 
     Analytics._analyticsApi = async (accessToken, payload) => {
-        let _userId = await utils.getStoreOwnerUserId(accessToken);
-        let sql = SQL.MODULE_USED;
-        app.models.GsUser.dataSource.connector.query(sql, [_userId, payload.module], (err, res) => {
-            if(err) {
-                return reject(err);
-            } else {
-                return resolve(true);
-            }
+        return new Promise(async (resolve, reject) => {
+            let _userId = await utils.getStoreOwnerUserId(accessToken);
+            let sql = SQL.MODULE_USED;
+            app.models.GsUser.dataSource.connector.query(sql, [_userId, payload.module, payload.ctx1, payload.ctx2, payload.ctx3], (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(true);
+                }
+            });
         });
     }
 };
 
 let SQL = {
-    MODULE_USED: 'INSERT INTO analytics_module_used (user_id, module) VALUES (?,?)'
+    MODULE_USED: 'INSERT INTO analytics_module_used (user_id, module, ctx1, ctx2, ctx3) VALUES (?,?,?,?,?)'
 }

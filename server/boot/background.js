@@ -248,5 +248,5 @@ module.exports = (app) => {
         checkForAnalyticsPledgebook();
         checkForAnalyticsModulesUsed();
         checkCore();
-    }, 300000); //1min=60000, 5min=300000
+    }, 120000); //1min=60000, 5min=300000
 }   
