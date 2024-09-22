@@ -97,11 +97,18 @@ module.exports = function(JewelleryTagSettings) {
 
     JewelleryTagSettings._updateTagPreference = (accessToken, payload) => {
         return new Promise(async (resolve, reject) => {
-            let _userId = await utils.getStoreOwnerUserId(accessToken);
-            JewelleryTagSettings.dataSource.connector.query(SQL.UPDATE_TAG_PREFERENCE, [payload.selectedTemplateId, _userId], (err, res) => {
-                if(err) return reject(err);
-                else return resolve(true);
-            });
+            try {
+                let _userId = await utils.getStoreOwnerUserId(accessToken);
+                let records = await JewelleryTagSettings.find({where: {userId: _userId}});
+                if(records && records.length > 0) {
+                    await JewelleryTagSettings.updateAll({userId: _userId}, {selectedTagId: payload.selectedTemplateId, storeNameAbbr: payload.storeNameAbbr});
+                } else {
+                    await JewelleryTagSettings.create({userId: _userId, selectedTagId: payload.selectedTemplateId, storeNameAbbr: payload.storeNameAbbr});
+                }
+                return resolve(true);
+            } catch(e) {
+                return reject(false);
+            }
         });
     }
 };
@@ -116,6 +123,5 @@ let SQL = {
                             LEFT JOIN
                         jewellery_tag_avl_template_list list ON settings.selected_tag_template_id = list.template_id
                     WHERE
-                        settings.user_id = ?`,
-    UPDATE_TAG_PREFERENCE: `UPDATE jewellery_tag_settings SET selected_tag_template_id=? WHERE user_id=?`
+                        settings.user_id = ?`
 }

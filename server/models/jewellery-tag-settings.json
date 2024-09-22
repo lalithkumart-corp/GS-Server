@@ -47,6 +47,18 @@
           "nullable": "Y"
         }
       },
+      "storeNameAbbr": {
+        "type": "number",
+        "required": false,
+        "mysql": {
+          "columnName": "store_name_abbr",
+          "dataType": "int",
+          "dataLength": 22,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
       "customization": {
         "type": "any",
         "required": false,
