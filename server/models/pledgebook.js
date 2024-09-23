@@ -2102,7 +2102,8 @@ module.exports = function(Pledgebook) {
             isRenewalOfBillNo: newBillParams.isRenewalOfBillNo,
             isRenewalOfUID: newBillParams.isRenewalOfUID,
             createdDate: utils.getCurrentDateTimeInUTCForDB(),
-            modifiedDate: utils.getCurrentDateTimeInUTCForDB()
+            modifiedDate: utils.getCurrentDateTimeInUTCForDB(),
+            expiryDate: newBillParams.expiryDate,
         }
         return params;
     }
