@@ -49,7 +49,7 @@ module.exports = function(Gsuser) {
                 applicationStatus: status,
                 setupActionsStatus: setupActionsStatus,
                 loanBillTemplateSettings: otherStuffs.loanBillTemplateSettings,
-                jewelleryGstBillTemplateSettings: otherStuffs.jewelleryGstBillTemplateSettings
+                jewelleryBillTemplateSettings: otherStuffs.jewelleryBillTemplateSettings
             }
             Gsuser.storeLoginActionDB({email: apiParams.email, status: true, userId: session.userId});
             return response;
@@ -629,16 +629,24 @@ module.exports = function(Gsuser) {
                 return resolve(row);
             });
 
-            let jewelleryGstBillTemplateSettings = new Promise(async (resolve, reject) => {
+            let jewelleryBillTemplateSettings = new Promise(async (resolve, reject) => {
                 let row = await app.models.JewelleryBillSetting.prototype._getTemplateSettingsApi({_userId: ownerUserId});
-                return resolve(row);
+                let gst = {};
+                let estimate = {};
+                for(let i in row) {
+                    if(row[i].category == 'gst')
+                        gst = row[i];
+                    if(row[i].category == 'estimate')
+                        estimate = row[i];
+                }
+                return resolve({gst, estimate});
             });
     
-            Promise.all([fetchLoanBillTemplateSettings, jewelleryGstBillTemplateSettings]).then(
+            Promise.all([fetchLoanBillTemplateSettings, jewelleryBillTemplateSettings]).then(
                 (results) => {
                     let obj = {
                         loanBillTemplateSettings: results[0],
-                        jewelleryGstBillTemplateSettings: results[1]
+                        jewelleryBillTemplateSettings: results[1]
                     }
                     resolve(obj);
                 },

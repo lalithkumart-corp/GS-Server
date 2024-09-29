@@ -6,7 +6,7 @@
       "validateUpsert": true,
       "mysql": {
         "schema": "developmentdb",
-        "table": "jewellery_invoice_details"
+        "table": "jewellery_invoices"
       }
     },
     "properties": {},

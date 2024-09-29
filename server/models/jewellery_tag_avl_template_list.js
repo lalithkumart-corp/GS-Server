@@ -59,7 +59,7 @@ let SQL = {
                             settings.selected_tag_template_id,
                             settings.customization
                         FROM
-                            gsprod.jewellery_tag_avl_template_list templates 
+                            jewellery_tag_avl_template_list templates 
                                 LEFT JOIN
-                            gsprod.jewellery_tag_settings settings ON (settings.selected_tag_template_id = templates.template_id AND settings.user_id = ?)`,
+                            jewellery_tag_settings settings ON (settings.selected_tag_template_id = templates.template_id AND settings.user_id = ?)`,
 }

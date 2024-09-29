@@ -122,7 +122,7 @@ module.exports = function(JewelleryBillSettings) {
                 
             let records = await JewelleryBillSettings.find({ where: whereObj });
             if(records && records.length > 0)
-                return records[0];
+                return records;
             else
                 return null;
         } catch(e) {
@@ -149,28 +149,34 @@ module.exports = function(JewelleryBillSettings) {
     JewelleryBillSettings._updateSettingsApi = async (apiParams) => {
         try {
             apiParams._userId = await utils.getStoreOwnerUserId(apiParams.accessToken);
-            let records = await JewelleryBillSettings.find({where: {userId: apiParams._userId, category: apiParams.category}});
-            if(records && records.length > 0) {
-                
-                let updateParams = {};
-                if(apiParams.customCss)
-                    updateParams.customCss = JSON.stringify(apiParams.customCss);
-                if(apiParams.selectedTemplate)
-                    updateParams.selectedTemplate = apiParams.selectedTemplate;
-                
-                updateParams.billSeries = apiParams.billSeries;
-                
-                updateParams.billNo = apiParams.billNo;
-
-                await JewelleryBillSettings.updateAll({userId: apiParams._userId, category: apiParams.category}, updateParams);
-            }else
-                await JewelleryBillSettings.create({userId: apiParams._userId, category: apiParams.category, customCss: JSON.stringify(apiParams.customCss), selectedTemplate: apiParams.selectedTemplate, billSeries: apiParams.billSeries, billNo: apiParams.billNo});
+            await JewelleryBillSettings._updateSettingsInDB('gst', {_userId: apiParams._userId, ...apiParams.gst});
+            await JewelleryBillSettings._updateSettingsInDB('estimate', {_userId: apiParams._userId, ...apiParams.estimate});
             return true;
         } catch(e) {
             console.log(e);
             throw e;
         }
     };
+
+    JewelleryBillSettings._updateSettingsInDB = async (category, payload) => {
+        let records = await JewelleryBillSettings.find({where: {userId: payload._userId, category: category}});
+        if(records && records.length > 0) {
+            
+            let updateParams = {};
+            if(payload.customCss)
+                updateParams.customCss = JSON.stringify(payload.customCss);
+            if(payload.selectedTemplate)
+                updateParams.selectedTemplate = payload.selectedTemplate;
+            
+            updateParams.billSeries = payload.billSeries;
+            
+            updateParams.billNo = payload.billNo;
+
+            await JewelleryBillSettings.updateAll({userId: payload._userId, category: category}, updateParams);
+        }else
+            await JewelleryBillSettings.create({userId: payload._userId, category: category, customCss: JSON.stringify(payload.customCss), selectedTemplate: payload.selectedTemplate, billSeries: payload.billSeries, billNo: payload.billNo});
+        return true;
+    }
 
     JewelleryBillSettings.getAvlJewelleryBillSettingssApi = (cb) => {
         JewelleryBillSettings._getAvlJewelleryBillSettingssApi().then(
@@ -196,7 +202,16 @@ module.exports = function(JewelleryBillSettings) {
                     _.each(res, (aRow, index) => {
                         aRow.screenshot_url = utils.constructImageUrl(aRow.screenshot_url);
                     });
-                    return resolve(res);
+                    let gst = [];
+                    let estimate = [];
+                    for(let i in res) {
+                        if(res[i].category == 'gst') {
+                            gst.push(res[i]);
+                        } else if(res[i].category == 'estimate') {
+                            estimate.push(res[i]);
+                        }
+                    }
+                    return resolve({gst, estimate});
                 }
             });
         });

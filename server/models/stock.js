@@ -722,11 +722,13 @@ module.exports = function(Stock) {
             let isAvl = await Stock.checkItemAvlQty(data.apiParams.newProds, data._userId);
             if(!isAvl)
                 throw new Error('Please check item quantity. Item might have been already sold. Please check "Sold Out Items" stock list');
-            // let invoiceDetailResp = await Stock.insertInvoiceData(data);
+
             let invoiceDetailResp = await Stock.app.models.JewelleryInvoice.prototype.insertInvoiceData(data);
             if(!invoiceDetailResp)
                 throw new Error('Invoice creation failed. Please check Logs.');
             
+            let invoiceItemsInsertResp = await Stock.insertInvoiceItems(data, {invoiceRef: data._uniqString}); //TODO 
+
             await Stock.insertInSellingDetail(data);
             await Stock.updateQtyInStockTable(data);
             
@@ -770,27 +772,42 @@ module.exports = function(Stock) {
         }
     }
 
-    Stock.insertInvoiceData = async (payload) => {
+    Stock.insertInvoiceItems = async (payload, options) => {
         try {
-            let invoiceNoFull = payload.apiParams.invoiceNo;
-            if(payload.apiParams.invoiceSeries)
-                invoiceNoFull = `${payload.apiParams.invoiceSeries}.${payload.apiParams.invoiceNo}`;
-            let sql = SQL.INSERT_INVOICE_DETAIL.replace(/INVOICE_TABLE/g, `invoice_details_${payload._userId}`);
-            let queryVal = [
-                    payload._uniqString,
-                    invoiceNoFull,
-                    payload.apiParams.customerId,
-                    'SOLD',
-                    payload.apiParams.paymentFormData.paid,
-                    payload.apiParams.paymentFormData.balance,
-                    payload.apiParams.paymentFormData.paymentMode,
-                    JSON.stringify(payload.apiParams.paymentFormData),
-                    JSON.stringify(payload.apiParams)
+            let prodIds = [];
+            payload.apiParams.newProds.forEach(obj => {
+                prodIds.push(obj.prodId);
+            });
+            let q1 = SQL.FETCH_STOCK_TBL_UID.replace(/STOCK_TABLE/g, `stock_${payload._userId}`);
+            let res = await utils.executeSqlQuery(Stock.dataSource, q1, [prodIds]);
+            
+            let invoiceItemInsertQry = SQL.INSERT_INVOICE_ITEMS.replace(/INVOICE_ITEM_TABLE/g, `jewellery_invoice_items_${payload._userId}`);
+    
+            for(let i in payload.apiParams.newProds) {
+                let obj = payload.apiParams.newProds[i];
+                let stockRecArr = res.filter((a) => a.prod_id==obj.prodId);
+                let stockRec = stockRecArr[0];
+                let queryParams = [
+                    options.invoiceRef,
+                    stockRec.uid,
+                    obj.qty,
+                    obj.grossWt,
+                    obj.netWt,
+                    obj.wastagePercent,
+                    obj.wastageVal,
+                    obj.makingCharge || null,
+                    obj.initialPrice,
+                    obj.discount || null,
+                    obj.cgstPercent,
+                    obj.cgstVal,
+                    obj.sgstPercent,
+                    obj.sgstVal,
+                    obj.finalPrice
                 ];
-            let result = await utils.executeSqlQuery(Stock.dataSource, sql, queryVal);
-            return result;
+                let r = await utils.executeSqlQuery(Stock.dataSource, invoiceItemInsertQry, queryParams);
+                console.log(r);
+            }
         } catch(e) {
-            logger.error(GsErrorCtrl.create({className: 'Stock', methodName: 'insertInvoiceData', cause: e, message: 'Exception in sql query execution'}));
             console.log(e);
             throw e;
         }
@@ -818,7 +835,7 @@ module.exports = function(Stock) {
                 temp.push(anItem.cgstPercent || 0);
                 temp.push(anItem.sgstPercent || 0);
                 temp.push(anItem.discount || 0);
-                temp.push(anItem.price || 0);
+                temp.push(anItem.finalPrice || 0);
                 temp.push(`"${payload._uniqString}"`);
                 bucket.push(`(${temp.join(',')})`);
             });
@@ -868,7 +885,7 @@ module.exports = function(Stock) {
             let sql = SQL.INSERT_INTO_OLD_ITEM_STOCK;
             sql = sql.replace(/OLD_ITEMS_STOCK_TABLE/g, `old_items_stock_${data._userId}`);
             let oldOrnaments = data.apiParams.oldOrnaments;
-            let queryParams = [oldOrnaments.itemType, oldOrnaments.grossWt, oldOrnaments.netWt, oldOrnaments.wastageVal, oldOrnaments.pricePerGram, oldOrnaments.netAmount, data._uniqString];
+            let queryParams = [data.apiParams.customerId, oldOrnaments.itemType, data.apiParams.retailRate, oldOrnaments.grossWt, oldOrnaments.netWt, oldOrnaments.wastageVal, oldOrnaments.pricePerGram, oldOrnaments.netAmount, data._uniqString];
             await utils.executeSqlQuery(Stock.dataSource, sql, queryParams);
         } catch(e) {
             console.log(e);
@@ -892,7 +909,7 @@ module.exports = function(Stock) {
             let sql = SQL.FETCH_SOLD_OUT_ITEMS_LIST;
             sql += Stock._getFilterQueryPartForSoldOutItems(params);
             sql = sql.replace(/STOCK_SOLD_TABLE/g, `stock_sold_${params._userId}`);
-            sql = sql.replace(/INVOICE_DETAIL_TABLE/g, `jewellery_invoice_details_${params._userId}`);
+            sql = sql.replace(/JWL_INVOICE_TABLE/g, `jewellery_invoices_${params._userId}`);
             sql = sql.replace(/REPLACE_USERID/g, params._userId);
             let res = await utils.executeSqlQuery(Stock.dataSource, sql);
             //TODO:
@@ -913,7 +930,7 @@ module.exports = function(Stock) {
             if(params.filters.date)
                 filterList.push(`(STOCK_SOLD_TABLE.date BETWEEN '${params.filters.date.startDate}' AND '${params.filters.date.endDate}')`);
             if(params.filters.invoiceNo)
-                filterList.push(`(INVOICE_DETAIL_TABLE.invoice_no like '${params.filters.invoiceNo}%')`);
+                filterList.push(`(JWL_INVOICE_TABLE.invoice_no like '${params.filters.invoiceNo}%')`);
             if(params.filters.customer)
                 filterList.push(`(customer_REPLACE_USERID.Name like '${params.filters.customer}%')`);
             if(params.filters.prodId)
@@ -946,7 +963,7 @@ module.exports = function(Stock) {
             let sql = SQL.FETCH_SOLD_OUT_ITEMS_COUNT;
             sql += Stock._getFilterQueryPartForSoldOutItems(params, true);
             sql = sql.replace(/STOCK_SOLD_TABLE/g, `stock_sold_${params._userId}`);
-            sql = sql.replace(/INVOICE_DETAIL_TABLE/g, `jewellery_invoice_details_${params._userId}`);
+            sql = sql.replace(/JWL_INVOICE_TABLE/g, `jewellery_invoices_${params._userId}`);
             sql = sql.replace(/REPLACE_USERID/g, params._userId);
             let res = await utils.executeSqlQuery(Stock.dataSource, sql);
             let count = 0;
@@ -1021,6 +1038,7 @@ module.exports = function(Stock) {
 };
 
 let SQL = {
+    FETCH_STOCK_TBL_UID: 'SELECT prod_id, uid FROM STOCK_TABLE WHERE prod_id IN (?)',
     FETCH_COUNT: `SELECT
                     COUNT(*) AS Count,
                     SUM(net_wt) AS NetWt,
@@ -1171,15 +1189,69 @@ let SQL = {
                                 invoice_ref
                             ) 
                             VALUES `,
-    INSERT_INTO_OLD_ITEM_STOCK: `INSERT INTO OLD_ITEMS_STOCK_TABLE (item_type, gross_wt, net_wt, wastage_val, applied_retail_rate, price, invoice_ref)
-                            VALUES(?,?,?,?,?,?,?)`,
-    INSERT_INVOICE_DETAIL: `INSERT INTO INVOICE_TABLE (ukey, invoice_no, cust_id, action, paid_amt, balance_amt, payment_mode, raw_payment_data, raw_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    INSERT_INTO_OLD_ITEM_STOCK: `INSERT INTO OLD_ITEMS_STOCK_TABLE (purchased_from_cust_id, item_type, daily_retail_rate, gross_wt, net_wt, wastage_val, applied_retail_rate, price, invoice_ref)
+                            VALUES(?,?,?,?,?,?,?,?,?)`,
+    INSERT_INVOICE_DETAIL_OLD: `INSERT INTO INVOICE_TABLE (ukey, invoice_no, cust_id, action, paid_amt, balance_amt, payment_mode, raw_payment_data, raw_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+    
+    INSERT_INVOICE_ITEMS: `INSERT INTO INVOICE_ITEM_TABLE (
+                                invoice_ref, stock_tbl_item_uid, qty, 
+                                gross_wt, net_wt, 
+                                wastage_percent, wastage_val,
+                                making_charge, initial_price, discount,
+                                cgst_percent, cgst_val, 
+                                sgst_percent, sgst_val, 
+                                final_price) 
+                                VALUES (?, ?, ?,
+                                ?,?,
+                                ?,?,
+                                ?,?,?,
+                                ?,?,
+                                ?,?,
+                                ?)`,
     FETCH_SOLD_OUT_ITEMS_COUNT: `SELECT
                                     COUNT(*) AS Count
                                 FROM
                                 STOCK_SOLD_TABLE
-                                LEFT JOIN INVOICE_DETAIL_TABLE ON STOCK_SOLD_TABLE.invoice_ref = INVOICE_DETAIL_TABLE.ukey
-                                LEFT JOIN customer_REPLACE_USERID ON INVOICE_DETAIL_TABLE.cust_id = customer_REPLACE_USERID.CustomerId`,
+                                LEFT JOIN JWL_INVOICE_TABLE ON STOCK_SOLD_TABLE.invoice_ref = JWL_INVOICE_TABLE.ukey
+                                LEFT JOIN customer_REPLACE_USERID ON JWL_INVOICE_TABLE.cust_id = customer_REPLACE_USERID.CustomerId`,
+    FETCH_SOLD_OUT_ITEMS_LIST_OLD: `SELECT
+                            customer_REPLACE_USERID.CustomerId AS CustomerId,
+                            date AS InvoicingDate,
+                            customer_REPLACE_USERID.Name AS CustomerName,
+                            customer_REPLACE_USERID.GaurdianName AS GaurdianName,
+                            customer_REPLACE_USERID.Address AS Address,
+                            customer_REPLACE_USERID.City AS City,
+                            customer_REPLACE_USERID.Mobile AS Mobile,
+                            customer_REPLACE_USERID.SecMobile AS SecMobile,
+                            prod_id AS ProdId,
+                            huid AS ProdHuid,
+                            metal_rate AS MetalRate,
+                            retail_rate AS RetailRate,
+                            orn_list_jewellery.metal as metal,
+                            orn_list_jewellery.item_name as item_name,
+                            orn_list_jewellery.item_category as item_category,
+                            orn_list_jewellery.item_subcategory as item_subcategory,
+                            orn_list_jewellery.dimension as dimension,
+                            qty AS Qty,
+                            gross_wt,
+                            net_wt,
+                            wastage,
+                            labour,
+                            cgst_percent,
+                            sgst_percent,
+                            discount,
+                            total,
+                            STOCK_SOLD_TABLE.created_date AS created_date,
+                            JWL_INVOICE_TABLE.payment_mode AS PaymentMode,
+                            JWL_INVOICE_TABLE.paid_amt AS PaidAmt,
+                            JWL_INVOICE_TABLE.balance_amt AS BalAmt,
+                            JWL_INVOICE_TABLE.ukey AS InvoiceRef,
+                            JWL_INVOICE_TABLE.invoice_no AS InvoiceNo
+                        FROM
+                            STOCK_SOLD_TABLE
+                            LEFT JOIN JWL_INVOICE_TABLE ON STOCK_SOLD_TABLE.invoice_ref = JWL_INVOICE_TABLE.ukey
+                            LEFT JOIN customer_REPLACE_USERID ON JWL_INVOICE_TABLE.cust_id = customer_REPLACE_USERID.CustomerId
+                            LEFT JOIN orn_list_jewellery ON STOCK_SOLD_TABLE.ornament = orn_list_jewellery.id`,
     FETCH_SOLD_OUT_ITEMS_LIST: `SELECT
                             customer_REPLACE_USERID.CustomerId AS CustomerId,
                             date AS InvoicingDate,
@@ -1208,15 +1280,15 @@ let SQL = {
                             discount,
                             total,
                             STOCK_SOLD_TABLE.created_date AS created_date,
-                            INVOICE_DETAIL_TABLE.payment_mode AS PaymentMode,
-                            INVOICE_DETAIL_TABLE.paid_amt AS PaidAmt,
-                            INVOICE_DETAIL_TABLE.balance_amt AS BalAmt,
-                            INVOICE_DETAIL_TABLE.ukey AS InvoiceRef,
-                            INVOICE_DETAIL_TABLE.invoice_no AS InvoiceNo
+                            JWL_INVOICE_TABLE.payment_mode AS PaymentMode,
+                            JWL_INVOICE_TABLE.paid_amt AS PaidAmt,
+                            JWL_INVOICE_TABLE.balance_amt AS BalAmt,
+                            JWL_INVOICE_TABLE.ukey AS InvoiceRef,
+                            JWL_INVOICE_TABLE.invoice_no AS InvoiceNo
                         FROM
                             STOCK_SOLD_TABLE
-                            LEFT JOIN INVOICE_DETAIL_TABLE ON STOCK_SOLD_TABLE.invoice_ref = INVOICE_DETAIL_TABLE.ukey
-                            LEFT JOIN customer_REPLACE_USERID ON INVOICE_DETAIL_TABLE.cust_id = customer_REPLACE_USERID.CustomerId
+                            LEFT JOIN JWL_INVOICE_TABLE ON STOCK_SOLD_TABLE.invoice_ref = JWL_INVOICE_TABLE.ukey
+                            LEFT JOIN customer_REPLACE_USERID ON JWL_INVOICE_TABLE.cust_id = customer_REPLACE_USERID.CustomerId
                             LEFT JOIN orn_list_jewellery ON STOCK_SOLD_TABLE.ornament = orn_list_jewellery.id`,
     FETCH_SOLD_ITEMS_BY_INVOICE_ID: `SELECT * FROM STOCK_SOLD_TABLE WHERE invoice_ref=?`,
     UPDATE_STOCK_ITEM_QTY: `UPDATE STOCK_TABLE SET sold_qty=sold_qty-?,
