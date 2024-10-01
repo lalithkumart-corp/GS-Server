@@ -424,8 +424,9 @@ module.exports = function(FundTransaction) {
         return new Promise( async (resolve, reject) => {
             let userId = await  utils.getStoreOwnerUserId(apiParams.accessToken);
             let currentTImeInUTCTimezone = utils.getCurrentDateTimeInUTCForDB();
+            let categId = await FundTransaction.prototype._getOrCreateCategoryId(userId, apiParams.category);
             let sql = SQL.CASH_TRANSACTION_IN.replace(/REPLACE_USERID/g, userId);
-            let queryValues = [userId, apiParams.customerId, apiParams.accountId, dateformat(apiParams.transactionDate, 'yyyy-mm-dd HH:MM:ss', true), apiParams.amount, 0, apiParams.category, apiParams.remarks, apiParams.paymentMode, currentTImeInUTCTimezone, currentTImeInUTCTimezone];
+            let queryValues = [userId, apiParams.customerId, apiParams.accountId, dateformat(apiParams.transactionDate, 'yyyy-mm-dd HH:MM:ss', true), apiParams.amount, 0, categId, apiParams.remarks, apiParams.paymentMode, currentTImeInUTCTimezone, currentTImeInUTCTimezone];
             FundTransaction.dataSource.connector.query(sql, queryValues, (err, res) => {
                 if(err){
                     reject(err);
@@ -453,7 +454,8 @@ module.exports = function(FundTransaction) {
 
             let destAccDetail = apiParams.destinationAccountDetail;
             let currentTImeInUTCTimezone = utils.getCurrentDateTimeInUTCForDB();
-            let queryValues = [userId, apiParams.customerId, apiParams.accountId, dateformat(apiParams.transactionDate, 'yyyy-mm-dd HH:MM:ss', true), 0, apiParams.amount, apiParams.category, apiParams.remarks,
+            let categId = await FundTransaction.prototype._getOrCreateCategoryId(userId, apiParams.category);
+            let queryValues = [userId, apiParams.customerId, apiParams.accountId, dateformat(apiParams.transactionDate, 'yyyy-mm-dd HH:MM:ss', true), 0, apiParams.amount, categId, apiParams.remarks,
                 apiParams.paymentMode, destAccDetail.toAccountId, destAccDetail.accNo, destAccDetail.ifscCode, destAccDetail.upiId, currentTImeInUTCTimezone, currentTImeInUTCTimezone];
 
             let sql = SQL.CASH_TRANSACTION_OUT.replace(/REPLACE_USERID/g, userId);
@@ -857,7 +859,7 @@ module.exports = function(FundTransaction) {
                     amountCondition = 'cash_out > 0';
             }
             let sql = SQL.CATEGORY_LIST;
-            sql += ` WHERE user_id=${userId}`;
+            sql += ` WHERE fund_transactions_REPLACE_USERID.user_id=${userId}`;
             if(amountCondition)
                 sql += ` AND ${amountCondition}`;
 
@@ -1000,6 +1002,9 @@ module.exports = function(FundTransaction) {
                     case 'udhaar':
                         await FundTransaction.addUdhaarEntry(params);
                         break;
+                    case 'jwl_sale':
+                        await FundTransaction.addJwlSaleEntry(params);
+                        break;
                 }
                 return resolve(true);
             } catch(e) {
@@ -1010,7 +1015,7 @@ module.exports = function(FundTransaction) {
     }
 
     FundTransaction.addGirviEntry = (params) => {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             let parsedArg = params.parsedArg;
             let mode = null;
             let fromAcc = null;
@@ -1033,10 +1038,17 @@ module.exports = function(FundTransaction) {
                     ifscCode = pd.online.toAccount.ifscCode;
                 }
             }
+            let categId = await FundTransaction.prototype._getOrCreateCategoryId(parsedArg._userId, 'Girvi');
             let currentTImeInUTCTimezone = utils.getCurrentDateTimeInUTCForDB();
             let interestAndOtherCharges = parseFloat(parsedArg.interestValue) + parseFloat(parsedArg.otherCharges);
-            let qv = [parsedArg._userId, parsedArg.customerId, fromAcc, parsedArg.uniqueIdentifier, parsedArg.date, interestAndOtherCharges, parsedArg.amount, 'Girvi', parsedArg.billNoWithSeries,
-            mode, toAcc, accountNo, ifscCode, upiId, currentTImeInUTCTimezone, currentTImeInUTCTimezone];
+            let qv = [parsedArg._userId, parsedArg.customerId, 
+                fromAcc, parsedArg.uniqueIdentifier, 
+                parsedArg.date, interestAndOtherCharges, 
+                parsedArg.amount, categId, 
+                parsedArg.billNoWithSeries, mode, 
+                toAcc, accountNo, 
+                ifscCode, upiId, 
+                currentTImeInUTCTimezone, currentTImeInUTCTimezone];
 
             let sql = SQL.INTERNAL_GIRVI_TRANSACTION;
             sql = sql.replace(/REPLACE_USERID/g, parsedArg._userId);
@@ -1065,8 +1077,8 @@ module.exports = function(FundTransaction) {
                         toAcc = pd[mode].toAccountId;
                     }
                     let currentTImeInUTCTimezone = utils.getCurrentDateTimeInUTCForDB();
-
-                    let qv = [params._userId, datum.customerId, toAcc, datum.redeemUID, datum.closedDate, datum.paidAmount, 0, 'Redeem', datum.billNo, mode, currentTImeInUTCTimezone, currentTImeInUTCTimezone];
+                    let categId = await FundTransaction.prototype._getOrCreateCategoryId(params._userId, 'Redeem');
+                    let qv = [params._userId, datum.customerId, toAcc, datum.redeemUID, datum.closedDate, datum.paidAmount, 0, categId, datum.billNo, mode, currentTImeInUTCTimezone, currentTImeInUTCTimezone];
                     
                     await FundTransaction._addRedeemEntry(qv);
                 }
@@ -1092,15 +1104,35 @@ module.exports = function(FundTransaction) {
     }
 
     FundTransaction.addUdhaarEntry = (params) => {
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
             let destAccDetail = params.destinationAccountDetail;
             let currentTImeInUTCTimezone = utils.getCurrentDateTimeInUTCForDB();
             let interestAndOtherCharges = parseFloat(params.interestVal);
-            let qv = [params._userId, params.customerId, params.accountId, params._uniqId, dateformat(params.udhaarCreationDate, 'yyyy-mm-dd HH:MM:ss', true), interestAndOtherCharges, params.amount, 'Udhaar', params._billNo,
+            let categId = await FundTransaction.prototype._getOrCreateCategoryId(params._userId, 'Udhaar');
+            let qv = [params._userId, params.customerId, params.accountId, params._uniqId, dateformat(params.udhaarCreationDate, 'yyyy-mm-dd HH:MM:ss', true), interestAndOtherCharges, params.amount, categId, params._billNo,
             params.paymentMode, destAccDetail.toAccountId, destAccDetail.accNo, destAccDetail.ifscCode, destAccDetail.upiId, currentTImeInUTCTimezone, currentTImeInUTCTimezone];
 
             let sql = SQL.INTERNAL_UDHAAR_TRANSACTION;
             sql = sql.replace(/REPLACE_USERID/g, params._userId);
+            FundTransaction.dataSource.connector.query(sql, qv, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(true);
+                }
+            });
+        });
+    }
+
+    FundTransaction.addJwlSaleEntry = (params) => {
+        return new Promise(async (resolve, reject) => {
+            let currentTImeInUTCTimezone = utils.getCurrentDateTimeInUTCForDB();
+            let categId = await FundTransaction.prototype._getOrCreateCategoryId(params.userId, 'Jwl Sale');
+            let qv = [params.userId, params.customerId, '', params.gsUid, params.transactionDate, params.cashIn, 
+                0, categId, params.remarks, params.cashInMode, currentTImeInUTCTimezone, currentTImeInUTCTimezone];
+            
+            let sql = SQL.INTERNAL_JWL_SALE_TRANSACTION;
+            sql = sql.replace(/REPLACE_USERID/g, params.userId);
             FundTransaction.dataSource.connector.query(sql, qv, (err, res) => {
                 if(err) {
                     return reject(err);
@@ -1241,6 +1273,9 @@ module.exports = function(FundTransaction) {
                     case 'redeem':
                         await FundTransaction.markRedeemEntryAsDeleted(params);
                         break;
+                    case 'jwl_sale':
+                        await FundTransaction.markJwlSaleEntryAsDeleted(params);
+                        break;
                 }
                 return resolve(true);
             } catch(e) {
@@ -1270,6 +1305,21 @@ module.exports = function(FundTransaction) {
             let qv = [params._userId, params.closedBillReference];
             let sql = SQL.MARK_AS_DELETED;
             sql = sql.replace(/REPLACE_USERID/g, params._userId);
+            FundTransaction.dataSource.connector.query(sql, qv, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(true);
+                }
+            });
+        });
+    }
+
+    FundTransaction.markJwlSaleEntryAsDeleted = (params) => {
+        return new Promise( async (resolve, reject) => {
+            let qv = [params.userId, params.gsUid];
+            let sql = SQL.MARK_AS_DELETED;
+            sql = sql.replace(/REPLACE_USERID/g, params.userId);
             FundTransaction.dataSource.connector.query(sql, qv, (err, res) => {
                 if(err) {
                     return reject(err);
@@ -1412,7 +1462,10 @@ module.exports = function(FundTransaction) {
                 toAcc = pd[mode].toAccountId;
             }
             let currentTImeInUTCTimezone = utils.getCurrentDateTimeInUTCForDB();
-            let queryValues = [userId, params.customerId, toAcc, params.uniqueIdentifier, dateformat(params.dateVal, 'yyyy-mm-dd HH:MM:ss', true), params.paymentDetails.value, 0, params.category, params.remarks, mode, currentTImeInUTCTimezone, currentTImeInUTCTimezone];
+            let categId = await FundTransaction.prototype._getOrCreateCategoryId(userId, params.category);
+
+            let queryValues = [userId, params.customerId, toAcc, params.uniqueIdentifier, dateformat(params.dateVal, 'yyyy-mm-dd HH:MM:ss', true),
+                 params.paymentDetails.value, 0, categId, params.remarks, mode, currentTImeInUTCTimezone, currentTImeInUTCTimezone];
             
             let sql = SQL.ADD_CASH_FOR_BILL;
             sql = sql.replace(/REPLACE_USERID/g, userId);
@@ -1480,8 +1533,8 @@ module.exports = function(FundTransaction) {
     FundTransaction._updateCashInDataApi = (params) => {
         return new Promise(async (resolve, reject) => {
             let userId = await utils.getStoreOwnerUserId(params.accessToken);
-            let queryValues = [params.accountId, params.customerId, dateformat(params.transactionDate, 'yyyy-mm-dd HH:MM:ss', true), params.amount, params.category, params.remarks, params.paymentMode, params.transactionId, userId];
-
+            let categId = await FundTransaction.prototype._getOrCreateCategoryId(userId, params.category);
+            let queryValues = [params.accountId, params.customerId, dateformat(params.transactionDate, 'yyyy-mm-dd HH:MM:ss', true), params.amount, categId, params.remarks, params.paymentMode, params.transactionId, userId];
             let sql = SQL.UPDATE_TRANSACTION_FOR_CASH_IN;
             sql = sql.replace(/REPLACE_USERID/g, userId);
             FundTransaction.dataSource.connector.query(sql, queryValues, (err, res) => {
@@ -1510,7 +1563,9 @@ module.exports = function(FundTransaction) {
         return new Promise(async (resolve, reject) => {
             let userId = await utils.getStoreOwnerUserId(params.accessToken);
             let destAccDetail = params.destinationAccountDetail;
-            let queryValues = [params.accountId, params.customerId, dateformat(params.transactionDate, 'yyyy-mm-dd HH:MM:ss', true), params.amount, params.category, params.remarks, 
+            let categId = await FundTransaction.prototype._getOrCreateCategoryId(userId, params.category);
+            let queryValues = [params.accountId, params.customerId, dateformat(params.transactionDate, 'yyyy-mm-dd HH:MM:ss', true), 
+                params.amount, categId, params.remarks, 
                 params.paymentMode, destAccDetail.toAccountId, destAccDetail.accNo, destAccDetail.ifscCode, destAccDetail.upiId, params.transactionId, userId];
             let sql = SQL.UPDATE_TRANSACTION_FOR_CASH_OUT;
             sql = sql.replace(/REPLACE_USERID/g, userId);
@@ -1851,29 +1906,71 @@ module.exports = function(FundTransaction) {
                     }
                 )
         });
-    } 
+    }
+
+    FundTransaction.prototype._getOrCreateCategoryId = async (userId, categoryText) => {
+        let res = await FundTransaction.prototype._getCategId(userId, categoryText);
+        let categId = null;
+        if(res.length == 0) {
+            let ins = await FundTransaction.prototype._insertNewCateg(userId, categoryText);
+            categId = ins.insertId;
+        } else {
+            categId = res[0].id;
+        }
+        return categId;
+    }
+
+    FundTransaction.prototype._getCategId = (userId, categoryText) => {
+        return new Promise((resolve, reject) => {
+            FundTransaction.dataSource.connector.query(SQL.GET_CATEG_ID, [userId, categoryText], (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(res);
+                }
+            });
+        });
+    }
+
+    FundTransaction.prototype._insertNewCateg = (userId, categoryText) => {
+        return new Promise((resolve, reject) => {
+            FundTransaction.dataSource.connector.query(SQL.INSERT_NEW_CATEGORY, [userId, categoryText], (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(res);
+                }
+            });
+        });
+    }
 }
 
 let SQL = {
-    CASH_TRANSACTION_IN: `INSERT INTO fund_transactions_REPLACE_USERID (user_id, customer_id, account_id, transaction_date, cash_in, cash_out, category, remarks, cash_in_mode, created_date, modified_date) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-    CASH_TRANSACTION_OUT: `INSERT INTO fund_transactions_REPLACE_USERID (user_id, customer_id, account_id, transaction_date, cash_in, cash_out, category, remarks, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi, created_date, modified_date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-    INTERNAL_GIRVI_TRANSACTION: `INSERT INTO fund_transactions_REPLACE_USERID (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi, is_internal, created_date, modified_date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?) ON DUPLICATE KEY UPDATE account_id=VALUES(account_id), transaction_date=VALUES(transaction_date), cash_in=VALUES(cash_in), cash_out=VALUES(cash_out), cash_out_mode=VALUES(cash_out_mode), cash_out_to_bank_id=VALUES(cash_out_to_bank_id), cash_out_to_bank_acc_no=VALUES(cash_out_to_bank_acc_no), cash_out_to_bank_ifsc=VALUES(cash_out_to_bank_ifsc), cash_out_to_upi=VALUES(cash_out_to_upi), modified_date=VALUES(modified_Date)`,
-    INTERNAL_REDEEM_TRANSACTION: `INSERT INTO fund_transactions_REPLACE_USERID (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks, cash_in_mode, is_internal, created_date, modified_date) VALUES (?,?,?,?,?,?,?,?,?,?,1,?,?) ON DUPLICATE KEY UPDATE account_id=VALUES(account_id), transaction_date=VALUES(transaction_date), cash_in=VALUES(cash_in), cash_out=VALUES(cash_out), cash_in_mode=VALUES(cash_in_mode), modified_date=VALUES(modified_date)`,
-    INTERNAL_UDHAAR_TRANSACTION: `INSERT INTO fund_transactions_REPLACE_USERID (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi, is_internal, created_date, modified_date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?)`,
+    GET_CATEG_ID: `SELECT id, category FROM fund_transaction_categories where user_id=? and category=?`,
+    INSERT_NEW_CATEGORY: `INSERT INTO fund_transaction_categories (user_id, category) VALUES (?,?)`,
+    CASH_TRANSACTION_IN: `INSERT INTO fund_transactions_REPLACE_USERID (user_id, customer_id, account_id, transaction_date, cash_in, cash_out, category_id ,remarks, cash_in_mode, created_date, modified_date) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+    CASH_TRANSACTION_OUT: `INSERT INTO fund_transactions_REPLACE_USERID (user_id, customer_id, account_id, transaction_date, cash_in, cash_out, category_id, remarks, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi, created_date, modified_date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+    INTERNAL_GIRVI_TRANSACTION: `INSERT INTO fund_transactions_REPLACE_USERID (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category_id, remarks, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi, is_internal, created_date, modified_date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?) ON DUPLICATE KEY UPDATE account_id=VALUES(account_id), transaction_date=VALUES(transaction_date), cash_in=VALUES(cash_in), cash_out=VALUES(cash_out), cash_out_mode=VALUES(cash_out_mode), cash_out_to_bank_id=VALUES(cash_out_to_bank_id), cash_out_to_bank_acc_no=VALUES(cash_out_to_bank_acc_no), cash_out_to_bank_ifsc=VALUES(cash_out_to_bank_ifsc), cash_out_to_upi=VALUES(cash_out_to_upi), modified_date=VALUES(modified_Date)`,
+    INTERNAL_REDEEM_TRANSACTION: `INSERT INTO fund_transactions_REPLACE_USERID (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category_id, remarks, cash_in_mode, is_internal, created_date, modified_date) VALUES (?,?,?,?,?,?,?,?,?,?,1,?,?) ON DUPLICATE KEY UPDATE account_id=VALUES(account_id), transaction_date=VALUES(transaction_date), cash_in=VALUES(cash_in), cash_out=VALUES(cash_out), cash_in_mode=VALUES(cash_in_mode), modified_date=VALUES(modified_date)`,
+    INTERNAL_UDHAAR_TRANSACTION: `INSERT INTO fund_transactions_REPLACE_USERID (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category_id, remarks, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi, is_internal, created_date, modified_date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,1,?,?)`,
+    INTERNAL_JWL_SALE_TRANSACTION: `INSERT INTO fund_transactions_REPLACE_USERID (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category_id, remarks, cash_in_mode, is_internal, created_date, modified_date) VALUES (?,?,?,?,?,?,?,?,?,?,1,?,?) ON DUPLICATE KEY UPDATE account_id=VALUES(account_id), transaction_date=VALUES(transaction_date), cash_in=VALUES(cash_in), cash_out=VALUES(cash_out), cash_in_mode=VALUES(cash_in_mode), modified_date=VALUES(modified_date)`,
     INTERNAL_GIRVI_TRANSACTION_UPDATE: `UPDATE fund_transactions_REPLACE_USERID SET customer_id=?, account_id=?, transaction_date=?, cash_in=?, cash_out=?, remarks=?, cash_out_mode=?, cash_out_to_bank_id=?, cash_out_to_bank_acc_no=?, cash_out_to_bank_ifsc=?, cash_out_to_upi=?, modified_date=? WHERE gs_uid=? AND user_id=? AND is_internal=1`,
     INTERNAL_REDEEM_TRANSACTION_UPDATE: `UPDATE fund_transactions_REPLACE_USERID SET customer_id=?, account_id=?, transaction_date=?, cash_out=?, remarks=?, cash_in_mode=?, modified_date=? WHERE gs_uid=? AND user_id=? AND is_internal=1`,
     INTERNAL_UDHAAR_TRANSACTION_UPDATE: `UPDATE fund_transactions_REPLACE_USERID SET customer_id=?, account_id=?, transaction_date=?, cash_in=?, cash_out=?, remarks=?, cash_out_mode=?, cash_out_to_bank_id=?, cash_out_to_bank_acc_no=?, cash_out_to_bank_ifsc=?, cash_out_to_upi=?, modified_date=? WHERE gs_uid=? AND user_id=? AND is_internal=1`,
-    ADD_CASH_FOR_BILL: `INSERT INTO fund_transactions_REPLACE_USERID (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category, remarks, cash_in_mode, created_date, modified_date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-    UPDATE_TRANSACTION_FOR_CASH_IN: `UPDATE fund_transactions_REPLACE_USERID SET account_id=?, customer_id=?, transaction_date=?, cash_in=?, category=?, remarks=?, cash_in_mode=? WHERE id=? AND user_id=?`,
-    UPDATE_TRANSACTION_FOR_CASH_OUT: `UPDATE fund_transactions_REPLACE_USERID SET account_id=?, customer_id=?, transaction_date=?, cash_out=?, category=?, remarks=?, cash_out_mode=?, cash_out_to_bank_id=?, cash_out_to_bank_acc_no=?, cash_out_to_bank_ifsc=?, cash_out_to_upi=? WHERE id=? AND user_id=?`,
+    ADD_CASH_FOR_BILL: `INSERT INTO fund_transactions_REPLACE_USERID (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category_id, remarks, cash_in_mode, created_date, modified_date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+    UPDATE_TRANSACTION_FOR_CASH_IN: `UPDATE fund_transactions_REPLACE_USERID SET account_id=?, customer_id=?, transaction_date=?, cash_in=?, category_id=?, remarks=?, cash_in_mode=? WHERE id=? AND user_id=?`,
+    UPDATE_TRANSACTION_FOR_CASH_OUT: `UPDATE fund_transactions_REPLACE_USERID SET account_id=?, customer_id=?, transaction_date=?, cash_out=?, category_id=?, remarks=?, cash_out_mode=?, cash_out_to_bank_id=?, cash_out_to_bank_acc_no=?, cash_out_to_bank_ifsc=?, cash_out_to_upi=? WHERE id=? AND user_id=?`,
     MARK_AS_DELETED: `UPDATE fund_transactions_REPLACE_USERID SET deleted=1 WHERE user_id=? AND gs_uid=?`,
     TRANSACTION_LIST: `SELECT 
                             fund_accounts.name AS fund_house_name,
-                            fund_transactions_REPLACE_USERID.*
+                            fund_transactions_REPLACE_USERID.*,
+                            fund_transaction_categories.category as category
                         FROM
                             fund_transactions_REPLACE_USERID
                                 LEFT JOIN
                             fund_accounts ON fund_transactions_REPLACE_USERID.account_id = fund_accounts.id
+                                LEFT JOIN
+                            fund_transaction_categories ON fund_transactions_REPLACE_USERID.category_id=fund_transaction_categories.id
                         WHERE_CLAUSE
                         ORDER_CLAUSE
                         LIMIT_OFFSET_CLAUSE`,
@@ -1887,10 +1984,12 @@ let SQL = {
                                         fund_transactions_REPLACE_USERID
                                             LEFT JOIN
                                         fund_accounts ON fund_transactions_REPLACE_USERID.account_id = fund_accounts.id
+                                            LEFT JOIN
+                                        fund_transaction_categories ON fund_transactions_REPLACE_USERID.category_id=fund_transaction_categories.id
                                     WHERE_CLAUSE
                                     ORDER_CLAUSE
                                     LIMIT_OFFSET_CLAUSE`,
-    CATEGORY_LIST: `SELECT DISTINCT category from fund_transactions_REPLACE_USERID`,
+    CATEGORY_LIST: `SELECT DISTINCT category from fund_transactions_REPLACE_USERID LEFT JOIN fund_transaction_categories ON fund_transactions_REPLACE_USERID.category_id=fund_transaction_categories.id`,
     OPENING_BALANCE: `SELECT SUM(cash_in-cash_out) AS opening_balance from fund_transactions_REPLACE_USERID WHERE user_id = ? AND transaction_date < ? AND deleted = 0`,
     CLOSING_BALANCE: `SELECT SUM(cash_in-cash_out) AS closing_balance from fund_transactions_REPLACE_USERID WHERE user_id = ? AND transaction_date < ? AND deleted = 0`,
     CASH_IN_OUT_TOTALS: `SELECT SUM(cash_in) AS total_cash_in, SUM(cash_out) AS total_cash_out from fund_transactions_REPLACE_USERID WHERE user_id = ? AND (transaction_date BETWEEN ? AND ?) AND deleted = 0`,
@@ -1909,11 +2008,14 @@ let SQL = {
                             alerts.archived AS alertArchivedFlag,
                             alerts.module AS alertModule,
                             alerts.trigger_time AS alertTriggerTime,
-                            alerts.created_date AS alertCreatedDate
+                            alerts.created_date AS alertCreatedDate,
+                            fund_transaction_categories.category AS category
                         FROM
                             fund_trns_tmp_REPLACE_USERID
                                 LEFT JOIN
                             fund_accounts ON fund_trns_tmp_REPLACE_USERID.account_id = fund_accounts.id
+                                LEFT JOIN
+                            fund_transaction_categories ON fund_trns_tmp_REPLACE_USERID.category_id=fund_transaction_categories.id
                                 LEFT JOIN
                             customer_REPLACE_USERID ON customer_REPLACE_USERID.CustomerId = fund_trns_tmp_REPLACE_USERID.customer_id
                                 LEFT JOIN
@@ -1934,7 +2036,7 @@ let SQL = {
                         SELECT
                             fund_accounts.name AS fund_house_name,
                             CAST(fund_trns_tmp_REPLACE_USERID.transaction_date AS DATE) AS transaction_date,
-                            fund_trns_tmp_REPLACE_USERID.category,
+                            fund_transaction_categories.category AS category,
                             fund_trns_tmp_REPLACE_USERID.remarks,
                             fund_trns_tmp_REPLACE_USERID.cash_in,
                             fund_trns_tmp_REPLACE_USERID.cash_out,
@@ -1943,6 +2045,7 @@ let SQL = {
                         FROM
                             fund_trns_tmp_REPLACE_USERID
                         LEFT JOIN fund_accounts ON fund_trns_tmp_REPLACE_USERID.account_id = fund_accounts.id
+                        LEFT JOIN fund_transaction_categories ON fund_trns_tmp_REPLACE_USERID.category_id=fund_transaction_categories.id
                         LEFT JOIN customer_REPLACE_USERID ON customer_REPLACE_USERID.CustomerId = fund_trns_tmp_REPLACE_USERID.customer_id
                         ) t
                     GROUP BY
@@ -1958,24 +2061,26 @@ let SQL = {
                                         LEFT JOIN
                                     fund_accounts ON fund_trns_tmp_REPLACE_USERID.account_id = fund_accounts.id
                                         LEFT JOIN
+                                    fund_transaction_categories ON fund_trns_tmp_REPLACE_USERID.category_id=fund_transaction_categories.id
+                                        LEFT JOIN
                                     customer_REPLACE_USERID ON customer_REPLACE_USERID.CustomerId = fund_trns_tmp_REPLACE_USERID.customer_id
                                 WHERE_CLAUSE`,
     TRUNCATE_TRNS_TEMP_TBL: `TRUNCATE TABLE fund_trns_tmp_REPLACE_USERID`,
-    CLONE_FUND_TRNS_TO_TEMP_TBL: `INSERT INTO fund_trns_tmp_REPLACE_USERID (id, transaction_date, user_id, account_id, customer_id, gs_uid, category, remarks, deleted, cash_in, cash_out, created_date, modified_date, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi, cash_in_mode, alert, is_internal, tag_indicator)
+    CLONE_FUND_TRNS_TO_TEMP_TBL: `INSERT INTO fund_trns_tmp_REPLACE_USERID (id, transaction_date, user_id, account_id, customer_id, gs_uid, category_id, remarks, deleted, cash_in, cash_out, created_date, modified_date, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi, cash_in_mode, alert, is_internal, tag_indicator)
                                     SELECT
-                                        id,
+                                        fund_transactions_REPLACE_USERID.id,
                                         CAST(transaction_date AS DATETIME) AS transaction_date,
-                                        user_id,
+                                        fund_transactions_REPLACE_USERID.user_id,
                                         account_id,
                                         customer_id,
                                         gs_uid,
-                                        category,
+                                        category_id,
                                         remarks,
                                         deleted,
                                         cash_in,
                                         cash_out,
-                                        created_date,
-                                        modified_date,
+                                        fund_transactions_REPLACE_USERID.created_date,
+                                        fund_transactions_REPLACE_USERID.modified_date,
                                         cash_out_mode,
                                         cash_out_to_bank_id,
                                         cash_out_to_bank_acc_no,
@@ -1987,13 +2092,14 @@ let SQL = {
                                         tag_indicator
                                     FROM
                                         fund_transactions_REPLACE_USERID
+                                        LEFT JOIN fund_transaction_categories on fund_transaction_categories.id=fund_transactions_REPLACE_USERID.category_id
                                     WHERE_CLAUSE
                                     ORDER_CLAUSE`,
     ADD_GROUP_IDS: `UPDATE fund_trns_tmp_REPLACE_USERID
                         SET
                             grp_logic=id
                         WHERE 
-                            category NOT IN (?);`,
+                            category_id NOT IN (select id from fund_transaction_categories where category IN (?));`,
     CONSOLIDATED_TRANSACTION_LIST_DATE_WISE: `SELECT
                                         fund_house_name,
                                         SUM(cash_in) AS cash_in,
@@ -2007,13 +2113,15 @@ let SQL = {
                                             account_id,
                                             cash_in,
                                             cash_out,
-                                            category,
+                                            fund_transaction_categories.category as category,
                                             remarks,
                                             CAST(transaction_date AS DATE) AS transaction_date
                                         FROM
                                             fund_transactions_REPLACE_USERID
                                                 LEFT JOIN
                                             fund_accounts ON fund_transactions_REPLACE_USERID.account_id = fund_accounts.id
+                                                LEFT JOIN
+                                            fund_transaction_categories ON fund_transactions_REPLACE_USERID.category_id=fund_transaction_categories.id
                                         WHERE
                                             deleted = 0
                                             AND transaction_date BETWEEN ?
@@ -2023,11 +2131,13 @@ let SQL = {
                                         category,
                                         account_id`,
     CONSOLIDATED_LIST_FOR_BALANCE_SHEET: `SELECT
-                                            category,
+                                            fund_transaction_categories.category as category,
                                             SUM(cash_in) AS cash_in,
                                             SUM(cash_out) AS cash_out
                                         FROM
                                             fund_transactions_REPLACE_USERID
+                                                LEFT JOIN
+                                            fund_transaction_categories ON fund_trns_tmp_REPLACE_USERID.category_id=fund_transaction_categories.id
                                         WHERE_CLAUSE
                                         GROUP BY
                                             category;`,

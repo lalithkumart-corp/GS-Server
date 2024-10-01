@@ -1010,7 +1010,7 @@ module.exports = function(Pledgebook) {
                                     LEFT JOIN
                                 alerts ON (${pledgebookTableName}.alert = alerts.id AND alerts.archived=0)
                                     LEFT JOIN
-                                fund_transactions_REPLACE_USERID ON (${pledgebookTableName}.UniqueIdentifier = fund_transactions_REPLACE_USERID.gs_uid && fund_transactions_REPLACE_USERID.category IN ('girvi' , 'redeem'))
+                                fund_transactions_REPLACE_USERID ON (${pledgebookTableName}.UniqueIdentifier = fund_transactions_REPLACE_USERID.gs_uid && fund_transactions_REPLACE_USERID.category_id IN (select id from fund_transaction_categories where category IN ('girvi' , 'redeem') ))
                                     LEFT JOIN
                                 fund_accounts ON fund_transactions_REPLACE_USERID.account_id = fund_accounts.id
                                     LEFT JOIN

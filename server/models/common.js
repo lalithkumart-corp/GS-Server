@@ -1405,7 +1405,7 @@ let SQL = {
                     gs_uid varchar(45) DEFAULT NULL,
                     cash_in int NOT NULL DEFAULT '0',
                     cash_out int DEFAULT '0',
-                    category varchar(45) DEFAULT NULL,
+                    category_id int NOT NULL,
                     remarks text,
                     deleted tinyint DEFAULT '0',
                     created_date datetime DEFAULT CURRENT_TIMESTAMP,
