@@ -364,7 +364,7 @@ module.exports = function(Stock) {
         description: 'For testing purpose.',
     });
 
-    Stock.remoteMethod('sellItemApiHandler', {
+    Stock.remoteMethod('jewelleryBillingApiHandler', {
         accepts: {
             arg: 'apiParams',
             type: 'object',
@@ -714,14 +714,25 @@ module.exports = function(Stock) {
         });
     }
 
-    Stock.sellItemApiHandler = async (data) => {
+    Stock.jewelleryBillingApiHandler = async (data) => {
+        if(data.apiParams.billingType == 'original') {
+            return await Stock.handleOriginalBilling(data);
+        } else {
+            return await Stock.handleEstimateBilling(data);
+        }
+    }
+
+    Stock.handleOriginalBilling = async (data) => {
         try {
-            console.log(data);
             data._userId = await utils.getStoreOwnerUserId(data.accessToken);
             data._uniqString = (Date.now() + Math.random()).toString(36).replace('.', '');
             let isAvl = await Stock.checkItemAvlQty(data.apiParams.newProds, data._userId);
             if(!isAvl)
                 throw new Error('Please check item quantity. Item might have been already sold. Please check "Sold Out Items" stock list');
+
+            data.apiParams._invoiceNoFull = data.apiParams.invoiceNo;
+            if(data.apiParams.invoiceSeries)
+                data.apiParams._invoiceNoFull = `${data.apiParams.invoiceSeries}.${data.apiParams.invoiceNo}`;
 
             let invoiceDetailResp = await Stock.app.models.JewelleryInvoice.prototype.insertInvoiceData(data);
             if(!invoiceDetailResp)
@@ -737,6 +748,43 @@ module.exports = function(Stock) {
             
             let newNumber = parseInt(data.apiParams.invoiceNo) + 1;
             await Stock.app.models.JewelleryBillSetting.prototype.incrementSerialAndNumber(data._userId, newNumber, 'gst');
+
+            await Stock.app.models.FundTransaction.prototype.add({
+                userId: data._userId,
+                gsUid: data._uniqString,
+                customerId: data.apiParams.customerId,
+                transactionDate: data.apiParams.date,
+                cashIn: data.apiParams.paymentFormData.paid,
+                remarks: data.apiParams._invoiceNoFull,
+                cashInMode: data.apiParams.paymentFormData.paymentMode
+            }, 'jwl_sale');
+
+            return {STATUS: 'SUCCESS'};
+        } catch(e) {
+            return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
+        }
+    }
+
+    Stock.handleEstimateBilling = async (data) => {
+        try {
+            console.log(data);
+            data._userId = await utils.getStoreOwnerUserId(data.accessToken);
+            data._uniqString = (Date.now() + Math.random()).toString(36).replace('.', '');
+            let isAvl = await Stock.checkItemAvlQty(data.apiParams.newProds, data._userId);
+            if(!isAvl)
+                throw new Error('Please check item quantity. Item might have been already sold. Please check "Sold Out Items" stock list');
+
+            let invoiceDetailResp = await Stock.app.models.JewelleryEstimateInvoice.prototype.insertInvoiceData(data);
+            if(!invoiceDetailResp)
+                throw new Error('Invoice creation failed. Please check Logs.');
+            
+            await Stock.insertEstimateInvoiceItems(data, {invoiceRef: data._uniqString}); //TODO 
+
+            if(data.apiParams.oldOrnaments && data.apiParams.oldOrnaments.netWt)
+                await Stock.insertIntoOldOrnamentsEstimateTable(data);
+            
+            let newNumber = parseInt(data.apiParams.invoiceNo) + 1;
+            await Stock.app.models.JewelleryBillSetting.prototype.incrementSerialAndNumber(data._userId, newNumber, 'estimate');
 
             return {STATUS: 'SUCCESS'};
         } catch(e) {
@@ -782,6 +830,47 @@ module.exports = function(Stock) {
             let res = await utils.executeSqlQuery(Stock.dataSource, q1, [prodIds]);
             
             let invoiceItemInsertQry = SQL.INSERT_INVOICE_ITEMS.replace(/INVOICE_ITEM_TABLE/g, `jewellery_invoice_items_${payload._userId}`);
+    
+            for(let i in payload.apiParams.newProds) {
+                let obj = payload.apiParams.newProds[i];
+                let stockRecArr = res.filter((a) => a.prod_id==obj.prodId);
+                let stockRec = stockRecArr[0];
+                let queryParams = [
+                    options.invoiceRef,
+                    stockRec.uid,
+                    obj.qty,
+                    obj.grossWt,
+                    obj.netWt,
+                    obj.wastagePercent,
+                    obj.wastageVal,
+                    obj.makingCharge || null,
+                    obj.initialPrice,
+                    obj.discount || null,
+                    obj.cgstPercent,
+                    obj.cgstVal,
+                    obj.sgstPercent,
+                    obj.sgstVal,
+                    obj.finalPrice
+                ];
+                let r = await utils.executeSqlQuery(Stock.dataSource, invoiceItemInsertQry, queryParams);
+                console.log(r);
+            }
+        } catch(e) {
+            console.log(e);
+            throw e;
+        }
+    }
+
+    Stock.insertEstimateInvoiceItems = async (payload, options) => {
+        try {
+            let prodIds = [];
+            payload.apiParams.newProds.forEach(obj => {
+                prodIds.push(obj.prodId);
+            });
+            let q1 = SQL.FETCH_STOCK_TBL_UID.replace(/STOCK_TABLE/g, `stock_${payload._userId}`);
+            let res = await utils.executeSqlQuery(Stock.dataSource, q1, [prodIds]);
+            
+            let invoiceItemInsertQry = SQL.INSERT_ESTIMATE_INVOICE_ITEMS.replace(/ESTIMATE_INVOICE_ITEM_TABLE/g, `jewellery_estimate_invoice_items_${payload._userId}`);
     
             for(let i in payload.apiParams.newProds) {
                 let obj = payload.apiParams.newProds[i];
@@ -890,6 +979,20 @@ module.exports = function(Stock) {
         } catch(e) {
             console.log(e);
             logger.error(GsErrorCtrl.create({className: 'Stock', methodName: 'insertIntoOldOrnamentsTable', cause: e, message: 'Exception in sql query execution'}));
+            throw e;
+        }
+    }
+
+    Stock.insertIntoOldOrnamentsEstimateTable = async (data) => {
+        try {
+            let sql = SQL.INSERT_INTO_OLD_ITEM_ESTIMATES;
+            sql = sql.replace(/OLD_ITEMS_STOCK_TABLE/g, `old_items_estimates_${data._userId}`);
+            let oldOrnaments = data.apiParams.oldOrnaments;
+            let queryParams = [data.apiParams.customerId, oldOrnaments.itemType, data.apiParams.retailRate, oldOrnaments.grossWt, oldOrnaments.netWt, oldOrnaments.wastageVal, oldOrnaments.pricePerGram, oldOrnaments.netAmount, data._uniqString];
+            await utils.executeSqlQuery(Stock.dataSource, sql, queryParams);
+        } catch(e) {
+            console.log(e);
+            logger.error(GsErrorCtrl.create({className: 'Stock', methodName: 'insertIntoOldOrnamentsEstimateTable', cause: e, message: 'Exception in sql query execution'}));
             throw e;
         }
     }
@@ -1024,10 +1127,14 @@ module.exports = function(Stock) {
         }
     }
 
-    Stock._archiveOldOrnamentRecByInvoiceRef = async (userId, invoiceRef) => {
+    Stock._archiveOldOrnamentRecByInvoiceRef = async (userId, invoiceRef, identifier) => {
         try {
             let sql = SQL.MARK_ARCHIVED_OLD_ORN_TABLE_ITEM;
-            sql = sql.replace(/OLD_ITEMS_STOCK_TABLE/g, `old_items_stock_${userId}`);
+            if(identifier == 'original')
+                sql = sql.replace(/OLD_ITEMS_STOCK_TABLE/g, `old_items_stock_${userId}`);
+            else
+                sql = sql.replace(/OLD_ITEMS_STOCK_TABLE/g, `old_items_estimates_${userId}`);
+            
             await utils.executeSqlQuery(Stock.dataSource, sql, [invoiceRef]);
             return true;
         } catch(e) {
@@ -1191,6 +1298,8 @@ let SQL = {
                             VALUES `,
     INSERT_INTO_OLD_ITEM_STOCK: `INSERT INTO OLD_ITEMS_STOCK_TABLE (purchased_from_cust_id, item_type, daily_retail_rate, gross_wt, net_wt, wastage_val, applied_retail_rate, price, invoice_ref)
                             VALUES(?,?,?,?,?,?,?,?,?)`,
+    INSERT_INTO_OLD_ITEM_ESTIMATES: `INSERT INTO OLD_ITEMS_STOCK_TABLE (cust_id, item_type, daily_retail_rate, gross_wt, net_wt, wastage_val, applied_retail_rate, price, invoice_ref)
+                            VALUES(?,?,?,?,?,?,?,?,?)`,
     INSERT_INVOICE_DETAIL_OLD: `INSERT INTO INVOICE_TABLE (ukey, invoice_no, cust_id, action, paid_amt, balance_amt, payment_mode, raw_payment_data, raw_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     
     INSERT_INVOICE_ITEMS: `INSERT INTO INVOICE_ITEM_TABLE (
@@ -1208,6 +1317,21 @@ let SQL = {
                                 ?,?,
                                 ?,?,
                                 ?)`,
+        INSERT_ESTIMATE_INVOICE_ITEMS: `INSERT INTO ESTIMATE_INVOICE_ITEM_TABLE (
+                                    invoice_ref, stock_tbl_item_uid, qty, 
+                                    gross_wt, net_wt, 
+                                    wastage_percent, wastage_val,
+                                    making_charge, initial_price, discount,
+                                    cgst_percent, cgst_val, 
+                                    sgst_percent, sgst_val, 
+                                    final_price) 
+                                    VALUES (?, ?, ?,
+                                    ?,?,
+                                    ?,?,
+                                    ?,?,?,
+                                    ?,?,
+                                    ?,?,
+                                    ?)`,
     FETCH_SOLD_OUT_ITEMS_COUNT: `SELECT
                                     COUNT(*) AS Count
                                 FROM

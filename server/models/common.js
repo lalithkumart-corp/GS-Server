@@ -243,6 +243,9 @@ module.exports = function(Common) {
             await Common._createOldItemStockTable(userId);
             await Common._createJwlInvoiceTable(userId);
             await Common._createJwlInvoiceItemTable(userId);
+            await Common._createJwlEstimateInvoiceTable(userId);
+            await Common._createJwlEstimateInvoiceItemsTable(userId);
+            await Common._createOldItemEstimateTbl(userId);
             await Common._createFundTrnsTable(userId);
             // await Common._createFundTrnsTempTable(userId);
             await Common._createFundTrnsProcedure(userId);
@@ -494,6 +497,84 @@ module.exports = function(Common) {
                     return reject(error);
                 } else {
                     console.log(`"jewellery_invoice_items_${userId}" table for this user:${userId} exists already, So new table not created.`);
+                    return resolve(false);
+                }
+            });
+        });
+    }
+
+    Common._createJwlEstimateInvoiceTable = (userId) => {
+        return new Promise((resolve, reject) => {
+            let simpleSql = `SELECT * FROM jewellery_estimate_invoices_${userId} LIMIT 1`;
+            app.models.GsUser.dataSource.connector.query(simpleSql, (error, result) => {
+                if(error && error.code == "ER_NO_SUCH_TABLE") {
+                    let sql = SQL.JWL_ESTIMATE_INVOICES.replace(/REPLACE_USERID/g, userId);
+                    app.models.GsUser.dataSource.connector.query(sql, (err, resp) => {
+                        if(err) {
+                            console.log(err);
+                            console.log(`Error occured while creating a new "jewellery_estimate_invoices_<id>" table for the user: ${userId}`);
+                            return reject(err);
+                        } else {
+                            console.log(`New "jewellery_estimate_invoices_${userId}" table created!`);
+                            return resolve(true);
+                        }
+                    });
+                } else if(error) {
+                    return reject(error);
+                } else {
+                    console.log(`"jewellery_estimate_invoices_${userId}" table for this user:${userId} exists already, So new table not created.`);
+                    return resolve(false);
+                }
+            });
+        });
+    }
+
+    Common._createJwlEstimateInvoiceItemsTable = (userId) => {
+        return new Promise((resolve, reject) => {
+            let simpleSql = `SELECT * FROM jewellery_estimate_invoices_items_${userId} LIMIT 1`;
+            app.models.GsUser.dataSource.connector.query(simpleSql, (error, result) => {
+                if(error && error.code == "ER_NO_SUCH_TABLE") {
+                    let sql = SQL.JWL_ESTIMATE_INVOICE_ITEM.replace(/REPLACE_USERID/g, userId);
+                    app.models.GsUser.dataSource.connector.query(sql, (err, resp) => {
+                        if(err) {
+                            console.log(err);
+                            console.log(`Error occured while creating a new "jewellery_estimate_invoices_items_<id>" table for the user: ${userId}`);
+                            return reject(err);
+                        } else {
+                            console.log(`New "jewellery_estimate_invoices_items_${userId}" table created!`);
+                            return resolve(true);
+                        }
+                    });
+                } else if(error) {
+                    return reject(error);
+                } else {
+                    console.log(`"jewellery_estimate_invoices_items_${userId}" table for this user:${userId} exists already, So new table not created.`);
+                    return resolve(false);
+                }
+            });
+        });
+    }
+
+    Common._createOldItemEstimateTbl = (userId) => {
+        return new Promise((resolve, reject) => {
+            let simpleSql = `SELECT * FROM old_items_estimates_${userId} LIMIT 1`;
+            app.models.GsUser.dataSource.connector.query(simpleSql, (error, result) => {
+                if(error && error.code == "ER_NO_SUCH_TABLE") {
+                    let sql = SQL.OLD_ITEMS_ESTIMATE.replace(/REPLACE_USERID/g, userId);
+                    app.models.GsUser.dataSource.connector.query(sql, (err, resp) => {
+                        if(err) {
+                            console.log(err);
+                            console.log(`Error occured while creating a new "old_items_estimates_<id>" table for the user: ${userId}`);
+                            return reject(err);
+                        } else {
+                            console.log(`New "old_items_estimates_${userId}" table created!`);
+                            return resolve(true);
+                        }
+                    });
+                } else if(error) {
+                    return reject(error);
+                } else {
+                    console.log(`"old_items_estimates_${userId}" table for this user:${userId} exists already, So new table not created.`);
                     return resolve(false);
                 }
             });
@@ -1254,6 +1335,66 @@ let SQL = {
                             sgst_val float DEFAULT NULL,
                             final_price float DEFAULT NULL,
                             PRIMARY KEY (invoice_item_id)
+                            )`,
+    JWL_ESTIMATE_INVOICES: `CREATE TABLE jewellery_estimate_invoices_REPLACE_USERID (
+                            jewellery_estimate_invoice_tbl_id int NOT NULL AUTO_INCREMENT,
+                            invoice_date datetime DEFAULT CURRENT_TIMESTAMP,
+                            ukey varchar(45) DEFAULT NULL,
+                            invoice_no varchar(45) NOT NULL,
+                            cust_id int DEFAULT NULL,
+                            item_metal_type varchar(45) DEFAULT NULL,
+                            daily_retail_rate float DEFAULT NULL,
+                            total_initial_price float DEFAULT NULL,
+                            cgst_avg_percent float DEFAULT NULL,
+                            total_cgst_val float DEFAULT NULL,
+                            sgst_avg_percent float DEFAULT NULL,
+                            total_sgst_val float DEFAULT NULL,
+                            total_discount float DEFAULT NULL,
+                            total_purchase_final_price float DEFAULT NULL,
+                            total_exchange_final_price float DEFAULT NULL,
+                            roundoff_val float DEFAULT NULL,
+                            grand_total float DEFAULT NULL,
+                            is_archived int DEFAULT '0',
+                            created_date datetime DEFAULT CURRENT_TIMESTAMP,
+                            modified_date datetime DEFAULT CURRENT_TIMESTAMP,
+                            PRIMARY KEY (jewellery_estimate_invoice_tbl_id),
+                            UNIQUE KEY uid_UNIQUE (ukey)
+                            ) `,
+    JWL_ESTIMATE_INVOICE_ITEM: `CREATE TABLE jewellery_estimate_invoice_items_REPLACE_USERID (
+                                    invoice_item_id int NOT NULL AUTO_INCREMENT,
+                                    invoice_ref varchar(45) NOT NULL,
+                                    stock_tbl_item_uid varchar(45) NOT NULL,
+                                    stock_tbl_prod_id varchar(45) DEFAULT NULL,
+                                    qty int NOT NULL,
+                                    gross_wt float NOT NULL,
+                                    net_wt float NOT NULL,
+                                    wastage_percent float DEFAULT NULL,
+                                    wastage_val float DEFAULT NULL,
+                                    making_charge float DEFAULT NULL,
+                                    initial_price float DEFAULT NULL,
+                                    discount float DEFAULT NULL,
+                                    cgst_percent float DEFAULT NULL,
+                                    cgst_val float DEFAULT NULL,
+                                    sgst_percent float DEFAULT NULL,
+                                    sgst_val float DEFAULT NULL,
+                                    final_price float DEFAULT NULL,
+                                    PRIMARY KEY (invoice_item_id)
+                                    )`,
+    OLD_ITEMS_ESTIMATE: `CREATE TABLE old_items_estimates_REPLACE_USERID (
+                            id int NOT NULL AUTO_INCREMENT,
+                            item_type varchar(45) DEFAULT NULL,
+                            cust_id int NOT NULL,
+                            gross_wt float DEFAULT NULL,
+                            net_wt float DEFAULT NULL,
+                            wastage_val float DEFAULT NULL,
+                            applied_retail_rate float NOT NULL,
+                            daily_retail_rate float NOT NULL,
+                            price float DEFAULT NULL,
+                            invoice_ref varchar(45) DEFAULT NULL,
+                            archived int DEFAULT '0',
+                            created_date datetime DEFAULT CURRENT_TIMESTAMP,
+                            modified_date datetime DEFAULT CURRENT_TIMESTAMP,
+                            PRIMARY KEY (id)
                             )`,
     FUND_TRANS: `CREATE TABLE fund_transactions_REPLACE_USERID (
                     id int NOT NULL AUTO_INCREMENT,

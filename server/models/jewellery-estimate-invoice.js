@@ -6,8 +6,8 @@ let GsErrorCtrl = require('../components/logger/gsErrorCtrl');
 let logger = app.get('logger');
 let JewelleryInvoiceHelper = require('./modelHelpers/jewelleryInvoice');
 
-module.exports = function(JwlInvoice) {
-    JwlInvoice.remoteMethod('getInvoiceDataByKey', {
+module.exports = function(JwlEstimateInvoice) {
+    JwlEstimateInvoice.remoteMethod('getInvoiceDataByKey', {
         accepts: [
             {
                 arg: 'accessToken', type: 'string', http: (ctx) => {
@@ -38,7 +38,7 @@ module.exports = function(JwlInvoice) {
         description: 'Jewellery Bill Invoice Date.',
     });
 
-    JwlInvoice.remoteMethod('getInvoiceRecordByKey', {
+    JwlEstimateInvoice.remoteMethod('getInvoiceRecordByKey', {
         accepts: [
             {
                 arg: 'accessToken', type: 'string', http: (ctx) => {
@@ -71,7 +71,7 @@ module.exports = function(JwlInvoice) {
         description: 'Jewellery Bill Invoice Record.',
     });
 
-    JwlInvoice.remoteMethod('getCustomerInvoiceListApi', {
+    JwlEstimateInvoice.remoteMethod('getCustomerInvoiceListApi', {
         accepts: [
             {
                 arg: 'accessToken', type: 'string', http: (ctx) => {
@@ -101,7 +101,7 @@ module.exports = function(JwlInvoice) {
         description: 'Jewellery - Customer Invoice List.',
     });
 
-    JwlInvoice.remoteMethod('getCustomerInvoiceListCountApi', {
+    JwlEstimateInvoice.remoteMethod('getCustomerInvoiceListCountApi', {
         accepts: [
             {
                 arg: 'accessToken', type: 'string', http: (ctx) => {
@@ -131,7 +131,7 @@ module.exports = function(JwlInvoice) {
         description: 'Jewellery - Customer Invoice List count',
     });
 
-    JwlInvoice.remoteMethod('deleteInvoice', {
+    JwlEstimateInvoice.remoteMethod('deleteInvoice', {
         accepts: [
             {
                 arg: 'accessToken', type: 'string', http: (ctx) => {
@@ -164,12 +164,12 @@ module.exports = function(JwlInvoice) {
         description: 'Delete an Invoice'
     });
 
-    JwlInvoice.prototype.insertInvoiceData = async (payload) => {
+    JwlEstimateInvoice.prototype.insertInvoiceData = async (payload) => {
         try {
             let invoiceNoFull = payload.apiParams.invoiceNo;
             if(payload.apiParams.invoiceSeries)
                 invoiceNoFull = `${payload.apiParams.invoiceSeries}.${payload.apiParams.invoiceNo}`;
-            let sql = SQL.INSERT_JWL_INVOICE.replace(/INVOICE_TABLE/g, `jewellery_invoices_${payload._userId}`);
+            let sql = SQL.INSERT_JWL_ESTIMATE_INVOICE.replace(/INVOICE_ESTIMATE_TABLE/g, `jewellery_estimate_invoices_${payload._userId}`);
             let queryVal = [
                     payload._uniqString,
                     new Date().toISOString().replace('T',' ').replace('Z', ''),
@@ -185,24 +185,20 @@ module.exports = function(JwlInvoice) {
                     payload.apiParams.calculations.totalPurchaseFinalPrice,
                     payload.apiParams.calculations.totalExchangeFinalPrice,
                     payload.apiParams.calculations.roundedOffVal,
-                    payload.apiParams.calculations.grandTotal,
-
-                    payload.apiParams.paymentFormData.paid,
-                    payload.apiParams.paymentFormData.balance,
-                    payload.apiParams.paymentFormData.paymentMode
+                    payload.apiParams.calculations.grandTotal
                 ];
-            let result = await utils.executeSqlQuery(JwlInvoice.dataSource, sql, queryVal);
+            let result = await utils.executeSqlQuery(JwlEstimateInvoice.dataSource, sql, queryVal);
             return result;
         } catch(e) {
-            logger.error(GsErrorCtrl.create({className: 'JwlInvoice', methodName: 'insertInvoiceData', cause: e, message: 'Exception in sql query execution'}));
+            logger.error(GsErrorCtrl.create({className: 'JwlEstimateInvoice', methodName: 'insertInvoiceData', cause: e, message: 'Exception in sql query execution'}));
             console.log(e);
             throw e;
         }
     }
 
     //for pdf bill content
-    JwlInvoice.getInvoiceDataByKey = (accessToken, invoiceKeys, cb) => {
-        JwlInvoice._getInvoiceDataByKey(accessToken, invoiceKeys).then(
+    JwlEstimateInvoice.getInvoiceDataByKey = (accessToken, invoiceKeys, cb) => {
+        JwlEstimateInvoice._getInvoiceDataByKey(accessToken, invoiceKeys).then(
             (resp) => {
                 if(resp)
                     cb(null, {STATUS: 'SUCCESS', RESP: resp});
@@ -216,13 +212,13 @@ module.exports = function(JwlInvoice) {
         );
     }
 
-    JwlInvoice._getInvoiceDataByKey = async (accessToken, invoiceKeys) => {
+    JwlEstimateInvoice._getInvoiceDataByKey = async (accessToken, invoiceKeys) => {
         try {
             let _userId = await utils.getStoreOwnerUserId(accessToken);
             let sql = SQL.INVOICE_DATA_NEW.replace(/REPLACE_USERID/g, _userId);
-            let result = await utils.executeSqlQuery(JwlInvoice.dataSource, sql, [invoiceKeys]);
+            let result = await utils.executeSqlQuery(JwlEstimateInvoice.dataSource, sql, [invoiceKeys]);
             if(result && result.length > 0) {
-                let invoiceDataObj = JwlInvoice._constructInvoiceData(result);
+                let invoiceDataObj = JwlEstimateInvoice._constructInvoiceData(result);
                 return Object.values(invoiceDataObj);
                 // return result.map((aDbRow) => JSON.parse(aDbRow.invoice_data));
                 // return result[0].invoice_data;
@@ -235,7 +231,7 @@ module.exports = function(JwlInvoice) {
         }
     }
 
-    JwlInvoice._constructInvoiceData = (dbRows) => {
+    JwlEstimateInvoice._constructInvoiceData = (dbRows) => {
         let finalResp = {};
         for(let i in dbRows) {
             let row = dbRows[i];
@@ -295,8 +291,8 @@ module.exports = function(JwlInvoice) {
     };
 
     // for customer invoice page in UI
-    JwlInvoice.getInvoiceRecordByKey = (accessToken, invoiceKeys, cb) => {
-        JwlInvoice._getInvoiceRecordByKey(accessToken, invoiceKeys).then(
+    JwlEstimateInvoice.getInvoiceRecordByKey = (accessToken, invoiceKeys, cb) => {
+        JwlEstimateInvoice._getInvoiceRecordByKey(accessToken, invoiceKeys).then(
             (resp) => {
                 if(resp)
                     cb(null, {STATUS: 'SUCCESS', RESP: resp});
@@ -310,19 +306,20 @@ module.exports = function(JwlInvoice) {
         );
     }
 
-    JwlInvoice._getInvoiceRecordByKey = async (accessToken, invoiceKeys) => {
+    JwlEstimateInvoice._getInvoiceRecordByKey = async (accessToken, invoiceKeys) => {
         try {
             // let _userId = await utils.getStoreOwnerUserId(accessToken);
-            // let sql = SQL.INVOICE_RECORD.replace(/INVOICE_TABLE/g, `jewellery_invoices_${_userId}`);
-            // let result = await utils.executeSqlQuery(JwlInvoice.dataSource, sql, [invoiceKeys]);
+            // let sql = SQL.INVOICE_RECORD.replace(/INVOICE_ESTIMATE_TABLE/g, `jewellery_invoices_${_userId}`);
+            // let result = await utils.executeSqlQuery(JwlEstimateInvoice.dataSource, sql, [invoiceKeys]);
             // if(result && result.length > 0) {
             //     // return result.map((aDbRow) => JSON.parse(aDbRow.raw_data));
             //     return result;
             // }
             // else
             //     return null;
-
-            // TODO:
+            
+            
+            //TODO:
             return null;
         } catch(e) {
             console.log(e);
@@ -330,25 +327,25 @@ module.exports = function(JwlInvoice) {
         }
     }
 
-    JwlInvoice.getCustomerInvoiceListApi = async (accessToken, filters) => {
+    JwlEstimateInvoice.getCustomerInvoiceListApi = async (accessToken, filters) => {
         try {
             let params = { filters };
             params._userId = await utils.getStoreOwnerUserId(accessToken);
-            let list = await JwlInvoice._fetchJwlCustInvoiceList(params);
+            let list = await JwlEstimateInvoice._fetchJwlCustInvoiceList(params);
             return {STATUS: 'SUCCESS', CUST_INV_LIST: list};
         } catch(e) {
             return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
         }
     }
 
-    JwlInvoice._fetchJwlCustInvoiceList = (params) => {
+    JwlEstimateInvoice._fetchJwlCustInvoiceList = (params) => {
         return new Promise( (resolve, reject) => {
             let sql = SQL.INVOICE_LIST_NEW;
-            sql = JwlInvoice._injectFilterQuerypart(sql, params, 'list');
+            sql = JwlEstimateInvoice._injectFilterQuerypart(sql, params, 'list');
             // sql = sql.replace(/STOCK_SOLD_TABLE/g, `stock_sold_${params._userId}`);
-            // sql = sql.replace(/INVOICE_TABLE/g, `jewellery_invoice_details_${params._userId}`);
+            // sql = sql.replace(/INVOICE_ESTIMATE_TABLE/g, `jewellery_invoice_details_${params._userId}`);
             sql = sql.replace(/REPLACE_USERID/g,  params._userId);
-            JwlInvoice.dataSource.connector.query(sql, (err, res) => {
+            JwlEstimateInvoice.dataSource.connector.query(sql, (err, res) => {
                 if(err) {
                     reject(err);
                 } else {
@@ -358,26 +355,26 @@ module.exports = function(JwlInvoice) {
         });
     }
 
-    JwlInvoice.getCustomerInvoiceListCountApi = async (accessToken, filters) => {
+    JwlEstimateInvoice.getCustomerInvoiceListCountApi = async (accessToken, filters) => {
         try {
             let params = { filters };
             params._userId = await utils.getStoreOwnerUserId(accessToken);
-            let cnt = await JwlInvoice._fetchJwlCustInvoiceListCount(params);
+            let cnt = await JwlEstimateInvoice._fetchJwlCustInvoiceListCount(params);
             return {STATUS: 'SUCCESS', CUST_INV_LIST_COUNT: cnt};
         } catch(e) {
             return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
         }
     }
 
-    JwlInvoice._fetchJwlCustInvoiceListCount = (params) => {
+    JwlEstimateInvoice._fetchJwlCustInvoiceListCount = (params) => {
         return new Promise( (resolve, reject) => {
             let sql = SQL.INVOICE_LIST_TOTALS;
             params.filters.fetchTotalCount = true;
-            sql = JwlInvoice._injectFilterQuerypart(sql, params, 'count');
+            sql = JwlEstimateInvoice._injectFilterQuerypart(sql, params, 'count');
             // sql = sql.replace(/STOCK_SOLD_TABLE/g, `stock_sold_${params._userId}`);
-            // sql = sql.replace(/INVOICE_TABLE/g, `jewellery_invoice_details_${params._userId}`);
+            // sql = sql.replace(/INVOICE_ESTIMATE_TABLE/g, `jewellery_invoice_details_${params._userId}`);
             sql = sql.replace(/REPLACE_USERID/g,  params._userId);
-            JwlInvoice.dataSource.connector.query(sql, (err, res) => {
+            JwlEstimateInvoice.dataSource.connector.query(sql, (err, res) => {
                 if(err) {
                     reject(err);
                 } else {
@@ -387,7 +384,7 @@ module.exports = function(JwlInvoice) {
         });
     }
 
-    JwlInvoice._injectFilterQuerypart = (sql, params) => {
+    JwlEstimateInvoice._injectFilterQuerypart = (sql, params) => {
         let whereClause = '';
         let {filters} = params;
         let whereConditionList = [];
@@ -423,44 +420,24 @@ module.exports = function(JwlInvoice) {
         return sql;
     }
     
-    JwlInvoice.deleteInvoice = async (accessToken, params) => {
+    JwlEstimateInvoice.deleteInvoice = async (accessToken, params) => {
         try {
             let userId = await utils.getStoreOwnerUserId(accessToken);
             let invoiceRef = params.invoiceRef;
-            let soldItemDetails = await JwlInvoice.app.models.Stock._fetchSoldItemsByInvoiceId(userId, invoiceRef);
-            if(soldItemDetails && soldItemDetails.length>0) {
-                for(let i=0; i<soldItemDetails.length; i++) {
-                    let anItem = soldItemDetails[i];
-                    let itemDetail = {
-                        prodId: anItem.prod_id,
-                        qty: anItem.qty,
-                        grossWt: anItem.gross_wt,
-                        netWt: anItem.net_wt,
-                        pureWt: anItem.pure_wt
-                    }
-                   await JwlInvoice.app.models.Stock._putBackFromInvoice(userId, itemDetail);
-                }
-                await JwlInvoice.app.models.Stock._archiveSoldItemByInvoiceRef(userId, invoiceRef);
-                await JwlInvoice.app.models.Stock._archiveOldOrnamentRecByInvoiceRef(userId, invoiceRef);
-                await JwlInvoice._archiveByInvoiceRef(userId, invoiceRef);
-                await JwlInvoice.app.models.FundTransaction.prototype.removeEntry({
-                    userId,
-                    gsUid: invoiceRef
-                }, 'jwl_sale');
-            } else {
-                throw new Error("Items not found in DB to update back the qty and weight");
-            }
-            return { STATUS: 'SUCCESS', MSG: 'Archived the invoice and updated QTY and WT of specific item in stock table.'};
+            let soldItemDetails = await JwlEstimateInvoice.app.models.Stock._fetchSoldItemsByInvoiceId(userId, invoiceRef);
+            await JwlEstimateInvoice.app.models.Stock._archiveOldOrnamentRecByInvoiceRef(userId, invoiceRef);
+            await JwlEstimateInvoice._archiveByInvoiceRef(userId, invoiceRef);
+            return { STATUS: 'SUCCESS', MSG: 'Archived the Estimate invoice and archived Old Items estimate (if any).'};
         } catch(e) {
             return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
         }
     }
 
-    JwlInvoice._archiveByInvoiceRef = async (userId, invoiceRef) => {
+    JwlEstimateInvoice._archiveByInvoiceRef = async (userId, invoiceRef) => {
         try {
             let sql = SQL.MARK_ARCHIVED;
-            sql = sql.replace(/INVOICE_TABLE/g, `jewellery_invoices_${userId}`);
-            await utils.executeSqlQuery(JwlInvoice.dataSource, sql, [invoiceRef]);
+            sql = sql.replace(/INVOICE_ESTIMATE_TABLE/g, `jewellery_estimate_invoices_${userId}`);
+            await utils.executeSqlQuery(JwlEstimateInvoice.dataSource, sql, [invoiceRef]);
             return true;
         } catch(e) {
             console.log(e);
@@ -470,13 +447,8 @@ module.exports = function(JwlInvoice) {
 }
 
 let SQL = {
-    INSERT_INVOICE_DETAIL: `INSERT INTO INVOICE_TABLE (invoice_date, ukey, invoice_no, cust_id, action, paid_amt, balance_amt, raw_data, invoice_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-    INVOICE_RECORD: `SELECT * FROM INVOICE_TABLE WHERE ukey IN (?)`,
-
-    INVOICE_LIST_TOTALS_OLD: `SELECT count(*) as totalInvoiceList
-                    from 
-                        INVOICE_TABLE as i 
-                        LEFT JOIN customer_REPLACE_USERID as c ON i.cust_id = c.CustomerId`,
+    INSERT_INVOICE_DETAIL: `INSERT INTO INVOICE_ESTIMATE_TABLE (invoice_date, ukey, invoice_no, cust_id, action, paid_amt, balance_amt, raw_data, invoice_data) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,    
+    
     INVOICE_LIST_TOTALS: `select count(*) as totalInvoiceList from (select 
                         i.invoice_date,
                         i.ukey,
@@ -501,7 +473,7 @@ let SQL = {
                         stock_sold_REPLACE_USERID AS s ON s.invoice_ref = i.ukey
                         WHERE_CLAUSE
                         GROUP BY i.invoice_date, i.ukey, i.invoice_no, i.cust_id, i.paid_amt, i.balance_amt, i.payment_mode, i.created_date, i.modified_date, c.Name, c.GaurdianName, c.Address, c.Mobile) A`,
-    MARK_ARCHIVED: `UPDATE INVOICE_TABLE SET is_archived=1 where ukey=?`,
+    MARK_ARCHIVED: `UPDATE INVOICE_ESTIMATE_TABLE SET is_archived=1 where ukey=?`,
     INVOICE_LIST_NEW: `select 
                         i.invoice_date,
                         i.ukey,
@@ -519,11 +491,11 @@ let SQL = {
                         GROUP_CONCAT(s.prod_id) as prod_ids,
                         GROUP_CONCAT(s.huid) as huids
                     from
-                        jewellery_invoices_REPLACE_USERID AS i
+                        jewellery_estimate_invoices_REPLACE_USERID AS i
                             LEFT JOIN
                         customer_REPLACE_USERID AS c ON i.cust_id = c.CustomerId
                             LEFT JOIN
-                        stock_sold_REPLACE_USERID AS s ON s.invoice_ref = i.ukey
+                        stock_REPLACE_USERID AS s ON s.invoice_ref = i.ukey
                         WHERE_CLAUSE
                         GROUP BY i.invoice_date, i.ukey, i.invoice_no, i.cust_id, i.paid_amt, i.balance_amt, i.payment_mode, i.created_date, i.modified_date, c.Name, c.GaurdianName, c.Address, c.Mobile`,
     INVOICE_DATA_NEW: `SELECT 
@@ -596,16 +568,14 @@ let SQL = {
                         left join orn_list_jewellery o on o.id=s.ornament
                         left join touch t on t.id=s.touch_id
                     WHERE inv.ukey=?`,
-    INSERT_JWL_INVOICE: `INSERT INTO INVOICE_TABLE (
+    INSERT_JWL_ESTIMATE_INVOICE: `INSERT INTO INVOICE_ESTIMATE_TABLE (
                         ukey, invoice_date, 
                         invoice_no, cust_id, 
                         daily_retail_rate, item_metal_type, 
                         total_initial_price, total_cgst_val,
                         total_sgst_val, total_discount,
                         total_purchase_final_price, total_exchange_final_price,
-                        roundoff_val, grand_total,
-                        paid_amt, balance_amt, 
-                        payment_mode
+                        roundoff_val, grand_total
                         ) VALUES (
                          ?, ?, 
                          ?, ?, 
@@ -613,7 +583,5 @@ let SQL = {
                          ?, ?, 
                          ?, ?, 
                          ?, ?, 
-                         ?, ?, 
-                         ?, ?, 
-                         ?)`,
+                         ?, ?)`,
 }
