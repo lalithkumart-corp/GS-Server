@@ -749,16 +749,33 @@ module.exports = function(Stock) {
             let newNumber = parseInt(data.apiParams.invoiceNo) + 1;
             await Stock.app.models.JewelleryBillSetting.prototype.incrementSerialAndNumber(data._userId, newNumber, 'gst');
 
-            await Stock.app.models.FundTransaction.prototype.add({
+            let r = {
                 userId: data._userId,
                 gsUid: data._uniqString,
                 customerId: data.apiParams.customerId,
                 transactionDate: data.apiParams.date,
-                cashIn: data.apiParams.paymentFormData.paid,
                 remarks: data.apiParams._invoiceNoFull,
-                cashInMode: data.apiParams.paymentFormData.paymentMode
-            }, 'jwl_sale');
-
+                cashInMode: data.apiParams.paymentSelectionCardData.mode
+            };
+            if(data.apiParams.paymentSelectionCardData.mode == 'mixed') {
+                await Stock.app.models.FundTransaction.prototype.add({
+                    ...r,
+                    cashIn: data.apiParams.paymentSelectionCardData.mixed.cash.value,
+                    cashInMode: 'cash',
+                    accountId: data.apiParams.paymentSelectionCardData.mixed.cash.toAccountId,
+                }, 'jwl_sale');
+                await Stock.app.models.FundTransaction.prototype.add({
+                    ...r,
+                    cashIn: data.apiParams.paymentSelectionCardData.mixed.online.value,
+                    cashInMode: 'online',
+                    accountId: data.apiParams.paymentSelectionCardData.mixed.online.toAccountId,
+                }, 'jwl_sale');
+            } else {
+                await Stock.app.models.FundTransaction.prototype.add({
+                    cashIn: data.apiParams.paymentFormData.paid,
+                    accountId: data.apiParams.paymentSelectionCardData[r.mode].toAccountId,
+                }, 'jwl_sale');
+            }
             return {STATUS: 'SUCCESS'};
         } catch(e) {
             return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};

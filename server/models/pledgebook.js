@@ -991,12 +991,9 @@ module.exports = function(Pledgebook) {
                                 fund_transactions_REPLACE_USERID.transaction_date AS fundTransaction_transaction_date,
                                 fund_transactions_REPLACE_USERID.cash_out AS fundTransaction_cash_out,
                                 fund_transactions_REPLACE_USERID.cash_out_mode AS fundTransaction_cash_out_mode,
-                                fund_transactions_REPLACE_USERID.cash_out_to_bank_id AS fundTransaction_cash_out_to_bank_id,
                                 fund_transactions_REPLACE_USERID.cash_out_to_bank_acc_no AS fundTransaction_cash_out_to_bank_acc_no,
                                 fund_transactions_REPLACE_USERID.cash_out_to_bank_ifsc AS fundTransaction_cash_out_to_bank_ifsc,
-                                fund_transactions_REPLACE_USERID.cash_out_to_upi AS fundTransaction_cash_out_to_upi,
-                                fund_transactions_REPLACE_USERID.id AS fundTransaction_Id,
-                                banks_list.name AS cashOutToBankName
+                                fund_transactions_REPLACE_USERID.id AS fundTransaction_Id
                             FROM
                                 ${pledgebookTableName}
                                     LEFT JOIN
@@ -1013,8 +1010,6 @@ module.exports = function(Pledgebook) {
                                 fund_transactions_REPLACE_USERID ON (${pledgebookTableName}.UniqueIdentifier = fund_transactions_REPLACE_USERID.gs_uid && fund_transactions_REPLACE_USERID.category_id IN (select id from fund_transaction_categories where category IN ('girvi' , 'redeem') ))
                                     LEFT JOIN
                                 fund_accounts ON fund_transactions_REPLACE_USERID.account_id = fund_accounts.id
-                                    LEFT JOIN
-                                banks_list ON fund_transactions_REPLACE_USERID.cash_out_to_bank_id = banks_list.id
                                 `;
                 
                 query = Pledgebook.appendFilters(params, query, pledgebookTableName, pledgebookClosedBillTableName, queryIdentifier);
@@ -1169,12 +1164,9 @@ module.exports = function(Pledgebook) {
                             fund_transactions_REPLACE_USERID.transaction_date AS fundTransaction_transaction_date,
                             fund_transactions_REPLACE_USERID.cash_out AS fundTransaction_cash_out,
                             fund_transactions_REPLACE_USERID.cash_out_mode AS fundTransaction_cash_out_mode,
-                            fund_transactions_REPLACE_USERID.cash_out_to_bank_id AS fundTransaction_cash_out_to_bank_id,
                             fund_transactions_REPLACE_USERID.cash_out_to_bank_acc_no AS fundTransaction_cash_out_to_bank_acc_no,
                             fund_transactions_REPLACE_USERID.cash_out_to_bank_ifsc AS fundTransaction_cash_out_to_bank_ifsc,
-                            fund_transactions_REPLACE_USERID.cash_out_to_upi AS fundTransaction_cash_out_to_upi,
-                            fund_transactions_REPLACE_USERID.id AS fundTransaction_Id,
-                            banks_list.name AS cashOutToBankName
+                            fund_transactions_REPLACE_USERID.id AS fundTransaction_Id
                         FROM
                             ${pledgebookTableName}
                                 LEFT JOIN
@@ -1187,8 +1179,6 @@ module.exports = function(Pledgebook) {
                             fund_transactions_REPLACE_USERID ON (${pledgebookTableName}.UniqueIdentifier = fund_transactions_REPLACE_USERID.gs_uid AND fund_transactions_REPLACE_USERID.is_internal = 1)
                                 LEFT JOIN
                             fund_accounts ON fund_transactions_REPLACE_USERID.account_id = fund_accounts.id
-                                LEFT JOIN
-                            banks_list ON fund_transactions_REPLACE_USERID.cash_out_to_bank_id = banks_list.id
                         WHERE `;
                 let filterPart = [];
                 for(let i=0; i<params.length; i++) {

@@ -1411,10 +1411,8 @@ let SQL = {
                     created_date datetime DEFAULT CURRENT_TIMESTAMP,
                     modified_date datetime DEFAULT CURRENT_TIMESTAMP,
                     cash_out_mode varchar(45) DEFAULT NULL,
-                    cash_out_to_bank_id int DEFAULT NULL,
                     cash_out_to_bank_acc_no varchar(45) DEFAULT NULL,
                     cash_out_to_bank_ifsc varchar(45) DEFAULT NULL,
-                    cash_out_to_upi varchar(45) DEFAULT NULL,
                     cash_in_mode varchar(45) DEFAULT NULL,
                     alert int DEFAULT NULL,
                     is_internal int DEFAULT 0,
@@ -1437,10 +1435,8 @@ let SQL = {
                         created_date datetime DEFAULT NULL,
                         modified_date datetime DEFAULT NULL,
                         cash_out_mode varchar(45) DEFAULT NULL,
-                        cash_out_to_bank_id int DEFAULT NULL,
                         cash_out_to_bank_acc_no varchar(45) DEFAULT NULL,
                         cash_out_to_bank_ifsc varchar(45) DEFAULT NULL,
-                        cash_out_to_upi varchar(45) DEFAULT NULL,
                         cash_in_mode varchar(45) DEFAULT NULL,
                         alert int DEFAULT NULL,
                         is_internal int DEFAULT 0,
@@ -1468,10 +1464,8 @@ let SQL = {
                 created_date DATETIME NULL,
                 modified_date DATETIME NULL,
                 cash_out_mode VARCHAR(45) NULL,
-                cash_out_to_bank_id INT NULL,
                 cash_out_to_bank_acc_no VARCHAR(45) NULL,
                 cash_out_to_bank_ifsc VARCHAR(45) NULL,
-                cash_out_to_upi VARCHAR(45) NULL,
                 cash_in_mode VARCHAR(45) NULL,
                 alert INT NULL,
                 is_internal INT NULL,
@@ -1482,7 +1476,7 @@ let SQL = {
             );
             
             
-            INSERT INTO fund_trns_tmp_REPLACE_USERID (id, transaction_date, user_id, account_id, customer_id, gs_uid, category, remarks, deleted, cash_in, cash_out, created_date, modified_date, cash_out_mode, cash_out_to_bank_id, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_out_to_upi, cash_in_mode, alert, is_internal, tag_indicator)
+            INSERT INTO fund_trns_tmp_REPLACE_USERID (id, transaction_date, user_id, account_id, customer_id, gs_uid, category, remarks, deleted, cash_in, cash_out, created_date, modified_date, cash_out_mode, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_in_mode, alert, is_internal, tag_indicator)
             SELECT
                 id,
                 transaction_date,
@@ -1498,10 +1492,8 @@ let SQL = {
                 created_date,
                 modified_date,
                 cash_out_mode,
-                cash_out_to_bank_id,
                 cash_out_to_bank_acc_no,
                 cash_out_to_bank_ifsc,
-                cash_out_to_upi,
                 cash_in_mode,
                 alert,
                 is_internal,
