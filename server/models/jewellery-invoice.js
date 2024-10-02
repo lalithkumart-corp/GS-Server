@@ -164,6 +164,38 @@ module.exports = function(JwlInvoice) {
         description: 'Delete an Invoice'
     });
 
+    JwlInvoice.remoteMethod('returnItemsApiHandler', {
+        accepts: [
+            {
+                arg: 'accessToken', type: 'string', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let authToken = null;
+                    if(req && req.headers.authorization)
+                        authToken = req.headers.authorization || req.headers.Authorization;
+                    return authToken;
+                },
+                description: 'Arguments goes here',
+            },
+            {
+                arg: 'params',
+                type: 'object',
+                default: {
+                    
+                },
+                http: {
+                    source: 'body',
+                },
+        }],
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/return-items', verb: 'post'},
+        description: 'Return items'
+    });
     JwlInvoice.prototype.insertInvoiceData = async (payload) => {
         try {
             let invoiceNoFull = payload.apiParams.invoiceNo;
@@ -255,7 +287,8 @@ module.exports = function(JwlInvoice) {
             }
             finalResp[row.i_invoice_ref].ornaments.push({
                 title: row.o_item_name,
-                huid: row.huid,
+                huid: row.s_huid,
+                prodId: row.s_prod_id,
                 qty: row.ii_qty,
                 grossWt: row.ii_gross_wt,
                 netWt: row.ii_net_wt,
@@ -323,6 +356,7 @@ module.exports = function(JwlInvoice) {
             //     return null;
 
             // TODO:
+
             return null;
         } catch(e) {
             console.log(e);
@@ -441,7 +475,7 @@ module.exports = function(JwlInvoice) {
                    await JwlInvoice.app.models.Stock._putBackFromInvoice(userId, itemDetail);
                 }
                 await JwlInvoice.app.models.Stock._archiveSoldItemByInvoiceRef(userId, invoiceRef);
-                await JwlInvoice.app.models.Stock._archiveOldOrnamentRecByInvoiceRef(userId, invoiceRef);
+                await JwlInvoice.app.models.Stock._archiveOldOrnamentRecByInvoiceRef(userId, invoiceRef, 'original');
                 await JwlInvoice._archiveByInvoiceRef(userId, invoiceRef);
                 await JwlInvoice.app.models.FundTransaction.prototype.removeEntry({
                     userId,
@@ -465,6 +499,74 @@ module.exports = function(JwlInvoice) {
         } catch(e) {
             console.log(e);
             return null;
+        }
+    }
+
+    JwlInvoice._updateReturnFlagByInvoiceRef = async (userId, invoiceRef, charges) => {
+        try {
+            let sql = SQL.SET_RETURNED_FLAG_WITH_CHARGES;
+            sql = sql.replace(/INVOICE_TABLE/g, `jewellery_invoices_${userId}`);
+            await utils.executeSqlQuery(JwlInvoice.dataSource, sql, [charges, invoiceRef]);
+            return true;
+        } catch(e) {
+            console.log(e);
+            return null;
+        }
+    }
+
+    JwlInvoice.returnItemsApiHandler = async (accessToken, params) => {
+        try {
+            let userId = await utils.getStoreOwnerUserId(accessToken);
+            let invoiceRef = params.invoiceRef;
+            let soldItemDetails = await JwlInvoice.app.models.Stock._fetchSoldItemsByInvoiceId(userId, invoiceRef);
+            if(soldItemDetails && soldItemDetails.length>0) {
+                for(let i=0; i<soldItemDetails.length; i++) {
+                    let anItem = soldItemDetails[i];
+                    let itemDetail = {
+                        prodId: anItem.prod_id,
+                        qty: anItem.qty,
+                        grossWt: anItem.gross_wt,
+                        netWt: anItem.net_wt,
+                        pureWt: anItem.pure_wt
+                    }
+                   await JwlInvoice.app.models.Stock._putBackFromInvoice(userId, itemDetail);
+                }
+                await JwlInvoice.app.models.Stock._updateReturnFlagInStockSoldTblByInvoiceRef(userId, invoiceRef);
+                await JwlInvoice.app.models.Stock._updateReturnFlagInOldOrnTblByInvoiceRef(userId, invoiceRef);
+                await JwlInvoice._updateReturnFlagByInvoiceRef(userId, invoiceRef, params.charges);
+                let r = {
+                    userId: userId,
+                    gsUid: invoiceRef,
+                    customerId: params.customerId,
+                    transactionDate: params.date,
+                    remarks: params._invoiceNoFull,
+                    cashInMode: params.paymentSelectionCardData.mode
+                };
+                if(params.paymentSelectionCardData.mode == 'mixed') {
+                    await JwlInvoice.app.models.FundTransaction.prototype.add({
+                        ...r,
+                        cashOut: params.paymentSelectionCardData.mixed.cash.value,
+                        cashOutMode: 'cash',
+                        accountId: params.paymentSelectionCardData.mixed.cash.fromAccountId,
+                    }, 'jwl_sale_return');
+                    await JwlInvoice.app.models.FundTransaction.prototype.add({
+                        ...r,
+                        cashOut: params.paymentSelectionCardData.mixed.online.value,
+                        cashOutMode: 'online',
+                        accountId: params.paymentSelectionCardData.mixed.online.fromAccountId,
+                    }, 'jwl_sale_return');
+                } else {
+                    await JwlInvoice.app.models.FundTransaction.prototype.add({
+                        cashOut: params.paymentSelectionCardData.cash.value,
+                        accountId: params.paymentSelectionCardData[r.mode].fromAccountId,
+                    }, 'jwl_sale_return');
+                }
+            } else {
+                throw new Error("Items not found in DB to update back the qty and weight");
+            }
+            return { STATUS: 'SUCCESS', MSG: 'Marked the Invoice with Return flag and Added back the QTY and WT of specific item in stock table.'};
+        } catch(e) {
+            return {STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};
         }
     }
 }
@@ -502,14 +604,18 @@ let SQL = {
                         WHERE_CLAUSE
                         GROUP BY i.invoice_date, i.ukey, i.invoice_no, i.cust_id, i.paid_amt, i.balance_amt, i.payment_mode, i.created_date, i.modified_date, c.Name, c.GaurdianName, c.Address, c.Mobile) A`,
     MARK_ARCHIVED: `UPDATE INVOICE_TABLE SET is_archived=1 where ukey=?`,
+    SET_RETURNED_FLAG_WITH_CHARGES: `UPDATE INVOICE_TABLE SET is_returned=1, return_charges_val=? where ukey=?`,
     INVOICE_LIST_NEW: `select 
                         i.invoice_date,
                         i.ukey,
                         i.invoice_no,
+                        i.item_metal_type,
                         i.cust_id,
                         i.paid_amt,
                         i.balance_amt,
                         i.payment_mode,
+                        i.is_returned,
+                        i.return_charges_val,
                         i.created_date,
                         i.modified_date,
                         c.Name,
@@ -525,7 +631,7 @@ let SQL = {
                             LEFT JOIN
                         stock_sold_REPLACE_USERID AS s ON s.invoice_ref = i.ukey
                         WHERE_CLAUSE
-                        GROUP BY i.invoice_date, i.ukey, i.invoice_no, i.cust_id, i.paid_amt, i.balance_amt, i.payment_mode, i.created_date, i.modified_date, c.Name, c.GaurdianName, c.Address, c.Mobile`,
+                        GROUP BY i.invoice_date, i.ukey, i.invoice_no, i.item_metal_type, i.cust_id, i.paid_amt, i.balance_amt, i.payment_mode, i.is_returned, i.return_charges_val, i.created_date, i.modified_date, c.Name, c.GaurdianName, c.Address, c.Mobile`,
     INVOICE_DATA_NEW: `SELECT 
                         inv.jewellery_invoice_tbl_id AS i_jewellery_invoice_tbl_id,
                         inv.invoice_date AS i_invoice_date,
@@ -552,6 +658,7 @@ let SQL = {
                         inv_item.stock_tbl_item_uid as ii_stock_tbl_item_uid,
                         o.item_name as o_item_name,
                         s.huid as s_huid, 
+                        s.prod_id as s_prod_id,
                         t.name as t_name,
                         t.metal as t_metal,
                         inv_item.qty AS ii_qty,

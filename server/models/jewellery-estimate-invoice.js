@@ -424,8 +424,8 @@ module.exports = function(JwlEstimateInvoice) {
         try {
             let userId = await utils.getStoreOwnerUserId(accessToken);
             let invoiceRef = params.invoiceRef;
-            let soldItemDetails = await JwlEstimateInvoice.app.models.Stock._fetchSoldItemsByInvoiceId(userId, invoiceRef);
-            await JwlEstimateInvoice.app.models.Stock._archiveOldOrnamentRecByInvoiceRef(userId, invoiceRef);
+            // let soldItemDetails = await JwlEstimateInvoice.app.models.Stock._fetchSoldItemsByInvoiceId(userId, invoiceRef);
+            await JwlEstimateInvoice.app.models.Stock._archiveOldOrnamentRecByInvoiceRef(userId, invoiceRef, 'estimate');
             await JwlEstimateInvoice._archiveByInvoiceRef(userId, invoiceRef);
             return { STATUS: 'SUCCESS', MSG: 'Archived the Estimate invoice and archived Old Items estimate (if any).'};
         } catch(e) {

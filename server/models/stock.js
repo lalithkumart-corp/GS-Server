@@ -1144,6 +1144,18 @@ module.exports = function(Stock) {
         }
     }
 
+    Stock._updateReturnFlagInStockSoldTblByInvoiceRef = async(userId, invoiceRef) => {
+        try {
+            let sql = SQL.MARK_IS_RETURNED_SOLD_STOCK_TABLE_ITEM;
+            sql = sql.replace(/STOCK_SOLD_TABLE/g, `stock_sold_${userId}`);
+            await utils.executeSqlQuery(Stock.dataSource, sql, [invoiceRef]);
+            return true;
+        } catch(e) {
+            console.log(e);
+            return null;
+        }
+    }
+
     Stock._archiveOldOrnamentRecByInvoiceRef = async (userId, invoiceRef, identifier) => {
         try {
             let sql = SQL.MARK_ARCHIVED_OLD_ORN_TABLE_ITEM;
@@ -1151,6 +1163,19 @@ module.exports = function(Stock) {
                 sql = sql.replace(/OLD_ITEMS_STOCK_TABLE/g, `old_items_stock_${userId}`);
             else
                 sql = sql.replace(/OLD_ITEMS_STOCK_TABLE/g, `old_items_estimates_${userId}`);
+            
+            await utils.executeSqlQuery(Stock.dataSource, sql, [invoiceRef]);
+            return true;
+        } catch(e) {
+            console.log(e);
+            return null;
+        }
+    }
+
+    Stock._updateReturnFlagInOldOrnTblByInvoiceRef = async (userId, invoiceRef) => {
+        try {
+            let sql = SQL.MARK_IS_RETURNED_OLD_ORN_TABLE_ITEM;
+                sql = sql.replace(/OLD_ITEMS_STOCK_TABLE/g, `old_items_stock_${userId}`);
             
             await utils.executeSqlQuery(Stock.dataSource, sql, [invoiceRef]);
             return true;
@@ -1443,5 +1468,7 @@ let SQL = {
                                         modified_date=?
                                     WHERE prod_id=?`,
     MARK_ARCHIVED_SOLD_STOCK_TABLE_ITEM: `UPDATE STOCK_SOLD_TABLE SET archived=1 where invoice_ref=?`,
-    MARK_ARCHIVED_OLD_ORN_TABLE_ITEM: `UPDATE OLD_ITEMS_STOCK_TABLE SET archived=1 where invoice_ref=?`
+    MARK_IS_RETURNED_SOLD_STOCK_TABLE_ITEM: `UPDATE STOCK_SOLD_TABLE SET is_returned=1 where invoice_ref=?`,
+    MARK_ARCHIVED_OLD_ORN_TABLE_ITEM: `UPDATE OLD_ITEMS_STOCK_TABLE SET archived=1 where invoice_ref=?`,
+    MARK_IS_RETURNED_OLD_ORN_TABLE_ITEM: `UPDATE OLD_ITEMS_STOCK_TABLE SET is_returned=1 where invoice_ref=?`,
 }

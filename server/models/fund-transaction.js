@@ -1005,6 +1005,9 @@ module.exports = function(FundTransaction) {
                     case 'jwl_sale':
                         await FundTransaction.addJwlSaleEntry(params);
                         break;
+                    case 'jwl_sale_return':
+                        await FundTransaction.addJwlSaleReturnEntry(params);
+                        break;
                 }
                 return resolve(true);
             } catch(e) {
@@ -1129,6 +1132,25 @@ module.exports = function(FundTransaction) {
             let categId = await FundTransaction.prototype._getOrCreateCategoryId(params.userId, 'Jwl Sale');
             let qv = [params.userId, params.customerId, params.accountId, params.gsUid, params.transactionDate, params.cashIn, 
                 0, categId, params.remarks, params.cashInMode, currentTImeInUTCTimezone, currentTImeInUTCTimezone];
+            
+            let sql = SQL.INTERNAL_JWL_SALE_TRANSACTION;
+            sql = sql.replace(/REPLACE_USERID/g, params.userId);
+            FundTransaction.dataSource.connector.query(sql, qv, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(true);
+                }
+            });
+        });
+    }
+
+    FundTransaction.addJwlSaleReturnEntry = (params) => {
+        return new Promise(async (resolve, reject) => {
+            let currentTImeInUTCTimezone = utils.getCurrentDateTimeInUTCForDB();
+            let categId = await FundTransaction.prototype._getOrCreateCategoryId(params.userId, 'Jwl Sale Return');
+            let qv = [params.userId, params.customerId, params.accountId, params.gsUid, params.transactionDate, 0, 
+                params.cashOut, categId, params.remarks, params.cashInMode, currentTImeInUTCTimezone, currentTImeInUTCTimezone];
             
             let sql = SQL.INTERNAL_JWL_SALE_TRANSACTION;
             sql = sql.replace(/REPLACE_USERID/g, params.userId);
