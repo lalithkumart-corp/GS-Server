@@ -502,11 +502,12 @@ module.exports = function(JwlInvoice) {
         }
     }
 
-    JwlInvoice._updateReturnFlagByInvoiceRef = async (userId, invoiceRef, charges) => {
+    JwlInvoice._updateReturnFlagByInvoiceRef = async (userId, invoiceRef, charges, returnedAmt) => {
         try {
+            let currentTImeInUTCTimezone = utils.getCurrentDateTimeInUTCForDB();
             let sql = SQL.SET_RETURNED_FLAG_WITH_CHARGES;
             sql = sql.replace(/INVOICE_TABLE/g, `jewellery_invoices_${userId}`);
-            await utils.executeSqlQuery(JwlInvoice.dataSource, sql, [charges, invoiceRef]);
+            await utils.executeSqlQuery(JwlInvoice.dataSource, sql, [charges, returnedAmt, currentTImeInUTCTimezone, returnDate,invoiceRef]);
             return true;
         } catch(e) {
             console.log(e);
@@ -531,17 +532,18 @@ module.exports = function(JwlInvoice) {
                     }
                    await JwlInvoice.app.models.Stock._putBackFromInvoice(userId, itemDetail);
                 }
-                await JwlInvoice.app.models.Stock._updateReturnFlagInStockSoldTblByInvoiceRef(userId, invoiceRef);
-                await JwlInvoice.app.models.Stock._updateReturnFlagInOldOrnTblByInvoiceRef(userId, invoiceRef);
-                await JwlInvoice._updateReturnFlagByInvoiceRef(userId, invoiceRef, params.charges);
                 let r = {
                     userId: userId,
                     gsUid: invoiceRef,
-                    customerId: params.customerId,
+                    customerId: params.custId,
                     transactionDate: params.date,
-                    remarks: params._invoiceNoFull,
+                    remarks: params.invoiceNo,
                     cashInMode: params.paymentSelectionCardData.mode
                 };
+                await JwlInvoice.app.models.Stock._updateReturnFlagInStockSoldTblByInvoiceRef(userId, invoiceRef);
+                await JwlInvoice.app.models.Stock._updateReturnFlagInOldOrnTblByInvoiceRef(userId, invoiceRef);
+                await JwlInvoice._updateReturnFlagByInvoiceRef(userId, invoiceRef, params.charges, params.paymentSelectionCardData[r.cashInMode].value);
+
                 if(params.paymentSelectionCardData.mode == 'mixed') {
                     await JwlInvoice.app.models.FundTransaction.prototype.add({
                         ...r,
@@ -557,8 +559,9 @@ module.exports = function(JwlInvoice) {
                     }, 'jwl_sale_return');
                 } else {
                     await JwlInvoice.app.models.FundTransaction.prototype.add({
-                        cashOut: params.paymentSelectionCardData.cash.value,
-                        accountId: params.paymentSelectionCardData[r.mode].fromAccountId,
+                        ...r,
+                        cashOut: params.paymentSelectionCardData[r.cashInMode].value,
+                        accountId: params.paymentSelectionCardData[r.cashInMode].fromAccountId,
                     }, 'jwl_sale_return');
                 }
             } else {
@@ -604,7 +607,7 @@ let SQL = {
                         WHERE_CLAUSE
                         GROUP BY i.invoice_date, i.ukey, i.invoice_no, i.cust_id, i.paid_amt, i.balance_amt, i.payment_mode, i.created_date, i.modified_date, c.Name, c.GaurdianName, c.Address, c.Mobile) A`,
     MARK_ARCHIVED: `UPDATE INVOICE_TABLE SET is_archived=1 where ukey=?`,
-    SET_RETURNED_FLAG_WITH_CHARGES: `UPDATE INVOICE_TABLE SET is_returned=1, return_charges_val=? where ukey=?`,
+    SET_RETURNED_FLAG_WITH_CHARGES: `UPDATE INVOICE_TABLE SET is_returned=1, return_charges_val=?, returned_amt_val=?, returned_date=? where ukey=?`,
     INVOICE_LIST_NEW: `select 
                         i.invoice_date,
                         i.ukey,
@@ -616,6 +619,8 @@ let SQL = {
                         i.payment_mode,
                         i.is_returned,
                         i.return_charges_val,
+                        i.returned_amt_val,
+                        i.returned_date,
                         i.created_date,
                         i.modified_date,
                         c.Name,
@@ -631,7 +636,22 @@ let SQL = {
                             LEFT JOIN
                         stock_sold_REPLACE_USERID AS s ON s.invoice_ref = i.ukey
                         WHERE_CLAUSE
-                        GROUP BY i.invoice_date, i.ukey, i.invoice_no, i.item_metal_type, i.cust_id, i.paid_amt, i.balance_amt, i.payment_mode, i.is_returned, i.return_charges_val, i.created_date, i.modified_date, c.Name, c.GaurdianName, c.Address, c.Mobile`,
+                        GROUP BY 
+                            i.invoice_date, 
+                            i.ukey, 
+                            i.invoice_no, 
+                            i.item_metal_type, 
+                            i.cust_id, 
+                            i.paid_amt, 
+                            i.balance_amt, 
+                            i.payment_mode, 
+                            i.is_returned, 
+                            i.return_charges_val, 
+                            i.returned_amt_val,
+                            i.returned_date,
+                            i.created_date, 
+                            i.modified_date, 
+                            c.Name, c.GaurdianName, c.Address, c.Mobile`,
     INVOICE_DATA_NEW: `SELECT 
                         inv.jewellery_invoice_tbl_id AS i_jewellery_invoice_tbl_id,
                         inv.invoice_date AS i_invoice_date,
@@ -652,6 +672,8 @@ let SQL = {
                         inv.balance_amt AS i_balance_amt,
                         inv.payment_mode AS i_payment_mode,
                         inv.is_returned AS i_is_returned,
+                        inv.returned_amt_val AS i_returned_amt_val,
+                        inv.returned_date AS i_returned_date,
                         inv.created_date AS i_created_date,
                         inv.modified_date AS i_modified_date,
                         inv_item.invoice_item_id AS ii_invoice_item_id,

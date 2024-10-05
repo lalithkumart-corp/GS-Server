@@ -4,7 +4,7 @@ let utils = require('../utils/commonUtils');
 let _ = require('lodash');
 let GsErrorCtrl = require('../components/logger/gsErrorCtrl');
 let logger = app.get('logger');
-let JewelleryInvoiceHelper = require('./modelHelpers/jewelleryInvoice');
+let JewelleryEstimateInvoiceHelper = require('./modelHelpers/jewelleryEstimateInvoice');
 
 module.exports = function(JwlEstimateInvoice) {
     JwlEstimateInvoice.remoteMethod('getInvoiceDataByKey', {
@@ -34,7 +34,7 @@ module.exports = function(JwlEstimateInvoice) {
                 source: 'body'
             }
         },
-        http: {path: '/get-invoice-data', verb: 'get'},
+        http: {path: '/get-estimate-invoice-data', verb: 'get'},
         description: 'Jewellery Bill Invoice Date.',
     });
 
@@ -97,7 +97,7 @@ module.exports = function(JwlEstimateInvoice) {
                 source: 'body'
             }
         },
-        http: {path: '/fetch-jewellery-cust-invoices-list', verb: 'get'},
+        http: {path: '/fetch-jewellery-estimate-invoices-list', verb: 'get'},
         description: 'Jewellery - Customer Invoice List.',
     });
 
@@ -127,7 +127,7 @@ module.exports = function(JwlEstimateInvoice) {
                 source: 'body'
             }
         },
-        http: {path: '/fetch-jewellery-cust-invoices-list-count', verb: 'get'},
+        http: {path: '/fetch-jewellery-estimate-invoices-list-count', verb: 'get'},
         description: 'Jewellery - Customer Invoice List count',
     });
 
@@ -349,7 +349,7 @@ module.exports = function(JwlEstimateInvoice) {
                 if(err) {
                     reject(err);
                 } else {
-                    resolve(new JewelleryInvoiceHelper().dbRespToApiRespKeyMapper(res, 'invoice_list'));
+                    resolve(new JewelleryEstimateInvoiceHelper().dbRespToApiRespKeyMapper(res, 'invoice_list'));
                 }
             });
         });
@@ -466,7 +466,7 @@ let SQL = {
                         GROUP_CONCAT(s.prod_id) as prod_ids,
                         GROUP_CONCAT(s.huid) as huids
                     from
-                        jewellery_invoices_REPLACE_USERID AS i
+                        jewellery_estimate_invoices_REPLACE_USERID AS i
                             LEFT JOIN
                         customer_REPLACE_USERID AS c ON i.cust_id = c.CustomerId
                             LEFT JOIN
@@ -479,9 +479,6 @@ let SQL = {
                         i.ukey,
                         i.invoice_no,
                         i.cust_id,
-                        i.paid_amt,
-                        i.balance_amt,
-                        i.payment_mode,
                         i.created_date,
                         i.modified_date,
                         c.Name,
@@ -495,11 +492,13 @@ let SQL = {
                             LEFT JOIN
                         customer_REPLACE_USERID AS c ON i.cust_id = c.CustomerId
                             LEFT JOIN
-                        stock_REPLACE_USERID AS s ON s.invoice_ref = i.ukey
+                        jewellery_estimate_invoice_items_REPLACE_USERID AS ii ON i.ukey=ii.invoice_ref
+                            LEFT JOIN
+                        stock_REPLACE_USERID AS s ON s.uid = ii.stock_tbl_item_uid
                         WHERE_CLAUSE
-                        GROUP BY i.invoice_date, i.ukey, i.invoice_no, i.cust_id, i.paid_amt, i.balance_amt, i.payment_mode, i.created_date, i.modified_date, c.Name, c.GaurdianName, c.Address, c.Mobile`,
+                        GROUP BY i.invoice_date, i.ukey, i.invoice_no, i.cust_id, i.created_date, i.modified_date, c.Name, c.GaurdianName, c.Address, c.Mobile`,
     INVOICE_DATA_NEW: `SELECT 
-                        inv.jewellery_invoice_tbl_id AS i_jewellery_invoice_tbl_id,
+                        inv.jewellery_estimate_invoice_tbl_id AS i_jewellery_estimate_invoice_tbl_id,
                         inv.invoice_date AS i_invoice_date,
                         inv.ukey AS i_invoice_ref,
                         inv.invoice_no as i_invoice_no,
@@ -514,10 +513,6 @@ let SQL = {
                         inv.total_exchange_final_price AS i_total_exchange_final_price,
                         inv.roundoff_val AS i_roundoff_val,
                         inv.grand_total AS i_grant_total,
-                        inv.paid_amt AS i_paid_amt,
-                        inv.balance_amt AS i_balance_amt,
-                        inv.payment_mode AS i_payment_mode,
-                        inv.is_returned AS i_is_returned,
                         inv.created_date AS i_created_date,
                         inv.modified_date AS i_modified_date,
                         inv_item.invoice_item_id AS ii_invoice_item_id,
@@ -560,9 +555,9 @@ let SQL = {
                         c.Pincode AS c_pincode,
                         c.Mobile AS c_mobile
                     FROM 
-                        jewellery_invoices_REPLACE_USERID inv 
-                        LEFT JOIN jewellery_invoice_items_REPLACE_USERID inv_item ON inv.ukey=inv_item.invoice_ref
-                        LEFT JOIN old_items_stock_REPLACE_USERID old_stock ON inv.ukey=old_stock.invoice_ref
+                        jewellery_estimate_invoices_REPLACE_USERID inv 
+                        LEFT JOIN jewellery_estimate_invoice_items_REPLACE_USERID inv_item ON inv.ukey=inv_item.invoice_ref
+                        LEFT JOIN old_items_estimates_REPLACE_USERID old_stock ON inv.ukey=old_stock.invoice_ref
                         LEFT JOIN customer_REPLACE_USERID c ON inv.cust_id = c.CustomerId
                         left join stock_REPLACE_USERID s on s.uid = inv_item.stock_tbl_item_uid
                         left join orn_list_jewellery o on o.id=s.ornament

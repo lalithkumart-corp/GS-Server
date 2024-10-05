@@ -84,6 +84,16 @@
           "dataScale": null,
           "nullable": "Y"
         }
+      },
+      "customArgs": {
+        "type": "string",
+        "mysql": {
+          "columnName": "custom_args",
+          "dataType": "text",
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
       }
       
     },

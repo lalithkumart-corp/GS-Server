@@ -772,8 +772,9 @@ module.exports = function(Stock) {
                 }, 'jwl_sale');
             } else {
                 await Stock.app.models.FundTransaction.prototype.add({
+                    ...r,
                     cashIn: data.apiParams.paymentFormData.paid,
-                    accountId: data.apiParams.paymentSelectionCardData[r.mode].toAccountId,
+                    accountId: data.apiParams.paymentSelectionCardData[r.cashInMode].toAccountId,
                 }, 'jwl_sale');
             }
             return {STATUS: 'SUCCESS'};

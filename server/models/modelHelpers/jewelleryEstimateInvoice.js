@@ -3,7 +3,7 @@
 /* eslint-disable strict */
 let _ = require('lodash');
 
-class JewelleryInvoiceHelper {
+class JewelleryEstimateInvoiceHelper {
     constructor() {
 
     }
@@ -24,14 +24,7 @@ class JewelleryInvoiceHelper {
                 invoiceNo: aRow.invoice_no,
                 itemMetalType: aRow.item_metal_type,
                 custId: aRow.cust_id,
-                paidAmt: aRow.paid_amt,
-                balanceAmt: aRow.balance_amt,
-                paymentMode: aRow.payment_mode,
                 invoiceDate: aRow.invoice_date,
-                isReturned: aRow.is_returned,
-                returnedAmount: aRow.returned_amt_val,
-                returnDate: aRow.returned_date,
-                returnChargesVal: aRow.return_charges_val,
                 createdDate: aRow.created_date,
                 modifiedDate: aRow.modified_date,
                 prodIds: aRow.prod_ids,
@@ -46,4 +39,4 @@ class JewelleryInvoiceHelper {
     }
 }
 
-module.exports = JewelleryInvoiceHelper;
+module.exports = JewelleryEstimateInvoiceHelper;

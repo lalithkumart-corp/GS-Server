@@ -1313,6 +1313,8 @@ let SQL = {
                     payment_mode varchar(45) DEFAULT NULL,
                     is_returned int DEFAULT '0',
                     return_charges_val FLOAT DEFAULT NULL,
+                    returned_amt_val FLOAT DEFAULT NULL,
+                    returned_date datetime DEFAULT NULL,
                     is_archived int DEFAULT '0',
                     created_date datetime DEFAULT CURRENT_TIMESTAMP,
                     modified_date datetime DEFAULT CURRENT_TIMESTAMP,

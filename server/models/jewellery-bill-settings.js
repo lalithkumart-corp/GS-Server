@@ -97,7 +97,8 @@ module.exports = function(JewelleryBillSettings) {
                     rows.push({
                         selectedTemplate: aRow.selectedTemplate,
                         customCss: aRow.customCss,
-                        category: aRow.category
+                        category: aRow.category,
+                        customArgs: aRow.customArgs
                     });
                 });
                 return rows;
@@ -167,7 +168,9 @@ module.exports = function(JewelleryBillSettings) {
                 updateParams.customCss = JSON.stringify(payload.customCss);
             if(payload.selectedTemplate)
                 updateParams.selectedTemplate = payload.selectedTemplate;
-            
+            if(payload.customArgs)
+                updateParams.customArgs = JSON.stringify(payload.customArgs);
+
             updateParams.billSeries = payload.billSeries;
             
             updateParams.billNo = payload.billNo;
@@ -232,5 +235,6 @@ module.exports = function(JewelleryBillSettings) {
 
 let SQL = {
     LIST: `SELECT * FROM jewellery_bill_avl_template_list`,
-    INCR_INVOICE_NO: `UPDATE jewellery_bill_settings SET bill_no = ? WHERE (category = ? AND user_id = ?)`
+    INCR_INVOICE_NO: `UPDATE jewellery_bill_settings SET bill_no = ? WHERE (category = ? AND user_id = ?)`,
+    UPDATE_ARGS: `UPDATE jewellery_bill_settings SET custom_args=? WHERE (category = ? AND user_id = ?)`
 }
