@@ -444,6 +444,15 @@ module.exports = function(JwlInvoice) {
         if(filters.huid) 
             whereConditionList.push(`s.huid LIKE "${filters.huid.toUpperCase()}%"`);
 
+        if(filters.includeReturnedInvoices == 'false' || filters.includeReturnedInvoices == false)
+            whereConditionList.push(`i.is_returned=0`);
+            
+        if(filters.includeGoldOrnType == 'false' || filters.includeGoldOrnType == false)
+            whereConditionList.push(`i.item_metal_type != 'G'`);
+
+        if(filters.includeSilverOrnType == 'false' || filters.includeSilverOrnType == false)
+            whereConditionList.push(`i.item_metal_type != 'S'`);
+
         if(whereConditionList.length > 0)
             whereClause = ` WHERE ${whereConditionList.join(' AND ')}`
         
