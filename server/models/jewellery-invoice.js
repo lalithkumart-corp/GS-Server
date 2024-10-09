@@ -298,6 +298,7 @@ module.exports = function(JwlInvoice) {
                 wastageVal: row.ii_wastage_val,
                 makingCharge: row.ii_making_charge,
                 initialPrice: row.ii_initial_price,
+                finalPrice: row.ii_final_price,
                 cgstPercent: row.ii_cgst_percent,
                 cgstVal: row.ii_cgst_val,
                 sgstPercent: row.ii_sgst_percent,
@@ -453,14 +454,18 @@ module.exports = function(JwlInvoice) {
         if(filters.includeSilverOrnType == 'false' || filters.includeSilverOrnType == false)
             whereConditionList.push(`i.item_metal_type != 'S'`);
 
+        if(filters.customerId)
+            whereConditionList.push(`i.cust_id=${filters.customerId}`);
+
         if(whereConditionList.length > 0)
             whereClause = ` WHERE ${whereConditionList.join(' AND ')}`
         
         sql = sql.replace(/WHERE_CLAUSE/g, whereClause);
         
         if(!filters.fetchTotalCount) {
-            sql += ' ORDER BY i.invoice_date DESC';   
-            sql += ` LIMIT ${filters.offsetEnd-filters.offsetStart} OFFSET ${filters.offsetStart}`;
+            sql += ' ORDER BY i.invoice_date DESC';
+            if(filters.offsetEnd != undefined && filters.offsetStart != undefined)
+                sql += ` LIMIT ${filters.offsetEnd-filters.offsetStart} OFFSET ${filters.offsetStart}`;
         }
 
         return sql;
@@ -516,7 +521,7 @@ module.exports = function(JwlInvoice) {
             let currentTImeInUTCTimezone = utils.getCurrentDateTimeInUTCForDB();
             let sql = SQL.SET_RETURNED_FLAG_WITH_CHARGES;
             sql = sql.replace(/INVOICE_TABLE/g, `jewellery_invoices_${userId}`);
-            await utils.executeSqlQuery(JwlInvoice.dataSource, sql, [charges, returnedAmt, currentTImeInUTCTimezone, returnDate,invoiceRef]);
+            await utils.executeSqlQuery(JwlInvoice.dataSource, sql, [charges, returnedAmt, currentTImeInUTCTimezone, invoiceRef]);
             return true;
         } catch(e) {
             console.log(e);
