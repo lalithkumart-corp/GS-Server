@@ -1064,6 +1064,8 @@ module.exports = function(Stock) {
                 filterList.push(`(orn_list_jewellery.item_category like '${params.filters.itemCategory}%')`);
             if(params.filters.itemSubCategory)
                 filterList.push(`(orn_list_jewellery.item_subcategory like '${params.filters.itemSubCategory}%')`);
+            if(params.filters.showReturnedItems==false)
+                filterList.push(`(STOCK_SOLD_TABLE.is_returned = 0`);
         }
         if(filterList.length)
             sql = ` WHERE ${filterList.join(' AND ')}`;
@@ -1447,6 +1449,7 @@ let SQL = {
                             discount,
                             total,
                             STOCK_SOLD_TABLE.created_date AS created_date,
+                            STOCK_SOLD_TABLE.is_returned AS is_returned,
                             JWL_INVOICE_TABLE.payment_mode AS PaymentMode,
                             JWL_INVOICE_TABLE.paid_amt AS PaidAmt,
                             JWL_INVOICE_TABLE.balance_amt AS BalAmt,

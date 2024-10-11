@@ -738,7 +738,7 @@ let SQL = {
                         left join stock_REPLACE_USERID s on s.uid = inv_item.stock_tbl_item_uid
                         left join orn_list_jewellery o on o.id=s.ornament
                         left join touch t on t.id=s.touch_id
-                    WHERE inv.ukey=?`,
+                    WHERE inv.ukey IN (?)`,
     INSERT_JWL_INVOICE: `INSERT INTO INVOICE_TABLE (
                         ukey, invoice_date, 
                         invoice_no, cust_id, 
