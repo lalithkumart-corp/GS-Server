@@ -479,14 +479,17 @@ module.exports = function(JwlInvoice) {
             if(soldItemDetails && soldItemDetails.length>0) {
                 for(let i=0; i<soldItemDetails.length; i++) {
                     let anItem = soldItemDetails[i];
-                    let itemDetail = {
-                        prodId: anItem.prod_id,
-                        qty: anItem.qty,
-                        grossWt: anItem.gross_wt,
-                        netWt: anItem.net_wt,
-                        pureWt: anItem.pure_wt
+                    if(!anItem.is_returned) {
+                        let itemDetail = {
+                            prodId: anItem.prod_id,
+                            qty: anItem.qty,
+                            grossWt: anItem.gross_wt,
+                            netWt: anItem.net_wt,
+                            pureWt: anItem.pure_wt
+                        }
+                       await JwlInvoice.app.models.Stock._putBackFromInvoice(userId, itemDetail);
                     }
-                   await JwlInvoice.app.models.Stock._putBackFromInvoice(userId, itemDetail);
+                    
                 }
                 await JwlInvoice.app.models.Stock._archiveSoldItemByInvoiceRef(userId, invoiceRef);
                 await JwlInvoice.app.models.Stock._archiveOldOrnamentRecByInvoiceRef(userId, invoiceRef, 'original');

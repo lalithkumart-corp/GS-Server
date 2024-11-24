@@ -112,7 +112,7 @@ module.exports = function(ApplicationManager) {
                 let todaysDate = moment();
                 daysToExpire = validTillDate.diff(todaysDate, 'days');
             }
-            return { STATUS: 'SUCCESS', isActive: status, daysToExpire};
+            return { STATUS: 'SUCCESS', isActive: status, daysToExpire, softwareLicenseValidTill: appRow.validTillDate};
         } catch(e) {
             console.log(e);
             return { STATUS: 'ERROR', ERROR: e, MSG: (e?e.message:'')};

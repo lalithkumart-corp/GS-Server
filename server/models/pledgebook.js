@@ -1242,8 +1242,12 @@ module.exports = function(Pledgebook) {
                 else
                     filterQueries.push(`(${pledgebookTableName}.Date BETWEEN '${params.filters.date.startDate}' AND '${params.filters.date.endDate}')`);
             }
-            if(params.filters.custom && params.filters.custom.pledgeAmt && (params.filters.custom.pledgeAmt.grt < params.filters.custom.pledgeAmt.lsr))
-                filterQueries.push(`Amount BETWEEN ${params.filters.custom.pledgeAmt.grt} AND ${params.filters.custom.pledgeAmt.lsr}`);
+            if(params.filters.custom) {
+                if(params.filters.custom.pledgeAmt)
+                    filterQueries.push(`(${pledgebookTableName}.Amount BETWEEN ${parseInt(params.filters.custom.pledgeAmt.grt)} AND ${parseInt(params.filters.custom.pledgeAmt.lsr)})`);
+                if(params.filters.custom.pledgeAmtPerGram)
+                    filterQueries.push(`(${pledgebookTableName}.Amount BETWEEN (${pledgebookTableName}.TotalWeight*${parseInt(params.filters.custom.pledgeAmtPerGram.grt)}) AND (${pledgebookTableName}.TotalWeight*${parseInt(params.filters.custom.pledgeAmtPerGram.lsr)}))`);
+            }
             if(params.filters.custom && params.filters.custom.mobile)
                 filterQueries.push(`(Mobile like '${params.filters.custom.mobile}%' OR SecMobile like '${params.filters.custom.mobile}%')`)
             if(params.filters.custom && params.filters.custom.ornCategory) {
