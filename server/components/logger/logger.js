@@ -69,6 +69,9 @@ class Logger {
         } else {
             let rotateStreamArgs = this.getRotateFileStreamAgrs(levelIdentifier);
             theStream = new RotatingFileStream(rotateStreamArgs);
+            theStream.on('error', (err) => {
+                console.error(`Stream error (${levelIdentifier}):`, err);
+            });
         }
         return theStream;
     }

@@ -1247,6 +1247,8 @@ module.exports = function(Pledgebook) {
                     filterQueries.push(`(${pledgebookTableName}.Amount BETWEEN ${parseInt(params.filters.custom.pledgeAmt.grt)} AND ${parseInt(params.filters.custom.pledgeAmt.lsr)})`);
                 if(params.filters.custom.pledgeAmtPerGram)
                     filterQueries.push(`(${pledgebookTableName}.Amount BETWEEN (${pledgebookTableName}.TotalWeight*${parseInt(params.filters.custom.pledgeAmtPerGram.grt)}) AND (${pledgebookTableName}.TotalWeight*${parseInt(params.filters.custom.pledgeAmtPerGram.lsr)}))`);
+                if(params.filters.custom.intPercent)
+                    filterQueries.push(`(${pledgebookTableName}.IntPercent BETWEEN ${parseFloat(params.filters.custom.intPercent.grt)} AND ${parseFloat(params.filters.custom.intPercent.lsr)})`);
             }
             if(params.filters.custom && params.filters.custom.mobile)
                 filterQueries.push(`(Mobile like '${params.filters.custom.mobile}%' OR SecMobile like '${params.filters.custom.mobile}%')`)
