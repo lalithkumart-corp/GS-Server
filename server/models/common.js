@@ -1423,7 +1423,7 @@ let SQL = {
                     is_internal int DEFAULT 0,
                     tag_indicator INT NULL,
                     PRIMARY KEY (id),
-                    KEY category (category),
+                    KEY category_id (category_id),
                     KEY gs_uid_idx (gs_uid)
                     )`,
     FUND_TRANS_TMP: `CREATE TABLE fund_trns_tmp_REPLACE_USERID (

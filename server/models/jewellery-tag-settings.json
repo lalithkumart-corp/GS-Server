@@ -48,11 +48,11 @@
         }
       },
       "storeNameAbbr": {
-        "type": "number",
+        "type": "string",
         "required": false,
         "mysql": {
           "columnName": "store_name_abbr",
-          "dataType": "int",
+          "dataType": "varchar",
           "dataLength": 22,
           "dataPrecision": null,
           "dataScale": null,
