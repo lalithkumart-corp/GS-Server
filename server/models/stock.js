@@ -4,6 +4,9 @@ let utils = require('../utils/commonUtils');
 let _ = require('lodash');
 let GsErrorCtrl = require('../components/logger/gsErrorCtrl');
 let logger = app.get('logger');
+let MyHelperClass = require('./modelHelpers/stock');
+let myHelper = new MyHelperClass();
+
 module.exports = function(Stock) {
     Stock.fetchList = async (accessToken, filters) => {
         try {
@@ -389,6 +392,7 @@ module.exports = function(Stock) {
     Stock.insertApiHandler = async (data) => {
         try {
             let params = data.requestParams;
+            params = myHelper.sanitizeStockInsertParams(params);
             params.accessToken = data.accessToken;
             params._userId = await utils.getStoreOwnerUserId(params.accessToken);
 
@@ -537,6 +541,7 @@ module.exports = function(Stock) {
                             quantity, 
                             gross_wt, net_wt, pure_wt,
                             labour_charge, labour_charge_unit, calc_labour_amt,
+                            sales_wsg_percent, sales_mc,
                             metal_rate, amount,
                             cgst_percent, cgst_amt,
                             sgst_percent, sgst_amt,
@@ -555,6 +560,7 @@ module.exports = function(Stock) {
                             ${params.productQty},
                             ${params.productGWt}, ${params.productNWt}, ${params.productPWt},
                             ${params.productLabourCharges}, "${params.productLabourCalcUnit}", ${params.productCalcLabourAmt},
+                            ${params.productSalesWsgPercent}, ${params.productSalesMakingCharge},
                             ${params.metalPrice}, ${params.calcAmtWithLabour},
                             ${params.productCgstPercent || 0}, ${params.productCgstAmt || 0},
                             ${params.productSgstPercent || 0}, ${params.productSgstAmt || 0},
@@ -585,6 +591,8 @@ module.exports = function(Stock) {
                             labour_charge=${params.productLabourCharges},
                             labour_charge_unit="${params.productLabourCalcUnit}",
                             calc_labour_amt=${params.productCalcLabourAmt},
+                            sales_wsg_percent=${params.productSalesWsgPercent || null},
+                            sales_mc=${params.productSalesMakingCharge || null},
                             metal_rate=${params.metalPrice},
                             amount=${params.calcAmtWithLabour},
                             cgst_percent=${params.productCgstPercent || 0},
@@ -1231,6 +1239,8 @@ let SQL = {
                     STOCK_TABLE.labour_charge AS LabourCharge,
                     STOCK_TABLE.labour_charge_unit AS LabourChargeUnit,
                     STOCK_TABLE.calc_labour_amt AS LabourAmtCalc,
+                    STOCK_TABLE.sales_wsg_percent AS SalesWsgPercent,
+                    STOCK_TABLE.sales_mc AS SalesMakingCharge,
                     STOCK_TABLE.total AS Total,
                     STOCK_TABLE.sold_qty AS SoldQty,
                     STOCK_TABLE.sold_g_wt AS SoldGWt,
@@ -1287,6 +1297,7 @@ let SQL = {
                                 avl_g_wt, avl_n_wt, avl_p_wt,
                                 sold_g_wt, sold_n_wt, sold_p_wt,
                                 labour_charge, labour_charge_unit, calc_labour_amt,
+                                sales_wsg_percent, sales_mc,
                                 metal_rate, amount,
                                 cgst_percent, cgst_amt, sgst_amt, sgst_percent,
                                 total,
@@ -1317,6 +1328,7 @@ let SQL = {
                             avl_g_wt, avl_n_wt, avl_p_wt,
                             sold_g_wt, sold_n_wt, sold_p_wt,
                             labour_charge, labour_charge_unit, calc_labour_amt,
+                            sales_wsg_percent, sales_mc,
                             metal_rate, amount,
                             cgst_percent, cgst_amt, sgst_amt, sgst_percent,
                             total,

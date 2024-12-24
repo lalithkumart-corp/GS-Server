@@ -56,6 +56,7 @@ let SQL = {
     FETCH_TAG_TEMPLATES: `SELECT 
                             templates.template_id, 
                             templates.screenshot_url,
+                            templates.parameters_json,
                             settings.selected_tag_template_id,
                             settings.store_name_abbr,
                             settings.customization

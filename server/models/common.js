@@ -1189,6 +1189,8 @@ let SQL = {
                     labour_charge float DEFAULT '0',
                     labour_charge_unit varchar(45) DEFAULT 'FX',
                     calc_labour_amt float DEFAULT '0',
+                    sales_wsg_percent float DEFAULT NULL,
+                    sales_mc float DEFAULT NULL,
                     metal_rate float DEFAULT NULL,
                     amount float DEFAULT NULL,
                     cgst_percent float DEFAULT NULL,
