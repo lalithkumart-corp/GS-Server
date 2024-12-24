@@ -1261,6 +1261,7 @@ let SQL = {
                         net_wt float DEFAULT NULL,
                         wastage_val float DEFAULT NULL,
                         applied_retail_rate float DEFAULT NULL,
+                        daily_retail_rate float DEFAULT NULL,
                         price float DEFAULT NULL,
                         invoice_ref  varchar(45) DEFAULT NULL,
                         is_returned int DEFAULT 0,
@@ -1461,7 +1462,7 @@ let SQL = {
                 account_id INT NOT NULL,
                 customer_id INT NULL,
                 gs_uid VARCHAR(45) NULL,
-                category VARCHAR(200) NOT NULL,
+                category_id VARCHAR(200) NOT NULL,
                 remarks TEXT NULL,
                 deleted INT NULL,
                 cash_in DECIMAL NULL,
@@ -1481,7 +1482,7 @@ let SQL = {
             );
             
             
-            INSERT INTO fund_trns_tmp_REPLACE_USERID (id, transaction_date, user_id, account_id, customer_id, gs_uid, category, remarks, deleted, cash_in, cash_out, created_date, modified_date, cash_out_mode, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_in_mode, alert, is_internal, tag_indicator)
+            INSERT INTO fund_trns_tmp_REPLACE_USERID (id, transaction_date, user_id, account_id, customer_id, gs_uid, category_id, remarks, deleted, cash_in, cash_out, created_date, modified_date, cash_out_mode, cash_out_to_bank_acc_no, cash_out_to_bank_ifsc, cash_in_mode, alert, is_internal, tag_indicator)
             SELECT
                 id,
                 transaction_date,
@@ -1489,7 +1490,7 @@ let SQL = {
                 account_id,
                 customer_id,
                 gs_uid,
-                category,
+                category_id,
                 remarks,
                 deleted,
                 cash_in,
