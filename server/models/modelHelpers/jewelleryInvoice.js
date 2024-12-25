@@ -53,7 +53,12 @@ class JewelleryInvoiceHelper {
         }
         if(formattedArr) {
             let filteredArr = formattedArr.filter((a) => a.field === 'Pan Card')
-            customerPanNo = filteredArr[0].val;
+            if(filteredArr[0])
+                customerPanNo = filteredArr[0].val;
+
+            // Optional Chaining(?.) is not supported with "pkg" bundler
+            // Ex: This piece of code ----> filteredArr[0]?.val;   ---> throw error, as like file as file wont get compiled properly
+            // Hence above, i used simple if condition
         }
         return customerPanNo;
     }
