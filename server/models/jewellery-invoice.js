@@ -279,6 +279,7 @@ module.exports = function(JwlInvoice) {
                     billNo: row.i_invoice_no,
                     customerName: row.c_name,
                     customerMobile: row.c_mobile,
+                    customerPanNo: new JewelleryInvoiceHelper().getCustomerPan(row.c_other_details),
                     dateVal: row.i_invoice_date,
                     ornaments: [],
                     oldOrnaments: {},
@@ -732,7 +733,8 @@ let SQL = {
                         c.Place AS c_place,
                         c.City AS c_city,
                         c.Pincode AS c_pincode,
-                        c.Mobile AS c_mobile
+                        c.Mobile AS c_mobile,
+                        c.OtherDetails AS c_other_details
                     FROM 
                         jewellery_invoices_REPLACE_USERID inv 
                         LEFT JOIN jewellery_invoice_items_REPLACE_USERID inv_item ON inv.ukey=inv_item.invoice_ref

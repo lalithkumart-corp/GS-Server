@@ -2,6 +2,7 @@
 /* eslint-disable indent */
 /* eslint-disable strict */
 let _ = require('lodash');
+const { safeParseJson } = require('../../utils/commonUtils');
 
 class JewelleryInvoiceHelper {
     constructor() {
@@ -43,6 +44,18 @@ class JewelleryInvoiceHelper {
             });
         });
         return arr;
+    }
+    getCustomerPan(custOtherDetailsDbCol) {
+        let customerPanNo = null;
+        let formattedArr = null;
+        if(custOtherDetailsDbCol !== "") {
+            formattedArr = safeParseJson(custOtherDetailsDbCol);
+        }
+        if(formattedArr) {
+            let filteredArr = formattedArr.filter((a) => a.field === 'Pan Card')
+            customerPanNo = filteredArr[0].val;
+        }
+        return customerPanNo;
     }
 }
 

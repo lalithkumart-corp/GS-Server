@@ -198,6 +198,17 @@ const decrypt = (encryptedText, password) => {
     return decrypted;
 }
 
+const safeParseJson = (jsonStr) => {
+    if(!jsonStr) return null;
+    let returnVal = null;
+    try {
+        returnVal = JSON.parse(jsonStr);
+    } catch(e) {
+        returnVal = null;
+    }
+    return returnVal;
+}
+
 module.exports = {
     getStoreOwnerUserId,
     executeSqlQuery,
@@ -210,5 +221,6 @@ module.exports = {
     convertDatabaseDateTimetoDateStr,
     getCurrentDateTimeInUTCForDB,
     encrypt,
-    decrypt
+    decrypt,
+    safeParseJson
 }
