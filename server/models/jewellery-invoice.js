@@ -279,6 +279,7 @@ module.exports = function(JwlInvoice) {
                     billNo: row.i_invoice_no,
                     customerName: row.c_name,
                     customerMobile: row.c_mobile,
+                    customerAddr: row.c_address,
                     customerPanNo: new JewelleryInvoiceHelper().getCustomerPan(row.c_other_details),
                     dateVal: row.i_invoice_date,
                     ornaments: [],

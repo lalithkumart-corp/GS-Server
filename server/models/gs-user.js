@@ -49,7 +49,8 @@ module.exports = function(Gsuser) {
                 applicationStatus: status,
                 setupActionsStatus: setupActionsStatus,
                 loanBillTemplateSettings: otherStuffs.loanBillTemplateSettings,
-                jewelleryBillTemplateSettings: otherStuffs.jewelleryBillTemplateSettings
+                jewelleryBillTemplateSettings: otherStuffs.jewelleryBillTemplateSettings,
+                jewelleryTagTemplateSettings: otherStuffs.jewelleryTagTemplateSettings,
             }
             Gsuser.storeLoginActionDB({email: apiParams.email, status: true, userId: session.userId});
             return response;
@@ -641,12 +642,18 @@ module.exports = function(Gsuser) {
                 }
                 return resolve({gst, estimate});
             });
-    
-            Promise.all([fetchLoanBillTemplateSettings, jewelleryBillTemplateSettings]).then(
+
+            let jewelleryTagTemplateSettings = new Promise(async (resolve, reject) => {
+                let row = await app.models.JewelleryTagSetting.prototype._getSettings(ownerUserId);                
+                return resolve(row);
+            });
+
+            Promise.all([fetchLoanBillTemplateSettings, jewelleryBillTemplateSettings, jewelleryTagTemplateSettings]).then(
                 (results) => {
                     let obj = {
                         loanBillTemplateSettings: results[0],
-                        jewelleryBillTemplateSettings: results[1]
+                        jewelleryBillTemplateSettings: results[1],
+                        jewelleryTagTemplateSettings: results[2],
                     }
                     resolve(obj);
                 },

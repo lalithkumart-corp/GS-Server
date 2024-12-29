@@ -8,7 +8,8 @@ module.exports = function(JewelleryTagSettings) {
         try {            
             if(!accessToken)
                 throw 'Access Token is missing';
-            let tagSettings = await JewelleryTagSettings._getSettings(accessToken);
+            let _userId = await utils.getStoreOwnerUserId(accessToken);
+            let tagSettings = await JewelleryTagSettings.prototype._getSettings(_userId);
             return {STATUS: 'SUCCESS', TAG_SETTINGS: tagSettings};
         } catch(e) {
             return { STATUS: 'ERROR', MESSAGE: e}
@@ -71,9 +72,8 @@ module.exports = function(JewelleryTagSettings) {
         description: 'Updates tag selection'
     });
 
-    JewelleryTagSettings._getSettings = (accessToken) => {
+    JewelleryTagSettings.prototype._getSettings = (_userId) => {
         return new Promise(async (resolve, reject) => {
-            let _userId = await utils.getStoreOwnerUserId(accessToken);
             JewelleryTagSettings.dataSource.connector.query(SQL.GET_SETTINGS, [_userId], (err, res) => {
                 if(err) {
                     reject(err);
