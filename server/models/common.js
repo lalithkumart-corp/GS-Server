@@ -249,9 +249,14 @@ module.exports = function(Common) {
             await Common._createFundTrnsTable(userId);
             // await Common._createFundTrnsTempTable(userId);
             await Common._createFundTrnsProcedure(userId);
+            
             await Common._createUdhaarTable(userId);
+            await Common._createUdhaarClosedBillsTable(userId);
+                
             await Common._insertUdhaarDefaults(userId);
             await Common._createNotesTable(userId);
+
+            await Common._insertJewelleryTagSettingDefaults(userId);
             await Common._createTriggers(SQL.TRIGGER_1, userId);
             await Common._createTriggers(SQL.TRIGGER_2, userId);
             await Common._createTriggers(SQL.TRIGGER_3, userId);
@@ -695,6 +700,32 @@ module.exports = function(Common) {
         });
     }
 
+    Common._createUdhaarClosedBillsTable = (userId) => {
+        return new Promise((resolve, reject) => {
+            let simpleSql = `SELECT * FROM udhaar_closed_bills_${userId} LIMIT 1`;
+            app.models.GsUser.dataSource.connector.query(simpleSql, (error, result) => {
+                if(error && error.code == "ER_NO_SUCH_TABLE") {
+                    let sql = SQL.UDHAAR_CLOSED_LIST.replace(/REPLACE_USERID/g, userId);
+                    app.models.GsUser.dataSource.connector.query(sql, (err, resp) => {
+                        if(err) {
+                            console.log(err);
+                            console.log(`Error occured while creating a new "udhaar_closed_bills_<id>" table for the user: ${userId}`);
+                            return reject(err);
+                        } else {
+                            console.log(`New "udhaar_closed_bills_${userId}" table created!`);
+                            return resolve(true);
+                        }
+                    });
+                } else if(error) {
+                    return reject(error);
+                } else {
+                    console.log(`"udhaar_closed_bills_${userId}" table for this user:${userId} exists already, So new table not created.`);
+                    return resolve(false);
+                }
+            });
+        });
+    }
+
     Common._insertUdhaarDefaults = (userId) => {
         return new Promise((resolve, reject) => {
             let sql = `INSERT IGNORE INTO udhaar_settings (user_id, bill_series, next_bill_no) VALUES (?,'U',1)`
@@ -1075,6 +1106,22 @@ module.exports = function(Common) {
                 }
             });
         });
+    }
+
+    Common._insertJewelleryTagSettingDefaults = (userId) => {
+        return new Promise((resolve, reject) => {
+            let sql = `INSERT IGNORE INTO jewellery_tag_settings (user_id, selected_tag_template_id) VALUES (?,1)`
+            app.models.GsUser.dataSource.connector.query(sql, [userId], (err, resp) => {
+                if(err) {
+                    console.log(err);
+                    console.log(`Error occured while insetting tag defaults for new user : ${userId}`);
+                    return reject(err);
+                } else {
+                    console.log(`Inserted tag defaults for the new user: ${userId}`);
+                    return resolve(true);
+                }
+            });
+        })
     }
 };
 
@@ -1553,6 +1600,16 @@ let SQL = {
                 UNIQUE KEY unique_identifier_UNIQUE (unique_identifier),
                 UNIQUE KEY bill_no_UNIQUE (bill_no)
               )`,
+    UDHAAR_CLOSED_LIST: `CREATE TABLE udhaar_closed_bills_REPLACE_USERID (
+            id INT NOT NULL AUTO_INCREMENT,
+            uid BIGINT NULL,
+            udhaar_tbl_uid BIGINT NULL,
+            principal_amt FLOAT NULL,
+            closing_amt FLOAT NULL,
+            interest_amt FLOAT NULL,
+            created_datetime DATETIME DEFAULT CURRENT_TIMESTAMP,
+            modified_datetime DATETIME DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (id))`,
     NOTES: `CREATE TABLE notes_REPLACE_USERID (
         Id int NOT NULL AUTO_INCREMENT,
         CustomerId int NOT NULL,

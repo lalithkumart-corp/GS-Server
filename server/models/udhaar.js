@@ -90,7 +90,7 @@ module.exports = function(Udhaar) {
         description: 'For fetching customer total bill history'
     });
 
-    Udhaar.remoteMethod('getPendingUdhaarBillsAPIHandler', {
+    Udhaar.remoteMethod('getUdhaarBillsAPIHandler', {
         accepts: [
             {
                 arg: 'accessToken', type: 'string', http: (ctx) => {
@@ -115,8 +115,8 @@ module.exports = function(Udhaar) {
                 source: 'body',
             },
         },
-        http: {path: '/get-pending-udhaar-bills', verb: 'get'},
-        description: 'For fetching pending Udhaar bills.',
+        http: {path: '/get-udhaar-bills', verb: 'get'},
+        description: 'For fetching Udhaar bills.',
     });
 
     Udhaar.remoteMethod('getUdhaarDetailApi', {
@@ -168,6 +168,50 @@ module.exports = function(Udhaar) {
         },
         http: {path: '/mark-resolved-by-payment-clearance', verb: 'post'},
         description: 'Udhaar - Mark resolved if all payments cleared.',
+    });
+
+    Udhaar.remoteMethod('closeUdhaarApiHandler', {
+        accepts: {
+            arg: 'apiParams',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/close-udhaar', verb: 'post'},
+        description: 'Udhaar - Mark closed.',
+    });
+
+    Udhaar.remoteMethod('reopenUdhaarApiHandler', {
+        accepts: {
+            arg: 'apiParams',
+            type: 'object',
+            default: {
+                
+            },
+            http: {
+                source: 'body',
+            },
+        },
+        returns: {
+            type: 'object',
+            root: true,
+            http: {
+                source: 'body'
+            }
+        },
+        http: {path: '/reopen-udhaar', verb: 'post'},
+        description: 'Udhaar - Reopen',
     });
 
     Udhaar.createApi = (apiParams, cb) => {
@@ -261,8 +305,8 @@ module.exports = function(Udhaar) {
         });
     }
 
-    Udhaar.getPendingUdhaarBillsAPIHandler = (accessToken, apiParams, cb) => {
-        Udhaar._getPendingUdhaarBillsAPIHandler(accessToken, apiParams).then((resp) => {
+    Udhaar.getUdhaarBillsAPIHandler = (accessToken, apiParams, cb) => {
+        Udhaar._getUdhaarBillsAPIHandler(accessToken, apiParams).then((resp) => {
             if(resp)
                 cb(null, {STATUS: 'SUCCESS', RESP: resp});
             else
@@ -271,7 +315,7 @@ module.exports = function(Udhaar) {
             cb({STATUS: 'EXCEPTION', ERR: e}, null);
         });
     }
-    Udhaar._getPendingUdhaarBillsAPIHandler = (accessToken, apiParams) => {
+    Udhaar._getUdhaarBillsAPIHandler = (accessToken, apiParams) => {
         return new Promise(async (resolve, reject) => {
             apiParams._userId = await utils.getStoreOwnerUserId(accessToken);
 
@@ -339,9 +383,9 @@ module.exports = function(Udhaar) {
                     whereCondList.push(`customer_REPLACE_USERID.Address LIKE '${filters.address}%' `);
                 if(filters.mobile)
                     whereCondList.push(`customer_REPLACE_USERID.Mobile LIKE '${filters.mobile}%' `);
-                if(filters.include) {
+                if(filters.include && filters.include != 'all') {
                     if(filters.include == 'pending') whereCondList.push(`udhaar_REPLACE_USERID.status=1`);
-                    else if(filters.include == 'resolved') whereCondList.push(`udhaar_REPLACE_USERID.status=0`);
+                    else if(filters.include == 'closed') whereCondList.push(`udhaar_REPLACE_USERID.status=0`);
                 } 
                 if (whereCondList.length > 0)
                     filterPart = ` WHERE ${whereCondList.join(' AND ')}`;
@@ -440,12 +484,83 @@ module.exports = function(Udhaar) {
         }
     }
     
+    Udhaar.closeUdhaarApiHandler = (apiParams, cb) => {
+        apiParams.status = 0;
+        Udhaar._closeUdhaar(apiParams).then((resp) => {
+            if(resp.status)
+                cb(null, {STATUS: 'SUCCESS', RESP: resp.data});
+            else
+                cb(null, {STATUS: 'ERROR-No Response', RESP: resp});
+        }).catch((e)=>{
+            cb({STATUS: 'EXCEPTION', ERR: e}, null);
+        });
+    }
+
+    Udhaar._closeUdhaar = async (apiParams) => {
+        try {
+            apiParams._userId = await utils.getStoreOwnerUserId(apiParams.accessToken);
+
+            let row = await Udhaar._fetchUdhaarRowDB(apiParams.uid, apiParams._userId);
+            if(!row) {
+                throw 'Udhaar data not found in DB. Could not able to close the specific udhaar';
+            }
+
+            let params = {
+                _userId: apiParams._userId,
+                uids: [apiParams.uid],
+                excludeInternal: true
+            };
+
+            let cashIn = 0;
+            let cashOut = 0;
+            let list = await Udhaar.app.models.FundTransaction.prototype._fetchTransactionByBillFromDB(params);
+            _.each(list, (aTransaction) => {
+                cashIn += aTransaction.cash_in;
+                cashOut += aTransaction.cash_out;
+            });
+            let amountReceived = cashIn-cashOut;
+            
+            if(amountReceived < row.amount)
+                throw `Principal Amount Rs:${row.amount} is not yet recovered. Amount recovered is Rs:${amountReceived}. Hence could not able to close the udhaar`;
+            let closingBillParams = {
+                uid: (+ new Date()),
+                closing_amt: amountReceived,
+                udhaarTableUid: apiParams.uid,
+                principalAmt: row.amount,
+                interest_amt: amountReceived-row.amount,
+                _userId: apiParams._userId
+            }
+            await Udhaar._insertIntoClosedBillsTbl(closingBillParams);
+            await Udhaar._updateUdhaarStatus(apiParams._userId, 0, apiParams.uid);
+
+            return {status: true};
+        } catch(e) {
+            console.log(e);
+            return {status: false, message: e.message};
+        }
+    }
+
+    Udhaar._fetchUdhaarRowDB = (uid, _userId) => {
+        return new Promise((resolve, reject) => {
+            let qry = SQL.UDHAAR_LIST_PLAIN.replace(/REPLACE_USERID/g, _userId)
+            Udhaar.dataSource.connector.query(qry, [uid], (err, res) => {
+                let row = null;
+                if(err) {
+                    console.log(err);
+                } else {
+                    row = res[0];
+                }
+                return resolve(row);
+            });
+        });
+    }
+
     Udhaar.markResolvedByPaymentClerance = (apiParams, cb) => {
         Udhaar._markResolvedByPaymentClerance(apiParams).then((resp) => {
             if(resp)
                 cb(null, {STATUS: 'SUCCESS', RESP: resp});
             else
-                cb(null, {STATUS: 'ERROR-No Response', RESP: resp});
+                cb(null, {STATUS: 'ERROR', RESP: resp});
         }).catch((e)=>{
             cb({STATUS: 'EXCEPTION', ERR: e}, null);
         });
@@ -468,7 +583,7 @@ module.exports = function(Udhaar) {
                 });
                 let bal = cashOut-cashIn;
                 if(bal<1)
-                    await Udhaar._markResolved(apiParams._userId, apiParams.uid);
+                    await Udhaar._updateUdhaarStatus(apiParams._userId, 0, apiParams.uid);
                 return resolve(true);
             } catch(e) {
                 return reject(e);
@@ -476,15 +591,68 @@ module.exports = function(Udhaar) {
         });
     }
 
-    Udhaar._markResolved = (userId, uid) => {
+    Udhaar._updateUdhaarStatus = (userId, status, uid) => {
         return new Promise((resolve, reject) => {
-            let sql = SQL.MARK_RESOLVED;
+            let sql = SQL.UPDATE_STATUS_UDHAAR_TBL;
             sql = sql.replace(/REPLACE_USERID/g, userId);
-            Udhaar.dataSource.connector.query(sql, [uid], (err, res) => {
+            Udhaar.dataSource.connector.query(sql, [status, uid], (err, res) => {
                 if(err)
                     return reject(err);
                 else
                     return resolve(true);
+            });
+        });
+    }
+
+    Udhaar._insertIntoClosedBillsTbl = (params) => {
+        return new Promise((resolve, reject) => {
+            const queryParams = [
+                params.uid, params.udhaarTableUid,
+                params.principalAmt, params.closing_amt, params.interest_amt
+            ];
+            let qry = SQL.INSERT_INTO_CLOSING_BILLS_TBL.replace(/REPLACE_USERID/g, params._userId);
+            Udhaar.dataSource.connector.query(qry, queryParams, (err, res) => {
+                if(err) return reject(err);
+                else return resolve(true);
+            });
+        });
+    }
+
+    Udhaar.reopenUdhaarApiHandler = (apiParams, cb) => {
+        apiParams.status = 1;
+        Udhaar._reopenUdhaarApiHandler(apiParams).then((resp) => {
+            if(resp)
+                cb(null, {STATUS: 'SUCCESS', RESP: resp});
+            else
+                cb(null, {STATUS: 'ERROR-No Response', RESP: resp});
+        }).catch((e)=>{
+            cb({STATUS: 'EXCEPTION', ERR: e}, null);
+        });
+    }
+
+    Udhaar._reopenUdhaarApiHandler = async (apiParams) => {
+        try {
+            apiParams._userId = await utils.getStoreOwnerUserId(apiParams.accessToken);
+            let row = await Udhaar._fetchUdhaarRowDB(apiParams.uid, apiParams._userId);
+            if(!row) {
+                throw 'Udhaar data not found in DB. Could not able to close the specific udhaar';
+            }
+            await Udhaar._deleteEntryFromClosedBillTbl(apiParams.uid, apiParams._userId);
+            await Udhaar._updateUdhaarStatus(apiParams._userId, 1, apiParams.uid);
+        } catch(e) {
+            throw e;
+        }
+    }
+
+    Udhaar._deleteEntryFromClosedBillTbl = (udhaarTblUid, _userId) => {
+        return new Promise((resolve, reject) => {
+            let qry = SQL.DELETE_ROW_IN_UDHAAR_CLOSED_TBL.replace(/REPLACE_USERID/g, _userId);
+            Udhaar.dataSource.connector.query(qry, [udhaarTblUid], (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(true);
+                }
             });
         });
     }
@@ -518,13 +686,15 @@ let SQL = {
                                 udhaar_REPLACE_USERID.trashed AS udhaarTrashedFlag,
                                 udhaar_REPLACE_USERID.interest_pct AS udhaarInterestPct,
                                 udhaar_REPLACE_USERID.interest_val AS udhaarInterestVal,
-                                udhaar_REPLACE_USERID.landed_cost AS udhaarLandedCost
+                                udhaar_REPLACE_USERID.landed_cost AS udhaarLandedCost,
+                                udhaar_REPLACE_USERID.status AS udhaarStatus
                             FROM
                                 udhaar_REPLACE_USERID
                                     LEFT JOIN
                                 customer_REPLACE_USERID ON udhaar_REPLACE_USERID.customer_id = customer_REPLACE_USERID.CustomerId
                             WHERE
                                 udhaar_REPLACE_USERID.customer_id = ?`,
+    UDHAAR_LIST_PLAIN: `SELECT * FROM udhaar_REPLACE_USERID where udhaar_REPLACE_USERID.unique_identifier = ?`,
     UDHAAR_LIST: `SELECT                         
                                 udhaar_REPLACE_USERID.unique_identifier AS udhaarUid,
                                 udhaar_REPLACE_USERID.bill_no AS udhaarBillNo,
@@ -536,6 +706,7 @@ let SQL = {
                                 udhaar_REPLACE_USERID.interest_val AS udhaarInterestVal,
                                 udhaar_REPLACE_USERID.landed_cost AS udhaarLandedCost,
                                 udhaar_REPLACE_USERID.trashed AS udhaarTrashedFlag,
+                                udhaar_REPLACE_USERID.status AS udhaarStatus,
                                 customer_REPLACE_USERID.Name AS customerName,
                                 customer_REPLACE_USERID.GaurdianName AS guardianName,
                                 customer_REPLACE_USERID.Address AS address,
@@ -574,7 +745,7 @@ let SQL = {
                         fund_transactions_REPLACE_USERID.transaction_date AS fundTrnsDate,
                         fund_transactions_REPLACE_USERID.cash_in AS fundTrnsCashIn,
                         fund_transactions_REPLACE_USERID.cash_out AS fundTrnsCashOut,
-                        fund_transactions_REPLACE_USERID.category AS fundTrnsCategory,
+                        fund_transaction_categories.category AS fundTrnsCategory,
                         fund_transactions_REPLACE_USERID.remarks AS fundTrnsRemarks,
                         fund_transactions_REPLACE_USERID.deleted AS fundTrnsDeleted,
                         fund_transactions_REPLACE_USERID.cash_out_mode AS fundTrnsCashOutMode,
@@ -593,9 +764,14 @@ let SQL = {
                     FROM
                         udhaar_REPLACE_USERID
                         LEFT JOIN fund_transactions_REPLACE_USERID ON (fund_transactions_REPLACE_USERID.gs_uid = udhaar_REPLACE_USERID.unique_identifier)
+                        LEFT JOIN fund_transaction_categories ON (fund_transactions_REPLACE_USERID.category_id=fund_transaction_categories.id AND fund_transaction_categories.user_id=REPLACE_USERID)
                         LEFT JOIN fund_accounts ON fund_transactions_REPLACE_USERID.account_id = fund_accounts.id
                         LEFT JOIN customer_REPLACE_USERID ON (customer_REPLACE_USERID.CustomerId = udhaar_REPLACE_USERID.customer_id)
                     WHERE
                         unique_identifier = ? AND fund_transactions_REPLACE_USERID.deleted=0`,
-    MARK_RESOLVED: `UPDATE udhaar_REPLACE_USERID SET status=0 WHERE unique_identifier=?`
+    MARK_RESOLVED: `UPDATE udhaar_REPLACE_USERID SET status=0 WHERE unique_identifier=?`,
+    UPDATE_STATUS_UDHAAR_TBL: `UPDATE udhaar_REPLACE_USERID SET status=? WHERE unique_identifier=?`,
+    INSERT_INTO_CLOSING_BILLS_TBL: `INSERT INTO udhaar_closed_bills_REPLACE_USERID (uid, udhaar_tbl_uid, principal_amt, closing_amt, interest_amt) 
+                    VALUES (?,?,?,?,?)`,
+    DELETE_ROW_IN_UDHAAR_CLOSED_TBL: `DELETE FROM udhaar_closed_bills_REPLACE_USERID WHERE udhaar_tbl_uid=?`
 };

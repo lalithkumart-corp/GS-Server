@@ -676,6 +676,8 @@ module.exports = function(FundTransaction) {
                 //     else
                 //         filters.push(`fund_transactions_REPLACE_USERID.gs_uid=${params.loan_uid}`);
                 // }
+                if(params.excludeInternal)
+                    filters.push(`fund_transactions_REPLACE_USERID.is_internal=0`);
                 filters.push(`fund_transactions_REPLACE_USERID.gs_uid IN ('${params.uids.join("', '")}')`);
                 break;
         }
