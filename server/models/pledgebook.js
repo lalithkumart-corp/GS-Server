@@ -302,7 +302,15 @@ module.exports = function(Pledgebook) {
                     return include_only;
                 },
                 description: "Require only pending or closed or all..."
-            }
+            }, {
+                arg: 'filters', type: 'object', http: (ctx) => {
+                    let req = ctx && ctx.req;
+                    let filters = req && req.query.filters;
+                    filters = filters ? JSON.parse(filters) : {};
+                    return filters;
+                },
+                description: 'filters arguments goes here',
+        }
         ],
         returns: {
             type: 'object',
@@ -668,7 +676,7 @@ module.exports = function(Pledgebook) {
                 params.orn,
                 params.billRemarks,
                 params.ornPicture.id,
-                params.ornCategory,
+                params.ornCategory, 
                 params.totalWeight,
                 params.interestPercent,
                 params.interestValue,
@@ -890,6 +898,7 @@ module.exports = function(Pledgebook) {
     Pledgebook.reOpenBill = (params) => {
         return new Promise( (resolve, reject) => {
             let query = Pledgebook.getQuery('reopen-status-update', params, params._pledgebookTableName);
+            
             Pledgebook.dataSource.connector.query(query, async (err, result) => {
                 if (err) {
                     return reject(err);
@@ -1065,6 +1074,9 @@ module.exports = function(Pledgebook) {
                         query +=  ` AND Status=1`;
                     else if(params.includeOnly == "closed")
                         query += ` AND Status=0`;
+                
+                    if(params.filters && typeof params.filters.includeArchived !== 'undefined' && params.filters.includeArchived == false)
+                        query += ` AND ${pledgebookTableName}.Archived=0`;
 
                 query += ` ORDER BY PledgedDate DESC`;
                 break;
@@ -1451,9 +1463,9 @@ module.exports = function(Pledgebook) {
         }
     }
 
-    Pledgebook.fetchUserHistoryAPIHandler = async (accessToken, customerId, include_only, cb) => {
+    Pledgebook.fetchUserHistoryAPIHandler = async (accessToken, customerId, include_only, filters, cb) => {
         try {
-            let billList = await Pledgebook.fetchHistory({accessToken: accessToken, customerId: customerId, includeOnly: include_only});
+            let billList = await Pledgebook.fetchHistory({accessToken: accessToken, customerId: customerId, includeOnly: include_only, filters});
             return {STATUS: 'success', RESPONSE: billList, STATUS_MSG: ''};
         } catch(e) {
             return {STATUS: 'error', ERROR: e, MESSAGE: (e?e.message:'')};
@@ -1654,16 +1666,31 @@ module.exports = function(Pledgebook) {
                 Amount: aRec.Amount,
                 Name: aRec.Name,
                 GaurdianName: aRec.GaurdianName,
-                Orn: Pledgebook._constructOrnString(aRec.Orn),
+                NameFull: `${aRec.Name}`,
+                OrnWithWt: Pledgebook._constructOrnString(aRec.Orn, true),
+                Orn: Pledgebook._constructOrnString(aRec.Orn, false),
                 TotalWeight: aRec.TotalWeight || 0,
                 Status: (aRec.Status)?'PENDING':'CLOSED',
                 Address: aRec.Address,
                 Place: aRec.Place,
                 City: aRec.City,
                 Pincode: aRec.Pincode,
+                AddressFull: '',
                 Mobile: aRec.Mobile,
                 ClosedDate: aRec.closed_date?utils.convertDatabaseDateTimetoDateStr(new Date(aRec.closed_date + ' UTC')):''
             };
+            if(aRec.GaurdianName) {
+                let rel = aRec.GuardianRelation || 'c/o';
+                anObj.NameFull += `  ${rel}  ${aRec.GaurdianName}`;
+            }
+
+            let fullAddrArr = [];
+            if(aRec.Address) fullAddrArr.push(aRec.Address);
+            if(aRec.Place) fullAddrArr.push(aRec.Place);
+            if(aRec.City) fullAddrArr.push(aRec.City);
+            if(aRec.Pincode) fullAddrArr.push(aRec.Pincode);
+            anObj.AddressFull = fullAddrArr.join(', ');
+
             if(aRec.Status) {
                 let temp = {
                     ...anObj,
@@ -1682,7 +1709,7 @@ module.exports = function(Pledgebook) {
         return mainBucket;
     }
 
-    Pledgebook._constructOrnString = (jsonStr) => {
+    Pledgebook._constructOrnString = (jsonStr, withWt) => {
         let ornStr = '';
         if(jsonStr) {
             let jsonObj;
@@ -1694,7 +1721,10 @@ module.exports = function(Pledgebook) {
             if(jsonObj) {
                 let bucket = [];
                 _.each(jsonObj, (anOrnObj, index) => {
-                    bucket.push(`${anOrnObj.ornItem}-${anOrnObj.ornNos}-${anOrnObj.ornNWt}`);
+                    let ornamentCellData = `${anOrnObj.ornItem}-${anOrnObj.ornNos}`;
+                    if(withWt && anOrnObj.ornNWt) 
+                        ornamentCellData += `-${anOrnObj.ornNWt}`;
+                    bucket.push(ornamentCellData);
                 });
                 ornStr = bucket.join('||');
             }
@@ -1713,6 +1743,8 @@ module.exports = function(Pledgebook) {
                     {id: 'Amount', title: 'Amount'},
                     {id: 'Name', title: 'Name'},
                     {id: 'GaurdianName', title: 'GaurdianName'},
+                    {id: 'NameFull', title: 'NameFull'},
+                    {id: 'OrnWithWt', title: 'OrnWithWt'},
                     {id: 'Orn', title: 'Orn'},
                     {id: 'TotalWeight', title: 'TotalWeight'},
                     {id: 'Status', title: 'Status'},
@@ -1720,6 +1752,7 @@ module.exports = function(Pledgebook) {
                     {id: 'Place', title: 'Place'},
                     {id: 'City', title: 'City'},
                     {id: 'Pincode', title: 'Pincode'},
+                    {id: 'AddressFull', title: 'AddressFull'},
                     {id: 'Mobile', title: 'Mobile'},
                     {id: 'ClosedDate', title: 'Closed Date'}
                 ]
@@ -1755,11 +1788,14 @@ module.exports = function(Pledgebook) {
                 {id: 'Amount', title: 'Amount'},
                 {id: 'Name', title: 'Name'},
                 {id: 'GaurdianName', title: 'GaurdianName'},
+                {id: 'NameFull', title: 'NameFull'},
                 {id: 'Address', title: 'Address'},
                 {id: 'Place', title: 'Place'},
                 {id: 'City', title: 'City'},
                 {id: 'Pincode', title: 'Pincode'},
+                {id: 'AddressFull', title: 'AddressFull'},
                 {id: 'Mobile', title: 'Mobile'},
+                {id: 'OrnWithWt', title: 'OrnWithWt'},
                 {id: 'Orn', title: 'Orn'},
                 {id: 'TotalWeight', title: 'TotalWeight'}
             ]

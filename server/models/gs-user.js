@@ -291,8 +291,6 @@ module.exports = function(Gsuser) {
         try{
             let user = await Gsuser._insertUser(custom);
             await Gsuser._insertRoleMapping(user, 2);
-            // await Gsuser._createPledgebookTable(user);
-            // await Gsuser._createPledgebookClosingBillTable(user);
             await Gsuser._insertNewApplication(user);
             await Gsuser._insertNewStore(custom, user);
             let resp = await Gsuser._loginUser(custom);
@@ -305,61 +303,6 @@ module.exports = function(Gsuser) {
             console.log(e);
             return {STATUS: 'ERROR', ERROR: e};
         }
-
-        /*
-        let theParams = {
-            username: custom.userName,
-            email: custom.email,
-            password: custom.password,
-            phone: custom.phone,
-            guardianName: custom.guardianName
-        }
-        Gsuser.create(theParams, (err, user) => {
-            if(err) {
-                console.log(err);
-                return {STATUS: 'ERROR', ERROR: err};
-            } else {
-                let params = {
-                    principalType: "USER",
-                    principalId: user.id,
-                    roleId: 2
-                };
-
-                Gsuser.app.models.RoleMapping.create(params, (error, roleMapInstance) => {
-                    if(error) {
-                        console.log(error);
-                        return error;
-                    } else {
-                        console.log(roleMapInstance);                        
-                    }
-                });
-
-                let sql = pledgebookStructure;
-                sql = sql.replace(/TABLENAME/g, 'pledgebook_'+user.id);
-                Gsuser.dataSource.connector.query(sql, (err, resp) => {
-                    if(err) {
-                        console.log('Error occured while creating a new pledgebbok table for the user: ', user.id);
-                        return err;
-                    } else {
-                        console.log('New Pledgebook table created!');
-                    }
-                });
-
-                let sql_closed_bills = pledgebookClosedStructure;
-                sql_closed_bills = sql_closed_bills.replace(/TABLENAME/g, 'pledgebook_closed_bills_'+user.id);
-                Gsuser.dataSource.connector.query(sql_closed_bills, (err, resp) => {
-                    if(err) {
-                        console.log('Error occured while creating a new pledgebook_closed_bills table for the user: ', user.id);
-                        return err;
-                    } else {
-                        console.log('New pledgebook_closed_bills table created!');                        
-                    }
-                });
-
-                return {STATUS: 'SUCCESS', MSG: 'New User Has Been Created Successfully! Other backend works is in process...'};
-            }
-        })
-        */
     }
 
     Gsuser.remoteMethod('signupNewCustomer', {
@@ -528,41 +471,6 @@ module.exports = function(Gsuser) {
             });
         });
     }
-
-    // Gsuser._createPledgebookTable = (user) => {
-    //     return new Promise( (resolve, reject) => {
-    //         let sql = pledgebookStructure;
-    //         sql = sql.replace(/TABLENAME/g, 'pledgebook_'+user.id);
-    //         Gsuser.dataSource.connector.query(sql, (err, resp) => {
-    //             if(err) {
-    //                 console.log(err);
-    //                 console.log('Error occured while creating a new pledgebbok table for the user: ', user.id);
-    //                 return reject(err);
-    //             } else {
-    //                 console.log('New Pledgebook table created!');
-    //                 return resolve(true);
-    //             }
-    //         });
-    //     });        
-    // }
-
-    // Gsuser._createPledgebookClosingBillTable = (user) => {
-    //     return new Promise ( (resolve, reject) => {
-    //         let sql_closed_bills = pledgebookClosedStructure;
-    //         sql_closed_bills = sql_closed_bills.replace(/TABLENAME/g, 'pledgebook_closed_bills_'+user.id);
-    //         sql_closed_bills = sql_closed_bills.replace(/PLEDGEBOOKTABLE/g, 'pledgebook_'+user.id);
-    //         Gsuser.dataSource.connector.query(sql_closed_bills, (err, resp) => {
-    //             if(err) {
-    //                 console.log(err);
-    //                 console.log('Error occured while creating a new pledgebook_closed_bills table for the user: ', user.id);
-    //                 return reject(err);
-    //             } else {
-    //                 console.log('New pledgebook_closed_bills table created!');       
-    //                 return resolve(true);                 
-    //             }
-    //         });
-    //     });
-    // }
 
     Gsuser._insertNewApplication = (user) => {
         return new Promise((resolve, reject) => {
@@ -749,28 +657,6 @@ module.exports = function(Gsuser) {
             })
         });
     }
-
-     /*FundTransaction.getUdhaarListApi = (params, cb) => {
-        FundTransaction._getUdhaarListApi(params).then(
-            (resp) => {
-                cb(null, {STATUS: 'SUCCESS', RESP: resp});
-            }
-        ).catch(
-            (e)=> {
-                cb({STATUS: 'EXCEPTION', ERR: e}, null);
-            }
-        );
-    }
-
-    FundTransaction._getUdhaarListApi = (params) => {
-        return new Promise(async (resolve, reject) => {
-            let userId = await utils.getStoreOwnerUserId(params.accessToken);
-            
-            let promise1 = new Promise((resolve, reject) => {
-                FundTransaction.dataSource.connector.query()
-            });
-        });
-    }*/
 };
 
 let pledgebookStructure = `CREATE TABLE TABLENAME (
