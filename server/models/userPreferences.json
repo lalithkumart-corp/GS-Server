@@ -97,6 +97,17 @@
         "dataScale": null,
         "nullable": "Y"
       }
+    },
+    "loan_bill_expiry_days": {
+      "type": "number",
+      "mysql": {
+        "columnName": "loan_bill_expiry_days",
+        "dataType": "int",
+        "dataLength": 255,
+        "dataPrecision": null,
+        "dataScale": null,
+        "nullable": "Y"
+      }
     }
   },
   "validations": [],

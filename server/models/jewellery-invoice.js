@@ -204,7 +204,7 @@ module.exports = function(JwlInvoice) {
             let sql = SQL.INSERT_JWL_INVOICE.replace(/INVOICE_TABLE/g, `jewellery_invoices_${payload._userId}`);
             let queryVal = [
                     payload._uniqString,
-                    new Date().toISOString().replace('T',' ').replace('Z', ''),
+                    payload.apiParams.date,
                     invoiceNoFull,
                     payload.apiParams.customerId,
                     payload.apiParams.retailRate,

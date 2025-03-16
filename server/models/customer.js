@@ -727,13 +727,16 @@ module.exports = function(Customer) {
             let modifiedDate = new Date().toISOString().replace('T', ' ').slice(0,23);
             let query = SQL.UPDATE_CUSTOMER;
             query = query.replace(/REPLACE_USERID/g, params._userId);
+            let otherDetails = params.otherDetails;
+            if(typeof params.otherDetails !== "string")
+                otherDetails = JSON.stringify(params.otherDetails);
             let qv = [
                 params.cname, 
                 params.guardianRelation, params.gaurdianName,
                 params.picture.id, params.address,
                 params.place, params.city,
                 params.pinCode, params.mobile, params.secMobile,
-                JSON.stringify(params.otherDetails), params._hashKey,
+                otherDetails, params._hashKey,
                 modifiedDate, params.customerId
             ];
             Customer.dataSource.connector.query(query, qv, (err, res) => {
