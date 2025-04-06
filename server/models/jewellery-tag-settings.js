@@ -101,9 +101,9 @@ module.exports = function(JewelleryTagSettings) {
                 let _userId = await utils.getStoreOwnerUserId(accessToken);
                 let records = await JewelleryTagSettings.find({where: {userId: _userId}});
                 if(records && records.length > 0) {
-                    await JewelleryTagSettings.updateAll({userId: _userId}, {selectedTagId: payload.selectedTemplateId, storeNameAbbr: payload.storeNameAbbr});
+                    await JewelleryTagSettings.updateAll({userId: _userId}, {selectedTagId: payload.selectedTemplateId, storeNameAbbr: payload.storeNameAbbr, storeNameFull: payload.storeNameFull});
                 } else {
-                    await JewelleryTagSettings.create({userId: _userId, selectedTagId: payload.selectedTemplateId, storeNameAbbr: payload.storeNameAbbr});
+                    await JewelleryTagSettings.create({userId: _userId, selectedTagId: payload.selectedTemplateId, storeNameAbbr: payload.storeNameAbbr, storeNameFull: payload.storeNameFull});
                 }
                 return resolve(true);
             } catch(e) {
@@ -117,6 +117,7 @@ let SQL = {
     GET_SETTINGS: `SELECT 
                         settings.selected_tag_template_id,
                         settings.store_name_abbr,
+                        settings.store_name_full,
                         settings.customization
                     FROM
                         jewellery_tag_settings settings

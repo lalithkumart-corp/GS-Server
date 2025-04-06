@@ -59,6 +59,18 @@
           "nullable": "Y"
         }
       },
+      "storeNameFull": {
+        "type": "string",
+        "required": false,
+        "mysql": {
+          "columnName": "store_name_full",
+          "dataType": "varchar",
+          "dataLength": 22,
+          "dataPrecision": null,
+          "dataScale": null,
+          "nullable": "Y"
+        }
+      },
       "customization": {
         "type": "any",
         "required": false,
