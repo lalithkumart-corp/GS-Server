@@ -1293,6 +1293,9 @@ module.exports = function(FundTransaction) {
         return new Promise(async (resolve, reject) => {
             try {
                 switch(moduleIdentifier) {
+                    case 'girvi': 
+                        await FundTransaction.markGirviEntryAsDeleted(params);
+                        break;
                     case 'redeem':
                         await FundTransaction.markRedeemEntryAsDeleted(params);
                         break;
@@ -1305,6 +1308,36 @@ module.exports = function(FundTransaction) {
                 console.log(e);
                 return resolve(true); // this is backend job, so allways returning true.
             }
+        });
+    }
+
+     FundTransaction.markGirviEntryAsDeleted = (params) => {
+        return new Promise(async (resolve, reject) => {
+            try {
+                for(let i=0; i<params.data.length; i++) {
+                    let datum = params.data[i];
+                    let params2 = {_userId: params._userId, uniqueIdentifiers: datum.uniqueIdentifiers};
+                    await FundTransaction._markGirviEntryAsDeleted(params2);
+                }
+                return resolve(true);
+            } catch(e) {
+                return reject(e);
+            }
+        });
+    }
+
+    FundTransaction._markGirviEntryAsDeleted = (params) => {
+        return new Promise( async (resolve, reject) => {
+            let qv = [params._userId, params.uniqueIdentifiers, params._userId];
+            let sql = SQL.MARK_GIRVI_ENTRY_AS_DELETED;
+            sql = sql.replace(/REPLACE_USERID/g, params._userId);
+            FundTransaction.dataSource.connector.query(sql, qv, (err, res) => {
+                if(err) {
+                    return reject(err);
+                } else {
+                    return resolve(true);
+                }
+            });
         });
     }
 
@@ -1325,8 +1358,8 @@ module.exports = function(FundTransaction) {
 
     FundTransaction._markRedeemEntryAsDeleted = (params) => {
         return new Promise( async (resolve, reject) => {
-            let qv = [params._userId, params.closedBillReference];
-            let sql = SQL.MARK_AS_DELETED;
+            let qv = [params._userId, params.closedBillReference, params._userId];
+            let sql = SQL.MARK_REDEEM_ENTRY_AS_DELETED;
             sql = sql.replace(/REPLACE_USERID/g, params._userId);
             FundTransaction.dataSource.connector.query(sql, qv, (err, res) => {
                 if(err) {
@@ -1983,6 +2016,8 @@ let SQL = {
     ADD_CASH_FOR_BILL: `INSERT INTO fund_transactions_REPLACE_USERID (user_id, customer_id, account_id, gs_uid, transaction_date, cash_in, cash_out, category_id, remarks, cash_in_mode, created_date, modified_date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
     UPDATE_TRANSACTION_FOR_CASH_IN: `UPDATE fund_transactions_REPLACE_USERID SET account_id=?, customer_id=?, transaction_date=?, cash_in=?, category_id=?, remarks=?, cash_in_mode=? WHERE id=? AND user_id=?`,
     UPDATE_TRANSACTION_FOR_CASH_OUT: `UPDATE fund_transactions_REPLACE_USERID SET account_id=?, customer_id=?, transaction_date=?, cash_out=?, category_id=?, remarks=?, cash_out_mode=?, cash_out_to_bank_acc_no=?, cash_out_to_bank_ifsc=? WHERE id=? AND user_id=?`,
+    MARK_REDEEM_ENTRY_AS_DELETED: `UPDATE fund_transactions_REPLACE_USERID SET deleted=1 WHERE user_id=? AND gs_uid=? AND category_id = (select id from fund_transaction_categories where category='Redeem' and user_id=? limit 1)`,
+    MARK_GIRVI_ENTRY_AS_DELETED: `UPDATE fund_transactions_REPLACE_USERID SET deleted=1 WHERE user_id=? AND gs_uid IN (?) AND category_id = (select id from fund_transaction_categories where category='Girvi' and user_id=? limit 1)`,
     MARK_AS_DELETED: `UPDATE fund_transactions_REPLACE_USERID SET deleted=1 WHERE user_id=? AND gs_uid=?`,
     TRANSACTION_LIST: `SELECT 
                             fund_accounts.name AS fund_house_name,

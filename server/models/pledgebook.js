@@ -1970,6 +1970,8 @@ module.exports = function(Pledgebook) {
                 await Pledgebook._copyClosedBillsToRecycleBinTable(params);
                 await Pledgebook._deleteBillsInClosedPledgebook(params);
                 await Pledgebook._deleteBillsInPledgebook(params);
+
+                await Pledgebook.app.modes.FundTransaction.removeEntry({uniqueIdentifiers: params.uniqueIdentifiers, _userId: params._userId}, 'girvi');
             } else {
                 throw 'No bills selected for deleting';
             }
